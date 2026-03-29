@@ -119,6 +119,7 @@ MaterializeConditionById(std::string_view a_conditionId,
     return MaterializedCondition{
         .condition = runtimeIt->second.condition,
         .signature = runtimeIt->second.signature,
+        .displayCnf = runtimeIt->second.displayCnf,
         .refreshTargets =
             RefreshTargets{runtimeIt->second.refreshActorFormIDs,
                            runtimeIt->second.refreshUseNearbyFallback}};
@@ -135,12 +136,14 @@ MaterializeConditionById(std::string_view a_conditionId,
   runtimeState.valid = true;
   runtimeState.condition = lowered->condition;
   runtimeState.signature = lowered->signature;
+  runtimeState.displayCnf = lowered->displayCnf;
   runtimeState.refreshActorFormIDs.assign(refreshTargets.actorFormIDs.begin(),
                                           refreshTargets.actorFormIDs.end());
   runtimeState.refreshUseNearbyFallback = refreshTargets.useNearbyFallback;
 
   return MaterializedCondition{.condition = runtimeState.condition,
                                .signature = runtimeState.signature,
+                               .displayCnf = runtimeState.displayCnf,
                                .refreshTargets = refreshTargets};
 }
 } // namespace sosr::conditions

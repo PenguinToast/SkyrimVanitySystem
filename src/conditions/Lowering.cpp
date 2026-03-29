@@ -324,6 +324,27 @@ std::string BuildLiteralSignature(const NativeLiteral &a_literal) {
   return signature;
 }
 
+std::string BuildLiteralDisplay(const NativeLiteral &a_literal) {
+  std::string display = a_literal.functionName;
+  display.push_back('(');
+  bool firstArgument = true;
+  for (std::uint16_t paramIndex = 0; paramIndex < a_literal.parameterCount &&
+                                     paramIndex < a_literal.arguments.size();
+       ++paramIndex) {
+    if (!firstArgument) {
+      display.append(", ");
+    }
+    firstArgument = false;
+    display.append(a_literal.arguments[paramIndex]);
+  }
+  display.push_back(')');
+  display.push_back(' ');
+  display.append(ComparatorToken(a_literal.comparator));
+  display.push_back(' ');
+  display.append(a_literal.comparand);
+  return display;
+}
+
 std::string BuildCnfSignature(const ConditionCnf &a_cnf) {
   std::string signature;
   bool firstGroup = true;
@@ -345,6 +366,19 @@ std::string BuildCnfSignature(const ConditionCnf &a_cnf) {
     signature.push_back(')');
   }
   return signature;
+}
+
+sosr::conditions::DisplayCnf BuildDisplayCnf(const ConditionCnf &a_cnf) {
+  sosr::conditions::DisplayCnf displayCnf;
+  displayCnf.reserve(a_cnf.size());
+  for (const auto &group : a_cnf) {
+    auto &displayGroup = displayCnf.emplace_back();
+    displayGroup.reserve(group.size());
+    for (const auto &literal : group) {
+      displayGroup.push_back(BuildLiteralDisplay(literal));
+    }
+  }
+  return displayCnf;
 }
 
 ConditionCnf AndCnf(const ConditionCnf &a_left, const ConditionCnf &a_right) {
@@ -627,6 +661,7 @@ LowerAndEmitCondition(const Definition &a_definition,
   }
 
   return LoweredMaterialization{.condition = *condition,
-                                .signature = BuildCnfSignature(*cnf)};
+                                .signature = BuildCnfSignature(*cnf),
+                                .displayCnf = BuildDisplayCnf(*cnf)};
 }
 } // namespace sosr::conditions

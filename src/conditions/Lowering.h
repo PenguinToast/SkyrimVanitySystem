@@ -10,9 +10,13 @@
 #include <vector>
 
 namespace sosr::conditions {
+using DisplayOrClause = std::vector<std::string>;
+using DisplayCnf = std::vector<DisplayOrClause>;
+
 struct LoweredMaterialization {
   std::shared_ptr<RE::TESCondition> condition;
   std::string signature;
+  DisplayCnf displayCnf;
 };
 
 [[nodiscard]] std::optional<LoweredMaterialization>

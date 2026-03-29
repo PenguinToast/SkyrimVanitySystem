@@ -2,6 +2,7 @@
 
 #include "ConditionRefreshTargets.h"
 #include "conditions/Definition.h"
+#include "conditions/Lowering.h"
 #include "conditions/Validation.h"
 
 #include <RE/Skyrim.h>
@@ -16,6 +17,7 @@ namespace sosr::conditions {
 struct MaterializedCondition {
   std::shared_ptr<RE::TESCondition> condition;
   std::string signature;
+  DisplayCnf displayCnf;
   RefreshTargets refreshTargets;
 };
 
