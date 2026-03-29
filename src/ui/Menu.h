@@ -43,6 +43,7 @@ public:
   void Draw();
   void Open();
   void Close();
+  void NotifyWindowShutdown();
   void Toggle();
   void SetGameDataLoaded(bool a_loaded) { gameDataLoaded_ = a_loaded; }
   [[nodiscard]] bool IsEnabled() const { return enabled_; }

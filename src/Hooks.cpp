@@ -4,7 +4,31 @@
 #include "ui/Menu.h"
 #include "ui/MenuHost.h"
 
+#include <atomic>
+#include <mutex>
+#include <unordered_map>
+
 namespace {
+std::atomic_bool g_windowShutdownObserved{false};
+std::mutex g_wndProcMapMutex;
+std::unordered_map<ATOM, WNDPROC> g_originalWndProcsByAtom;
+
+auto GetOriginalWndProc(HWND a_hwnd) -> WNDPROC {
+  const auto atom =
+      static_cast<ATOM>(::GetClassLongPtrA(a_hwnd, GCW_ATOM) & 0xFFFF);
+  if (atom == 0) {
+    return nullptr;
+  }
+
+  std::scoped_lock lock(g_wndProcMapMutex);
+  if (const auto it = g_originalWndProcsByAtom.find(atom);
+      it != g_originalWndProcsByAtom.end()) {
+    return it->second;
+  }
+
+  return nullptr;
+}
+
 [[nodiscard]] bool
 ShouldBlockKeyboardInputEvent(const RE::InputEvent *a_event) {
   if (a_event == nullptr) {
@@ -72,6 +96,17 @@ struct WndProcHook {
   static LRESULT thunk(HWND a_hwnd, UINT a_msg, WPARAM a_wParam,
                        LPARAM a_lParam) {
     switch (a_msg) {
+    case WM_CLOSE:
+      if (!g_windowShutdownObserved.exchange(true, std::memory_order_relaxed)) {
+        sosr::Menu::GetSingleton()->NotifyWindowShutdown();
+      }
+      break;
+    case WM_DESTROY:
+      g_windowShutdownObserved.store(true, std::memory_order_relaxed);
+      break;
+    case WM_NCDESTROY:
+      g_windowShutdownObserved.store(true, std::memory_order_relaxed);
+      break;
     case WM_ACTIVATE: {
       const auto activationType = LOWORD(a_wParam);
       if (activationType != WA_INACTIVE) {
@@ -91,17 +126,30 @@ struct WndProcHook {
       break;
     }
 
-    return func(a_hwnd, a_msg, a_wParam, a_lParam);
-  }
+    const auto originalWndProc = GetOriginalWndProc(a_hwnd);
+    if (originalWndProc == nullptr) {
+      logger::warn("SVS hook: missing original WndProc hwnd={} msg=0x{:X}",
+                   static_cast<void *>(a_hwnd), a_msg);
+      return DefWindowProcA(a_hwnd, a_msg, a_wParam, a_lParam);
+    }
 
-  static inline REL::Relocation<decltype(thunk)> func;
+    const auto result =
+        CallWindowProcA(originalWndProc, a_hwnd, a_msg, a_wParam, a_lParam);
+
+    return result;
+  }
 };
 
 struct RegisterClassAHook {
   static ATOM thunk(WNDCLASSA *a_wndClass) {
-    WndProcHook::func = reinterpret_cast<uintptr_t>(a_wndClass->lpfnWndProc);
+    const auto originalWndProc = a_wndClass->lpfnWndProc;
     a_wndClass->lpfnWndProc = &WndProcHook::thunk;
-    return func(a_wndClass);
+    const auto atom = func(a_wndClass);
+    if (atom != 0 && originalWndProc != nullptr) {
+      std::scoped_lock lock(g_wndProcMapMutex);
+      g_originalWndProcsByAtom[atom] = originalWndProc;
+    }
+    return atom;
   }
 
   static inline REL::Relocation<decltype(thunk)> func;
@@ -109,6 +157,10 @@ struct RegisterClassAHook {
 } // namespace
 
 namespace sosr::hooks {
+bool IsWindowShutdownObserved() {
+  return g_windowShutdownObserved.load(std::memory_order_relaxed);
+}
+
 struct D3DInitHook {
   static void thunk() {
     func();
@@ -131,6 +183,9 @@ struct D3DInitHook {
 struct PresentHook {
   static void thunk(std::uint32_t a_argument) {
     func(a_argument);
+    if (g_windowShutdownObserved.load(std::memory_order_relaxed)) {
+      return;
+    }
     InputManager::GetSingleton()->ProcessInputEvents();
   }
 

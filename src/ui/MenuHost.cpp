@@ -1,5 +1,6 @@
 #include "MenuHost.h"
 
+#include "Hooks.h"
 #include "Menu.h"
 
 namespace RE {
@@ -155,6 +156,9 @@ void MenuHost::RegisterMenu() {
 }
 
 void MenuHost::PostDisplay() {
+  if (hooks::IsWindowShutdownObserved()) {
+    return;
+  }
   Menu::GetSingleton()->Draw();
   ForceCursor();
 }

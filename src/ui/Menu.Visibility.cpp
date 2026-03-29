@@ -74,6 +74,32 @@ void Menu::Close() {
   visibilityState_ = VisibilityState::Closing;
 }
 
+void Menu::NotifyWindowShutdown() {
+  if (auto *controlMap = RE::ControlMap::GetSingleton();
+      controlMap != nullptr && wantTextInput_) {
+    AllowTextInput(controlMap, false);
+    wantTextInput_ = false;
+  }
+
+  if (ImGui::GetCurrentContext() != nullptr) {
+    auto &io = ImGui::GetIO();
+    io.MouseDrawCursor = false;
+    io.ClearInputKeys();
+    io.ClearEventsQueue();
+  }
+
+  ui::components::ClearPinnedTooltips();
+  CloseToggleKeyCapture();
+  hideMessageQueued_ = false;
+  visibilityState_ = VisibilityState::Closed;
+  windowAlpha_ = 0.0f;
+  pendingSmoothWheelDelta_ = 0.0f;
+  smoothScrollWindowId_ = 0;
+  smoothScrollTargetY_ = 0.0f;
+  FocusedConditionEditorWindowSlot() = 0;
+  enabled_ = false;
+}
+
 void Menu::OnMenuShow() {
   if (!initialized_ || enabled_) {
     return;
