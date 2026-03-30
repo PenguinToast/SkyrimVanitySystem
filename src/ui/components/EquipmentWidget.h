@@ -16,6 +16,7 @@ struct EquipmentWidgetOptions {
   EquipmentWidgetConflictStyle conflictStyle{
       EquipmentWidgetConflictStyle::None};
   std::function<void()> drawTooltipExtras{};
+  std::function<void()> drawContextMenuEntries{};
 };
 
 struct EquipmentWidgetResult {

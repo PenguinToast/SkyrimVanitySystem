@@ -67,24 +67,6 @@ void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
   }
 }
 
-void Menu::AcceptOverrideDeletePayload() {
-  const auto *payload = ImGui::AcceptDragDropPayload(
-      ui::workbench::kVariantItemPayloadType);
-  if (!payload || payload->DataSize != sizeof(DraggedEquipmentPayload)) {
-    return;
-  }
-
-  DraggedEquipmentPayload dragPayload{};
-  std::memcpy(&dragPayload, payload->Data, sizeof(dragPayload));
-  if (dragPayload.sourceKind ==
-      static_cast<std::uint32_t>(DragSourceKind::Override)) {
-    workbench_.DeleteOverride(dragPayload.rowIndex, dragPayload.itemIndex);
-  } else if (dragPayload.sourceKind ==
-             static_cast<std::uint32_t>(DragSourceKind::Row)) {
-    workbench_.DeleteRow(dragPayload.rowIndex);
-  }
-}
-
 void Menu::DrawVariantWorkbenchPane() {
   ValidateWorkbenchFilterSelection();
   DrawWorkbenchFilterBar();

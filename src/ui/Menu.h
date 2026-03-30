@@ -172,7 +172,6 @@ private:
                              bool a_insertAfter = false);
   void ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
                        int a_targetRowIndex, bool a_insertAfter);
-  void AcceptOverrideDeletePayload();
   void ClearCatalogSelection();
   [[nodiscard]] std::string BuildFavoriteKey(ui::catalog::BrowserTab a_tab,
                                              std::string_view a_id) const;

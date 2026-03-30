@@ -675,16 +675,26 @@ bool VariantWorkbench::SetConditionId(
     return false;
   }
 
-  auto &row = rows_[static_cast<std::size_t>(a_rowIndex)];
-  const auto nextKey = BuildRowKey(row.sourceKey, a_conditionId);
+  auto rowIndex = static_cast<std::size_t>(a_rowIndex);
+  const auto nextKey = BuildRowKey(rows_[rowIndex].sourceKey, a_conditionId);
   const auto duplicateIt =
       std::ranges::find_if(rows_, [&](const VariantWorkbenchRow &a_other) {
-        return &a_other != &row && a_other.key == nextKey;
+        return &a_other != &rows_[rowIndex] && a_other.key == nextKey;
       });
   if (duplicateIt != rows_.end()) {
-    return false;
+    if (!duplicateIt->HasOverridesOrHideState()) {
+      const auto duplicateIndex = static_cast<std::size_t>(
+          std::distance(rows_.begin(), duplicateIt));
+      DeleteRow(static_cast<int>(duplicateIndex));
+      if (duplicateIndex < rowIndex) {
+        --rowIndex;
+      }
+    } else {
+      return false;
+    }
   }
 
+  auto &row = rows_[rowIndex];
   row.conditionId = std::move(a_conditionId);
   UpdateRowIdentity(row);
   RebuildRowOrder();

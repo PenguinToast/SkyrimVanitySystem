@@ -7,6 +7,7 @@
 #include "workbench/ItemFactory.h"
 
 #include <algorithm>
+#include <string>
 
 namespace {
 constexpr char kIconEditorId[] = "\xee\x84\x8b";   // ICON_LC_LIST
@@ -343,6 +344,30 @@ DrawEquipmentWidget(const char *a_id,
       !result.deleteHovered && !ImGui::IsDragDropActive()) {
     DrawEquipmentInfoTooltip(tooltipId, result.hovered, a_item,
                              a_options.drawTooltipExtras);
+  }
+
+  if (ImGui::BeginPopupContextItem("##equipment-widget-context")) {
+    bool drewCustomEntries = false;
+    if (a_options.drawContextMenuEntries) {
+      a_options.drawContextMenuEntries();
+      drewCustomEntries = true;
+    }
+
+    if (a_options.showDeleteButton) {
+      if (drewCustomEntries) {
+        ImGui::Separator();
+      }
+      ImGui::PushStyleColor(ImGuiCol_Text, theme->GetColor("DECLINE"));
+      ImGui::BeginDisabled(a_options.disabledAppearance);
+      const std::string deleteLabel = std::string(kIconTrash) + " Delete";
+      if (ImGui::MenuItem(deleteLabel.c_str())) {
+        result.deleteClicked = true;
+      }
+      ImGui::EndDisabled();
+      ImGui::PopStyleColor();
+    }
+
+    ImGui::EndPopup();
   }
 
   ImGui::PopID();

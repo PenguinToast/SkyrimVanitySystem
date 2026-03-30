@@ -37,9 +37,7 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
   const auto &rowConflicts = conflictState.rowConflicts;
   const auto &overrideConflicts = conflictState.overrideConflicts;
 
-  constexpr float deletePaneHeight = 86.0f;
-  const auto tableHeight =
-      (std::max)(0.0f, ImGui::GetContentRegionAvail().y - deletePaneHeight);
+  const auto tableHeight = (std::max)(0.0f, ImGui::GetContentRegionAvail().y);
   if (ImGui::BeginChild("##variant-workbench-scroll", ImVec2(0.0f, tableHeight),
                         ImGuiChildFlags_None)) {
     if (ImGui::BeginTable("##variant-workbench", 3,
@@ -74,6 +72,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
       std::optional<DraggedEquipmentPayload> acceptedRowReorderPayload;
       int acceptedRowReorderIndex = -1;
       bool acceptedRowInsertAfter = false;
+      std::optional<std::pair<int, std::optional<std::string>>>
+          pendingConditionAssignment;
       bool suppressRowReorderPreview = false;
       std::unordered_map<std::string, ImRect> widgetRects;
       widgetRects.reserve(a_visibleRowIndices.size() * 3);
@@ -230,7 +230,25 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                                "%s", tooltipState.description.c_str());
                            ImGui::PopTextWrapPos();
                          }
-                       }}});
+                       }} ,
+             .drawContextMenuEntries = [&, rowIndex]() {
+               const auto &contextRow = rows[static_cast<std::size_t>(rowIndex)];
+               const auto &contextConditionState =
+                   rowConditionStates[static_cast<std::size_t>(rowIndex)];
+               if (ImGui::BeginMenu(contextConditionState.disabled ? "Enable Condition"
+                                                                   : "Set Condition")) {
+                 for (const auto &condition : ConditionDefinitions()) {
+                   const bool isCurrent =
+                       contextRow.conditionId.has_value() &&
+                       *contextRow.conditionId == condition.id;
+                   if (ImGui::MenuItem(condition.name.c_str(), nullptr, isCurrent)) {
+                     pendingConditionAssignment =
+                         std::pair{rowIndex, std::optional<std::string>(condition.id)};
+                    }
+                  }
+                  ImGui::EndMenu();
+               }
+             }});
         if (!equippedWidget.deleteHovered && ImGui::BeginDragDropSource()) {
           DraggedEquipmentPayload payload{};
           payload.sourceKind = static_cast<std::uint32_t>(DragSourceKind::Row);
@@ -243,25 +261,6 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
           ImGui::TextUnformatted(row.equipped.name.c_str());
           ImGui::Text("%s", row.equipped.slotText.c_str());
           ImGui::EndDragDropSource();
-        }
-        if (ImGui::BeginPopupContextItem(
-                ("##row-condition-context-" + std::to_string(rowIndex))
-                    .c_str())) {
-          if (ImGui::BeginMenu(conditionState.disabled ? "Enable Condition"
-                                                       : "Set Condition")) {
-            for (const auto &condition : ConditionDefinitions()) {
-              const bool isCurrent =
-                  row.conditionId.has_value() && *row.conditionId == condition.id;
-              if (ImGui::MenuItem(condition.name.c_str(), nullptr, isCurrent)) {
-                workbench_.SetConditionId(rowIndex, condition.id);
-              }
-            }
-            ImGui::EndMenu();
-          }
-          if (ImGui::MenuItem("Disable Row")) {
-            workbench_.SetConditionId(rowIndex, std::nullopt);
-          }
-          ImGui::EndPopup();
         }
         if (equippedWidget.deleteClicked) {
           workbench_.DeleteRow(rowIndex);
@@ -281,7 +280,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
             std::memcpy(&dragPayload, payload->Data, sizeof(dragPayload));
             const std::string conditionId(dragPayload.conditionId.data());
             if (!conditionId.empty()) {
-              workbench_.SetConditionId(rowIndex, conditionId);
+              pendingConditionAssignment =
+                  std::pair{rowIndex, std::optional<std::string>(conditionId)};
             }
           }
           ImGui::EndDragDropTarget();
@@ -511,25 +511,13 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
         ApplyWorkbenchRowDrop(*acceptedRowReorderPayload,
                               acceptedRowReorderIndex, acceptedRowInsertAfter);
       }
+      if (pendingConditionAssignment.has_value()) {
+        workbench_.SetConditionId(pendingConditionAssignment->first,
+                                  pendingConditionAssignment->second);
+      }
     }
     ImGui::EndChild();
   }
 
-  ImGui::Spacing();
-  ImGui::Separator();
-  ImGui::BeginChild(
-      "##override-delete-target", ImVec2(0.0f, 56.0f), ImGuiChildFlags_Borders,
-      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-  const auto deletePos = ImGui::GetWindowPos();
-  const auto deleteSize = ImGui::GetWindowSize();
-  ImGui::TextWrapped("Drag an override or row here to delete it.");
-  const ImRect deleteRect(deletePos, ImVec2(deletePos.x + deleteSize.x,
-                                            deletePos.y + deleteSize.y));
-  if (ImGui::BeginDragDropTargetCustom(
-          deleteRect, ImGui::GetID("##override-delete-drop"))) {
-    AcceptOverrideDeletePayload();
-    ImGui::EndDragDropTarget();
-  }
-  ImGui::EndChild();
 }
 } // namespace sosr
