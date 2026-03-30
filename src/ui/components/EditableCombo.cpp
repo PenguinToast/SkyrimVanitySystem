@@ -331,6 +331,12 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
           commitOption(option);
           ImGui::SetKeyboardFocusHere(-1);
         }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary) ||
+            ImGui::IsItemHovered()) {
+          ImGui::BeginTooltip();
+          ImGui::TextUnformatted(option.c_str());
+          ImGui::EndTooltip();
+        }
         if (selected) {
           ImGui::SetItemDefaultFocus();
           ImGui::SetScrollHereY();
