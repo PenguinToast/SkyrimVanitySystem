@@ -255,6 +255,8 @@ bool Menu::DrawConditionTab() {
 
   if (!ImGui::BeginTable("##conditions-table", 2,
                          ImGuiTableFlags_SizingStretchProp |
+                             ImGuiTableFlags_Resizable |
+                             ImGuiTableFlags_PadOuterX |
                              ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_BordersInnerV,
                          ImVec2(0.0f, 0.0f))) {
@@ -262,10 +264,7 @@ bool Menu::DrawConditionTab() {
   }
 
   ImGui::TableSetupColumn("Condition", ImGuiTableColumnFlags_WidthStretch);
-  ImGui::TableSetupColumn("Disable",
-                          ImGuiTableColumnFlags_WidthFixed |
-                              ImGuiTableColumnFlags_NoResize,
-                          72.0f);
+  ImGui::TableSetupColumn("Disable", ImGuiTableColumnFlags_WidthFixed, 72.0f);
   ImGui::TableHeadersRow();
   bool rowClicked = false;
   std::optional<std::size_t> pendingDeleteIndex;
