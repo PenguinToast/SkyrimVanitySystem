@@ -1,5 +1,6 @@
 #include "ConditionMaterializer.h"
 
+#include "conditions/Status.h"
 #include "conditions/GraphMetadata.h"
 #include "conditions/Lowering.h"
 #include "conditions/MaterializationState.h"
@@ -63,6 +64,7 @@ void RebuildConditionDependencyMetadata(std::vector<Definition> &a_conditions) {
       ++it;
     }
   }
+  PruneConditionStatusCache(a_conditions);
 
   GetConditionGraphMap() = std::move(rebuiltGraph);
 }
@@ -71,6 +73,7 @@ void InvalidateConditionMaterializationCaches(
     std::vector<Definition> &a_conditions) {
   (void)a_conditions;
   GetConditionRuntimeMap().clear();
+  ClearConditionStatusCache();
 }
 
 void InvalidateConditionMaterializationCachesFrom(
@@ -91,6 +94,7 @@ void InvalidateConditionMaterializationCachesFrom(
     }
 
     runtime.erase(conditionId);
+    EraseConditionStatusCache(conditionId);
 
     const auto graphIt = graph.find(conditionId);
     if (graphIt == graph.end()) {

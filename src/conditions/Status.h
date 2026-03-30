@@ -30,4 +30,10 @@ struct DefinitionStatus {
 [[nodiscard]] DefinitionStatus
 EvaluateDefinitionStatus(const Definition &a_definition,
                          const std::vector<Definition> &a_conditions);
+
+void PruneConditionStatusCache(const std::vector<Definition> &a_conditions);
+
+void ClearConditionStatusCache();
+
+void EraseConditionStatusCache(std::string_view a_conditionId);
 } // namespace sosr::conditions
