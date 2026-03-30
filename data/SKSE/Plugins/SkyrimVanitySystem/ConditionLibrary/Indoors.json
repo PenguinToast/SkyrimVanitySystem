@@ -1,6 +1,5 @@
 {
-  "id": "Indoors",
-  "description": "Applies while indoors in inhabited interior locations.",
+  "description": "Applies while indoors.",
   "clauses": [
     {
       "function": "IsInInterior",
