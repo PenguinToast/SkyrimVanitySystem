@@ -346,7 +346,11 @@ DrawEquipmentWidget(const char *a_id,
                              a_options.drawTooltipExtras);
   }
 
-  if (ImGui::BeginPopupContextItem("##equipment-widget-context")) {
+  const bool hasContextMenuEntries =
+      static_cast<bool>(a_options.drawContextMenuEntries) ||
+      a_options.showDeleteButton;
+  if (hasContextMenuEntries &&
+      ImGui::BeginPopupContextItem("##equipment-widget-context")) {
     bool drewCustomEntries = false;
     if (a_options.drawContextMenuEntries) {
       a_options.drawContextMenuEntries();

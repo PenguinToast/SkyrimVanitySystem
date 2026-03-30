@@ -81,6 +81,14 @@ void Menu::LoadUserSettings() {
     toggleKey_ = json.value("toggleKey", toggleKey_);
     toggleModifier_ = json.value("toggleModifier", toggleModifier_);
     themeName_ = json.value("theme", themeName_);
+    const auto hostMode = json.value("catalogHostMode", std::string("docked"));
+    if (hostMode == "popout") {
+      catalogPane_.hostMode = ui::catalog::HostMode::Popout;
+      catalogPane_.popoutOpen = true;
+    } else {
+      catalogPane_.hostMode = ui::catalog::HostMode::Docked;
+      catalogPane_.popoutOpen = false;
+    }
   } catch (const std::exception &exception) {
     logger::warn("Failed to parse user settings from {}: {}", userSettingsPath_,
                  exception.what());
@@ -110,7 +118,12 @@ void Menu::SaveUserSettings() const {
                                {"smoothScroll", smoothScroll_},
                                {"toggleKey", toggleKey_},
                                {"toggleModifier", toggleModifier_},
-                               {"theme", themeName_}};
+                               {"theme", themeName_},
+                               {"catalogHostMode",
+                                catalogPane_.hostMode ==
+                                        ui::catalog::HostMode::Popout
+                                    ? "popout"
+                                    : "docked"}};
   output << json.dump(2) << '\n';
 }
 

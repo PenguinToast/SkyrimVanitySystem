@@ -555,9 +555,6 @@ bool Menu::DrawConditionCatalogTable() {
     if (rowBodyHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
       OpenConditionEditorDialog(index);
     }
-    if (rowBodyHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-      ImGui::OpenPopup("##condition-row-context");
-    }
 
     auto *drawList = ImGui::GetWindowDrawList();
     auto *theme = ThemeConfig::GetSingleton();
@@ -654,7 +651,7 @@ bool Menu::DrawConditionCatalogTable() {
       }
     }
 
-    if (ImGui::BeginPopup("##condition-row-context")) {
+    if (!deleteHovered && ImGui::BeginPopupContextItem("##condition-row-context")) {
       if (ImGui::MenuItem("Edit")) {
         OpenConditionEditorDialog(index);
       }
@@ -933,10 +930,7 @@ void Menu::DrawConditionLibraryTable() {
       OpenConditionEditorDialog(index);
     }
     DrawConditionTooltip(condition, rowHovered, ConditionDefinitions(), false);
-    if (rowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-      ImGui::OpenPopup("##library-row-context");
-    }
-    if (ImGui::BeginPopup("##library-row-context")) {
+    if (ImGui::BeginPopupContextItem("##library-row-context")) {
       if (ImGui::MenuItem("Edit")) {
         OpenConditionEditorDialog(index);
       }

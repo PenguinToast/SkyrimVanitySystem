@@ -1,5 +1,7 @@
 #include "Menu.h"
 
+#include "ui/workbench/Common.h"
+
 namespace sosr {
 ui::components::EquipmentWidgetResult
 Menu::DrawCatalogDragWidget(const workbench::EquipmentWidgetItem &a_item,
@@ -16,7 +18,8 @@ Menu::DrawCatalogDragWidget(const workbench::EquipmentWidgetItem &a_item,
   payload.itemIndex = -1;
   payload.formID = a_item.formID;
   payload.slotMask = a_item.slotMask;
-  ImGui::SetDragDropPayload("SOSR_VARIANT_ITEM", &payload, sizeof(payload));
+  ImGui::SetDragDropPayload(ui::workbench::kVariantItemPayloadType, &payload,
+                            sizeof(payload));
   ImGui::TextUnformatted(a_item.name.c_str());
   ImGui::Text("%s", a_item.slotText.c_str());
   ImGui::EndDragDropSource();
