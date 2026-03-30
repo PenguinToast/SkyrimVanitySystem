@@ -24,6 +24,9 @@ struct VariantWorkbenchRow {
   bool isEquipped{false};
 
   [[nodiscard]] bool HasCondition() const { return conditionId.has_value(); }
+  [[nodiscard]] bool HasOverridesOrHideState() const {
+    return hideEquipped || !overrides.empty();
+  }
 
   [[nodiscard]] bool IsSlotRow() const { return equipped.IsSlot(); }
 
@@ -72,6 +75,8 @@ public:
   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   bool DeleteOverride(int a_rowIndex, int a_itemIndex);
   bool DeleteRow(int a_rowIndex);
+  std::size_t DeleteRowsByConditionId(std::string_view a_conditionId,
+                                      bool a_onlyIfEmpty);
   bool SetHideEquipped(int a_rowIndex, bool a_hideEquipped);
   bool ResetEquippedRows();
   void ResetAllRows();

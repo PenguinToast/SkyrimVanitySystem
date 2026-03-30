@@ -281,7 +281,8 @@ bool Menu::DrawConditionTab() {
       }
     }
     for (const auto &row : workbench_.GetRows()) {
-      if (row.conditionId && *row.conditionId == condition.id) {
+      if (row.conditionId && *row.conditionId == condition.id &&
+          row.HasOverridesOrHideState()) {
         ++deleteUsage.appliedRowCount;
       }
     }
@@ -483,6 +484,7 @@ bool Menu::DrawConditionTab() {
 
   if (pendingDeleteIndex && *pendingDeleteIndex < ConditionDefinitions().size()) {
     const auto deletedConditionId = ConditionDefinitions()[*pendingDeleteIndex].id;
+    workbench_.DeleteRowsByConditionId(deletedConditionId, true);
     ConditionDefinitions().erase(ConditionDefinitions().begin() +
                       static_cast<std::ptrdiff_t>(*pendingDeleteIndex));
     sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());

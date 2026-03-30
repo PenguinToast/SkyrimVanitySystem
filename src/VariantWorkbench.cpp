@@ -645,6 +645,30 @@ bool VariantWorkbench::DeleteRow(int a_rowIndex) {
   return true;
 }
 
+std::size_t VariantWorkbench::DeleteRowsByConditionId(
+    const std::string_view a_conditionId, const bool a_onlyIfEmpty) {
+  std::size_t removedCount = 0;
+
+  for (auto index = static_cast<int>(rows_.size()) - 1; index >= 0; --index) {
+    const auto &row = rows_[static_cast<std::size_t>(index)];
+    if (!row.conditionId.has_value() || *row.conditionId != a_conditionId) {
+      continue;
+    }
+    if (a_onlyIfEmpty && row.HasOverridesOrHideState()) {
+      continue;
+    }
+
+    rows_.erase(rows_.begin() + index);
+    ++removedCount;
+  }
+
+  if (removedCount != 0) {
+    RebuildRowOrder();
+  }
+
+  return removedCount;
+}
+
 bool VariantWorkbench::SetConditionId(
     const int a_rowIndex, std::optional<std::string> a_conditionId) {
   if (a_rowIndex < 0 || a_rowIndex >= static_cast<int>(rows_.size())) {
