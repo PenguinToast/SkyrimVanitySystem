@@ -13,6 +13,11 @@ IsBooleanComparator(sosr::conditions::Comparator a_comparator);
 [[nodiscard]] std::string BuildSuggestedConditionName(
     const std::vector<sosr::conditions::Definition> &a_conditions, int a_seed,
     const std::function<bool(std::string_view)> &a_extraConflict = {});
+[[nodiscard]] std::string BuildUniqueConditionName(
+    std::string_view a_baseName,
+    const std::vector<sosr::conditions::Definition> &a_conditions,
+    std::string_view a_excludedId = {},
+    const std::function<bool(std::string_view)> &a_reservedOrExtraConflict = {});
 [[nodiscard]] std::string ValidateConditionDraft(
     const sosr::conditions::Definition &a_definition,
     const std::vector<sosr::conditions::Definition> &a_conditions);

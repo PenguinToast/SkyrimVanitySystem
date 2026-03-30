@@ -1,6 +1,7 @@
 #include "ui/workbench/Tooltips.h"
 
 #include "ArmorUtils.h"
+#include "conditions/Status.h"
 #include "conditions/Validation.h"
 #include "ui/components/PinnableTooltip.h"
 
@@ -132,8 +133,9 @@ void DrawWorkbenchFilterOptionTooltip(
     if (const auto *condition =
             ::sosr::conditions::FindDefinitionById(a_conditions,
                                                    a_option.conditionId);
-        condition != nullptr) {
-      const auto color = ui::conditions::ToImGuiColor(condition->color);
+        condition != nullptr && condition->GetCatalog() != nullptr) {
+      const auto color =
+          ui::conditions::ToImGuiColor(condition->GetCatalog()->color);
       const float size = ImGui::GetTextLineHeight();
       const auto min = ImGui::GetCursorScreenPos();
       const auto max = ImVec2(min.x + size, min.y + size);
@@ -171,8 +173,32 @@ RowConditionVisualState ResolveRowConditionVisualState(
           ::sosr::conditions::FindDefinitionById(a_conditions,
                                                  *a_row.conditionId);
       condition != nullptr) {
-    state.color = ui::conditions::ToImGuiColor(condition->color);
-    if (!condition->enabled) {
+    if (const auto *catalog = condition->GetCatalog(); catalog != nullptr) {
+      state.color = ui::conditions::ToImGuiColor(catalog->color);
+    }
+    const auto conditionStatus =
+        ::sosr::conditions::EvaluateDefinitionStatus(*condition, a_conditions);
+    if (conditionStatus.IsBroken()) {
+      state.name = condition->name;
+      state.description = condition->description;
+      if (!state.description.empty()) {
+        state.description.append("\n\n");
+      }
+      state.description.append(
+          "This condition references missing conditions and will not apply.");
+      state.description.append("\nMissing: ");
+      for (std::size_t index = 0;
+           index < conditionStatus.missingDependencyIds.size(); ++index) {
+        if (index != 0) {
+          state.description.append(", ");
+        }
+        state.description.append(conditionStatus.missingDependencyIds[index]);
+      }
+      state.disabled = true;
+      state.brokenCondition = true;
+      return state;
+    }
+    if (conditionStatus.IsDisabled()) {
       state.name = condition->name;
       state.description = condition->description;
       if (!state.description.empty()) {

@@ -1,0 +1,87 @@
+{
+  "id": "Indoors",
+  "description": "Applies while indoors in inhabited interior locations.",
+  "clauses": [
+    {
+      "function": "IsInInterior",
+      "customConditionId": "",
+      "arg1": "",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "AND"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeCemetery",
+      "arg2": "",
+      "comparator": "==",
+      "value": "0",
+      "join": "AND"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeCastle",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "OR"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeDwelling",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "OR"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeGuild",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "OR"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeHabitation",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "OR"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeInn",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "OR"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeStore",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "OR"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeTemple",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "AND"
+    }
+  ]
+}

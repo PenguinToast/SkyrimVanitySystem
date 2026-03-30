@@ -25,6 +25,14 @@ FindDefinitionByName(const std::vector<Definition> &a_conditions,
 HasDependencyCycle(const Definition &a_draft,
                    const std::vector<Definition> &a_conditions);
 
+[[nodiscard]] std::vector<std::string>
+CollectMissingDependencyIds(const Definition &a_definition,
+                            const std::vector<Definition> &a_conditions);
+
+void RenameConditionReferences(std::vector<Definition> &a_definitions,
+                               std::string_view a_oldId,
+                               std::string_view a_newId);
+
 [[nodiscard]] std::string ValidateDefinitionNameAndGraph(
     const Definition &a_definition, const std::vector<Definition> &a_conditions,
     const std::function<bool(std::string_view)> &a_reservedNameConflict = {});

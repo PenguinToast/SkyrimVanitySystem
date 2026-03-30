@@ -20,6 +20,7 @@ struct RowConditionVisualState {
   bool disabled{false};
   bool missing{false};
   bool disabledCondition{false};
+  bool brokenCondition{false};
 };
 
 void DrawWrappedColoredTextRuns(

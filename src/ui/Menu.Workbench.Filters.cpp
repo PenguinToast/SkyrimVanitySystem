@@ -60,6 +60,9 @@ void Menu::BuildWorkbenchFilterOptions(
   }
 
   for (auto &condition : ConditionDefinitions()) {
+    if (!IsWorkbenchSelectableCondition(condition)) {
+      continue;
+    }
     const auto materialized =
         conditions::MaterializeConditionById(condition.id, ConditionDefinitions());
     if (!materialized.has_value()) {
@@ -101,9 +104,12 @@ void Menu::BuildWorkbenchFilterOptions(
     }
   }
 
-  if (!ConditionDefinitions().empty()) {
+  if (CountCatalogConditions() != 0) {
     a_options.push_back({.label = "Condition Filter", .isSection = true});
     for (const auto &condition : ConditionDefinitions()) {
+      if (!IsWorkbenchSelectableCondition(condition)) {
+        continue;
+      }
       a_options.push_back({.label = "Condition: " + condition.name,
                            .isSection = false,
                            .kind = WorkbenchFilterKind::Condition,

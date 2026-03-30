@@ -2,12 +2,15 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace sosr::conditions {
 inline constexpr std::string_view kDefaultConditionId = "condition-1";
+
+enum class DefinitionKind : std::uint8_t { Catalog, Library };
 
 enum class Comparator : std::uint8_t {
   Equal,
@@ -36,12 +39,64 @@ struct Color {
   float w{1.0f};
 };
 
+struct CatalogProperties {
+  Color color{};
+  bool enabled{true};
+};
+
+struct LibraryProperties {
+  std::string storagePath;
+};
+
 struct Definition {
   std::string id;
   std::string name;
   std::string description;
-  Color color{};
-  bool enabled{true};
+  DefinitionKind kind{DefinitionKind::Catalog};
+  std::optional<CatalogProperties> catalog;
+  std::optional<LibraryProperties> library;
   std::vector<Clause> clauses;
+
+  [[nodiscard]] bool IsCatalog() const {
+    return kind == DefinitionKind::Catalog;
+  }
+
+  [[nodiscard]] bool IsLibrary() const {
+    return kind == DefinitionKind::Library;
+  }
+
+  [[nodiscard]] const CatalogProperties *GetCatalog() const {
+    return catalog ? &*catalog : nullptr;
+  }
+
+  [[nodiscard]] CatalogProperties *GetCatalog() {
+    return catalog ? &*catalog : nullptr;
+  }
+
+  [[nodiscard]] const LibraryProperties *GetLibrary() const {
+    return library ? &*library : nullptr;
+  }
+
+  [[nodiscard]] LibraryProperties *GetLibrary() {
+    return library ? &*library : nullptr;
+  }
+
+  CatalogProperties &EnsureCatalog() {
+    kind = DefinitionKind::Catalog;
+    library.reset();
+    if (!catalog) {
+      catalog = CatalogProperties{};
+    }
+    return *catalog;
+  }
+
+  LibraryProperties &EnsureLibrary() {
+    kind = DefinitionKind::Library;
+    catalog.reset();
+    if (!library) {
+      library = LibraryProperties{};
+    }
+    return *library;
+  }
 };
 } // namespace sosr::conditions

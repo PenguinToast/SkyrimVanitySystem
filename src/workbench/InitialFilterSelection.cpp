@@ -5,6 +5,7 @@
 #include "StringUtils.h"
 #include "conditions/Creation.h"
 #include "conditions/Defaults.h"
+#include "conditions/Status.h"
 #include "conditions/Validation.h"
 
 #include <algorithm>
@@ -129,6 +130,9 @@ std::optional<std::string> FindFirstConditionForActorFilter(
     const RE::FormID a_actorFormID,
     std::vector<conditions::Definition> &a_conditions) {
   for (const auto &condition : a_conditions) {
+    if (!sosr::conditions::IsWorkbenchSelectable(condition)) {
+      continue;
+    }
     const auto materialized =
         conditions::MaterializeConditionById(condition.id, a_conditions);
     if (!materialized.has_value()) {
@@ -162,7 +166,9 @@ InitialFilterSelection BuildInitialFilterSelection(
     std::vector<conditions::Color> existingColors;
     existingColors.reserve(a_conditions.size());
     for (const auto &condition : a_conditions) {
-      existingColors.push_back(condition.color);
+      if (const auto *catalog = condition.GetCatalog(); catalog != nullptr) {
+        existingColors.push_back(catalog->color);
+      }
     }
 
     const auto baseName = BuildActorConditionBaseName(actor);

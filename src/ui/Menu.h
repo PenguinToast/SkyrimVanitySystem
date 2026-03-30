@@ -4,6 +4,7 @@
 #include "Keycode.h"
 #include "ThemeConfig.h"
 #include "VariantWorkbench.h"
+#include "conditions/Library.h"
 #include "conditions/Store.h"
 #include "components/EquipmentWidget.h"
 #include "imgui.h"
@@ -156,6 +157,8 @@ private:
   [[nodiscard]] bool DrawKitTab();
   [[nodiscard]] bool DrawSlotTab();
   [[nodiscard]] bool DrawConditionTab();
+  [[nodiscard]] bool DrawConditionCatalogTable();
+  void DrawConditionLibraryTable();
   void DrawOptionsTab();
   void DrawConditionEditorDialog();
   [[nodiscard]] bool DrawConditionEditorClauseTable(
@@ -219,9 +222,16 @@ private:
   void EnsureDefaultConditions();
   [[nodiscard]] int AllocateConditionEditorWindowSlot() const;
   void OpenNewConditionDialog();
+  void OpenNewLibraryConditionDialog();
   void OpenConditionEditorDialog(std::size_t a_index);
   void OpenConditionEditorDialogById(std::string_view a_conditionId);
   [[nodiscard]] bool SaveConditionEditor(ConditionEditorState &a_editor);
+  void ApplyLibraryChangeResult(const conditions::LibraryChangeResult &a_result);
+  void LoadConditionLibrary();
+  [[nodiscard]] std::size_t CountCatalogConditions() const;
+  [[nodiscard]] std::size_t CountLibraryConditions() const;
+  [[nodiscard]] bool IsWorkbenchSelectableCondition(
+      const ui::conditions::Definition &a_condition) const;
   [[nodiscard]] std::vector<const GearEntry *> BuildFilteredGear() const;
   [[nodiscard]] std::vector<const OutfitEntry *> BuildFilteredOutfits() const;
   [[nodiscard]] std::vector<const KitEntry *> BuildFilteredKits() const;

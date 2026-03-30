@@ -1,5 +1,6 @@
 #include "Menu.h"
 
+#include "conditions/Validation.h"
 #include "imgui_internal.h"
 #include "ui/TableReorder.h"
 #include "ui/WorkbenchConflicts.h"
@@ -27,7 +28,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
   auto rowsForConflicts = rows;
   for (std::size_t index = 0; index < rowsForConflicts.size(); ++index) {
     if (rowConditionStates[index].missing ||
-        rowConditionStates[index].disabledCondition) {
+        rowConditionStates[index].disabledCondition ||
+        rowConditionStates[index].brokenCondition) {
       rowsForConflicts[index].conditionId = std::nullopt;
     }
   }
@@ -238,6 +240,9 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                if (ImGui::BeginMenu(contextConditionState.disabled ? "Enable Condition"
                                                                    : "Set Condition")) {
                  for (const auto &condition : ConditionDefinitions()) {
+                   if (!IsWorkbenchSelectableCondition(condition)) {
+                     continue;
+                   }
                    const bool isCurrent =
                        contextRow.conditionId.has_value() &&
                        *contextRow.conditionId == condition.id;
@@ -280,6 +285,12 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
             std::memcpy(&dragPayload, payload->Data, sizeof(dragPayload));
             const std::string conditionId(dragPayload.conditionId.data());
             if (!conditionId.empty()) {
+              const auto *condition =
+                  conditions::FindDefinitionById(ConditionDefinitions(), conditionId);
+              if (!condition || !IsWorkbenchSelectableCondition(*condition)) {
+                ImGui::EndDragDropTarget();
+                continue;
+              }
               pendingConditionAssignment =
                   std::pair{rowIndex, std::optional<std::string>(conditionId)};
             }

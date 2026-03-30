@@ -3,6 +3,7 @@
 #include "ArmorUtils.h"
 #include "ConditionMaterializer.h"
 #include "ConditionRefreshTargets.h"
+#include "conditions/Status.h"
 #include "integrations/DynamicArmorVariantsExtendedClient.h"
 
 #include <nlohmann/json.hpp>
@@ -389,7 +390,12 @@ void VariantWorkbench::SyncDynamicArmorVariantsExtended(
     }
     const auto *condition =
         sosr::conditions::FindDefinitionById(a_conditions, *row.conditionId);
-    if (condition == nullptr || !condition->enabled) {
+    if (condition == nullptr ||
+        !sosr::conditions::IsWorkbenchSelectable(*condition)) {
+      continue;
+    }
+    if (!sosr::conditions::EvaluateDefinitionStatus(*condition, a_conditions)
+             .IsActive()) {
       continue;
     }
 

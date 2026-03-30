@@ -100,7 +100,15 @@ Definition BuildNewConditionTemplate(const std::string &a_name,
                                      const Color &a_color) {
   Definition definition;
   definition.name = a_name;
-  definition.color = a_color;
+  definition.EnsureCatalog().color = a_color;
+  definition.clauses.push_back(BuildDefaultPlayerClause());
+  return definition;
+}
+
+Definition BuildNewLibraryConditionTemplate(const std::string &a_name) {
+  Definition definition;
+  definition.name = a_name;
+  definition.EnsureLibrary();
   definition.clauses.push_back(BuildDefaultPlayerClause());
   return definition;
 }

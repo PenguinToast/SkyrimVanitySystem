@@ -29,6 +29,7 @@ using ui::condition_editor::ParseBooleanComparand;
 using ui::condition_editor::ResolveConditionFunctionInfo;
 using ui::condition_editor::ResolveEditorParamType;
 using ui::condition_widgets::DrawConditionColorSwatch;
+using ui::condition_widgets::DrawConditionPlaceholderSwatch;
 using ui::condition_widgets::DrawHoverDescription;
 
 constexpr char kIconTrash[] = "\xee\x86\x8c";        // ICON_LC_TRASH
@@ -268,9 +269,15 @@ bool Menu::DrawConditionEditorClauseTable(
     if (customCondition != nullptr) {
       const float swatchSize = ImGui::GetFrameHeight() - 2.0f;
       const float spacing = ImGui::GetStyle().ItemSpacing.x;
-      DrawConditionColorSwatch(
-          "##custom-condition-color", customCondition->color,
-          "Referenced custom condition color: " + customCondition->name);
+      if (customCondition->IsLibrary()) {
+        DrawConditionPlaceholderSwatch(
+            "##custom-condition-color",
+            "Referenced library condition: " + customCondition->name);
+      } else {
+        DrawConditionColorSwatch(
+            "##custom-condition-color", customCondition->GetCatalog()->color,
+            "Referenced custom condition color: " + customCondition->name);
+      }
       ImGui::SameLine(0.0f, spacing);
       functionWidth = (std::max)(0.0f, functionWidth - swatchSize - spacing);
     }

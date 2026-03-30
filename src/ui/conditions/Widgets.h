@@ -13,6 +13,8 @@ void DrawHoverDescription(std::string_view a_id, std::string_view a_text,
 void DrawConditionColorSwatch(const char *a_id,
                               const conditions::Color &a_color,
                               std::string_view a_tooltip);
+void DrawConditionPlaceholderSwatch(const char *a_id,
+                                    std::string_view a_tooltip);
 [[nodiscard]] float
 MeasureConditionRowHeight(const conditions::Definition &a_definition,
                           float a_wrapWidth);

@@ -1,6 +1,8 @@
 #include "Menu.h"
 
 #include "ConditionMaterializer.h"
+#include "conditions/Library.h"
+#include "ui/conditions/DraftValidation.h"
 
 #include <algorithm>
 #include <nlohmann/json.hpp>
@@ -86,12 +88,19 @@ void Menu::SerializeConditions(SKSE::SerializationInterface *a_skse) const {
                       {"conditions", nlohmann::json::array()}};
 
   for (const auto &condition : ConditionDefinitions()) {
+    if (!condition.IsCatalog()) {
+      continue;
+    }
+    const auto *catalog = condition.GetCatalog();
+    if (catalog == nullptr) {
+      continue;
+    }
     nlohmann::json conditionJson{
         {"id", condition.id},
         {"name", condition.name},
         {"description", condition.description},
-        {"color", SerializeConditionColor(condition.color)},
-        {"enabled", condition.enabled},
+        {"color", SerializeConditionColor(catalog->color)},
+        {"enabled", catalog->enabled},
         {"clauses", nlohmann::json::array()}};
     for (const auto &clause : condition.clauses) {
       conditionJson["clauses"].push_back(
@@ -156,7 +165,7 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
   int maxConditionId = 0;
   if (const auto conditionsIt = root.find("conditions");
       conditionsIt != root.end() && conditionsIt->is_array()) {
-    ConditionDefinitions().reserve(conditionsIt->size());
+    ConditionDefinitions().reserve(ConditionDefinitions().size() + conditionsIt->size());
     for (const auto &conditionJson : *conditionsIt) {
       if (!conditionJson.is_object()) {
         continue;
@@ -166,9 +175,10 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
       condition.id = conditionJson.value("id", std::string{});
       condition.name = conditionJson.value("name", std::string{});
       condition.description = conditionJson.value("description", std::string{});
-      condition.enabled = conditionJson.value("enabled", true);
-      condition.color = ParseConditionColor(
-          conditionJson.value("color", nlohmann::json{}), condition.color);
+      auto &catalog = condition.EnsureCatalog();
+      catalog.enabled = conditionJson.value("enabled", true);
+      catalog.color = ParseConditionColor(
+          conditionJson.value("color", nlohmann::json{}), catalog.color);
 
       if (const auto clausesIt = conditionJson.find("clauses");
           clausesIt != conditionJson.end() && clausesIt->is_array()) {
@@ -195,6 +205,13 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
 
       if (!condition.id.empty() && !condition.name.empty() &&
           !condition.clauses.empty()) {
+        if (conditions::FindDefinitionByName(ConditionDefinitions(),
+                                             condition.name) != nullptr ||
+            RE::SCRIPT_FUNCTION::LocateScriptCommand(condition.name.c_str()) !=
+                nullptr) {
+          condition.name = ui::condition_editor::BuildUniqueConditionName(
+              condition.name, ConditionDefinitions(), condition.id);
+        }
         if (condition.id.rfind("condition-", 0) == 0) {
           try {
             maxConditionId = (std::max)(
@@ -216,6 +233,7 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
 
 void Menu::RevertConditions() {
   ConditionDefinitions().clear();
+  LoadConditionLibrary();
   ConditionEditors().clear();
   NextConditionId() = 1;
 }

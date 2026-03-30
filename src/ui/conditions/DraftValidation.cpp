@@ -41,6 +41,38 @@ std::string BuildSuggestedConditionName(
   }
 }
 
+std::string BuildUniqueConditionName(
+    const std::string_view a_baseName,
+    const std::vector<Definition> &a_conditions,
+    const std::string_view a_excludedId,
+    const std::function<bool(std::string_view)> &a_reservedOrExtraConflict) {
+  auto baseName = TrimText(a_baseName);
+  if (baseName.empty()) {
+    baseName = "Condition";
+  }
+
+  const auto conflicts = [&](std::string_view a_candidate) {
+    if (FindConditionFunctionInfo(a_candidate) != nullptr ||
+        sosr::conditions::FindDefinitionByName(a_conditions, a_candidate,
+                                               a_excludedId) != nullptr) {
+      return true;
+    }
+    return a_reservedOrExtraConflict &&
+           a_reservedOrExtraConflict(a_candidate);
+  };
+
+  if (!conflicts(baseName)) {
+    return baseName;
+  }
+
+  for (int index = 2;; ++index) {
+    const auto candidate = baseName + " " + std::to_string(index);
+    if (!conflicts(candidate)) {
+      return candidate;
+    }
+  }
+}
+
 std::string ValidateConditionDraft(const Definition &a_definition,
                                    const std::vector<Definition> &a_conditions) {
   if (const auto baseValidation =

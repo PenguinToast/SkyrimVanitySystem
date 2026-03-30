@@ -20,6 +20,42 @@ ResolveDefinitionForValidation(const std::vector<Definition> &a_conditions,
   }
   return sosr::conditions::FindDefinitionById(a_conditions, a_conditionId);
 }
+
+void CollectMissingDependencyIdsRecursive(
+    const Definition &a_definition, const std::vector<Definition> &a_conditions,
+    std::vector<std::string> &a_missingIds,
+    std::vector<std::string_view> &a_visitStack) {
+  if (!a_definition.id.empty()) {
+    if (std::ranges::find(a_visitStack, std::string_view{a_definition.id}) !=
+        a_visitStack.end()) {
+      return;
+    }
+    a_visitStack.push_back(a_definition.id);
+  }
+
+  for (const auto &clause : a_definition.clauses) {
+    if (clause.customConditionId.empty()) {
+      continue;
+    }
+
+    const auto *referenced =
+        sosr::conditions::FindDefinitionById(a_conditions, clause.customConditionId);
+    if (!referenced) {
+      if (std::ranges::find(a_missingIds, clause.customConditionId) ==
+          a_missingIds.end()) {
+        a_missingIds.push_back(clause.customConditionId);
+      }
+      continue;
+    }
+
+    CollectMissingDependencyIdsRecursive(*referenced, a_conditions, a_missingIds,
+                                         a_visitStack);
+  }
+
+  if (!a_definition.id.empty()) {
+    a_visitStack.pop_back();
+  }
+}
 } // namespace
 
 namespace sosr::conditions {
@@ -103,6 +139,32 @@ bool HasDependencyCycle(const Definition &a_draft,
     }
   }
   return false;
+}
+
+std::vector<std::string>
+CollectMissingDependencyIds(const Definition &a_definition,
+                            const std::vector<Definition> &a_conditions) {
+  std::vector<std::string> missingIds;
+  std::vector<std::string_view> visitStack;
+  CollectMissingDependencyIdsRecursive(a_definition, a_conditions, missingIds,
+                                       visitStack);
+  return missingIds;
+}
+
+void RenameConditionReferences(std::vector<Definition> &a_definitions,
+                               std::string_view a_oldId,
+                               std::string_view a_newId) {
+  if (a_oldId.empty() || a_oldId == a_newId) {
+    return;
+  }
+
+  for (auto &definition : a_definitions) {
+    for (auto &clause : definition.clauses) {
+      if (clause.customConditionId == a_oldId) {
+        clause.customConditionId = std::string(a_newId);
+      }
+    }
+  }
 }
 
 std::string ValidateDefinitionNameAndGraph(

@@ -35,7 +35,11 @@ void Menu::DrawConditionEditorDialog() {
       continue;
     }
 
-    std::string title = editor.isNew ? "New Condition" : editor.draft.name;
+    const bool isLibraryEditor = editor.draft.IsLibrary();
+    std::string title =
+        editor.isNew ? (isLibraryEditor ? "New Library Condition"
+                                        : "New Condition")
+                     : editor.draft.name;
     if (title.empty()) {
       title = "Untitled";
     }
@@ -101,17 +105,29 @@ void Menu::DrawConditionEditorDialog() {
           "conditions:editor:description",
           "Optional description shown on the condition widget.");
 
-      auto color = editor.draft.color;
-      ImGui::SetNextItemWidth(
-          (std::min)(260.0f, ImGui::GetContentRegionAvail().x));
-      if (ImGui::ColorEdit3("##color", &color.x,
-                            ImGuiColorEditFlags_DisplayRGB)) {
-        color.w = 1.0f;
-        editor.draft.color = color;
+      if (!isLibraryEditor) {
+        auto color =
+            editor.draft.GetCatalog() != nullptr
+                ? editor.draft.GetCatalog()->color
+                : ui::conditions::Color{};
+        ImGui::SetNextItemWidth(
+            (std::min)(260.0f, ImGui::GetContentRegionAvail().x));
+        if (ImGui::ColorEdit3("##color", &color.x,
+                              ImGuiColorEditFlags_DisplayRGB)) {
+          color.w = 1.0f;
+          editor.draft.EnsureCatalog().color = color;
+        }
+        DrawHoverDescription(
+            "conditions:editor:color",
+            "Associated display color used by the Conditions catalog row.");
+      } else {
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextDisabled(
+            "Library conditions are reusable building blocks stored as JSON "
+            "files. They can be referenced by other conditions, but they are "
+            "never applied directly to workbench rows.");
+        ImGui::PopTextWrapPos();
       }
-      DrawHoverDescription(
-          "conditions:editor:color",
-          "Associated display color used by the Conditions catalog row.");
 
       ImGui::Spacing();
       ImGui::TextUnformatted("Clauses");

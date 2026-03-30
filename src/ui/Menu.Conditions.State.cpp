@@ -3,6 +3,8 @@
 #include "ConditionMaterializer.h"
 #include "conditions/Creation.h"
 #include "conditions/Defaults.h"
+#include "conditions/Library.h"
+#include "conditions/Status.h"
 #include "ui/conditions/EditorSupport.h"
 
 #include <algorithm>
@@ -12,6 +14,7 @@ using ConditionDefinition = ui::conditions::Definition;
 using ConditionFunctionInfo = ui::condition_editor::FunctionInfo;
 using ConditionValueEditorKind = ui::condition_editor::ValueEditorKind;
 using ui::condition_editor::BuildSuggestedConditionName;
+using ui::condition_editor::BuildUniqueConditionName;
 using ui::condition_editor::CompareTextInsensitive;
 using ui::condition_editor::FindConditionFunctionInfo;
 using ui::condition_editor::GetEditorKindForParamType;
@@ -21,8 +24,42 @@ using ui::condition_editor::ResolveEditorParamType;
 using ui::condition_editor::TrimText;
 using ui::condition_editor::ValidateConditionDraft;
 
+void PropagateConditionIdRenameToEditors(
+    std::vector<ui::conditions::editor::State> &a_editors,
+    const std::string_view a_oldId, const std::string_view a_newId) {
+  if (a_oldId.empty() || a_oldId == a_newId) {
+    return;
+  }
+
+  for (auto &editor : a_editors) {
+    if (editor.sourceConditionId == a_oldId) {
+      editor.sourceConditionId = std::string(a_newId);
+    }
+    if (editor.draft.id == a_oldId) {
+      editor.draft.id = std::string(a_newId);
+    }
+    for (auto &clause : editor.draft.clauses) {
+      if (clause.customConditionId == a_oldId) {
+        clause.customConditionId = std::string(a_newId);
+      }
+    }
+  }
+}
+
+bool EditorMatchesRenamedSource(
+    const ui::conditions::editor::State &a_editor,
+    const std::vector<std::pair<std::string, std::string>> &a_renamedIds) {
+  return std::ranges::any_of(
+      a_renamedIds, [&](const auto &a_rename) {
+        return a_editor.sourceConditionId == a_rename.second;
+      });
+}
+
 void Menu::EnsureDefaultConditions() {
-  if (!ConditionDefinitions().empty()) {
+  if (ConditionDefinitions().empty()) {
+    LoadConditionLibrary();
+  }
+  if (CountCatalogConditions() != 0) {
     return;
   }
 
@@ -30,6 +67,41 @@ void Menu::EnsureDefaultConditions() {
   NextConditionId() = 2;
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
   sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+}
+
+void Menu::LoadConditionLibrary() {
+  auto loaded = conditions::LoadConditionLibrary();
+  auto &definitions = ConditionDefinitions();
+  definitions.erase(
+      std::remove_if(definitions.begin(), definitions.end(),
+                     [](const ConditionDefinition &a_definition) {
+                       return a_definition.IsLibrary();
+                     }),
+      definitions.end());
+  definitions.insert(definitions.end(),
+                     std::make_move_iterator(loaded.begin()),
+                     std::make_move_iterator(loaded.end()));
+  sosr::conditions::RebuildConditionDependencyMetadata(definitions);
+  sosr::conditions::InvalidateConditionMaterializationCaches(definitions);
+}
+
+std::size_t Menu::CountCatalogConditions() const {
+  return static_cast<std::size_t>(std::ranges::count_if(
+      ConditionDefinitions(), [](const ConditionDefinition &a_definition) {
+        return a_definition.IsCatalog();
+      }));
+}
+
+std::size_t Menu::CountLibraryConditions() const {
+  return static_cast<std::size_t>(std::ranges::count_if(
+      ConditionDefinitions(), [](const ConditionDefinition &a_definition) {
+        return a_definition.IsLibrary();
+      }));
+}
+
+bool Menu::IsWorkbenchSelectableCondition(
+    const ConditionDefinition &a_condition) const {
+  return conditions::IsWorkbenchSelectable(a_condition);
 }
 
 int Menu::AllocateConditionEditorWindowSlot() const {
@@ -48,11 +120,16 @@ void Menu::OpenNewConditionDialog() {
   std::vector<ui::conditions::Color> existingColors;
   existingColors.reserve(ConditionDefinitions().size() + ConditionEditors().size());
   for (const auto &condition : ConditionDefinitions()) {
-    existingColors.push_back(condition.color);
+    if (const auto *catalog = condition.GetCatalog(); catalog != nullptr) {
+      existingColors.push_back(catalog->color);
+    }
   }
   for (const auto &existingEditor : ConditionEditors()) {
     if (existingEditor.isNew) {
-      existingColors.push_back(existingEditor.draft.color);
+      if (const auto *catalog = existingEditor.draft.GetCatalog();
+          catalog != nullptr) {
+        existingColors.push_back(catalog->color);
+      }
     }
   }
 
@@ -70,6 +147,25 @@ void Menu::OpenNewConditionDialog() {
   editor.windowSlot = AllocateConditionEditorWindowSlot();
   editor.draft = conditions::BuildNewConditionTemplate(
       suggestedName, conditions::PickDistinctConditionColor(existingColors));
+  editor.isNew = true;
+  editor.focusOnNextDraw = true;
+  ConditionEditors().push_back(std::move(editor));
+}
+
+void Menu::OpenNewLibraryConditionDialog() {
+  const auto suggestedName = BuildSuggestedConditionName(
+      ConditionDefinitions(), NextConditionId(), [&](std::string_view a_candidate) {
+        return std::ranges::any_of(
+            ConditionEditors(), [&](const ConditionEditorState &a_editor) {
+              return a_editor.isNew &&
+                     CompareTextInsensitive(TrimText(a_editor.draft.name),
+                                            a_candidate) == 0;
+            });
+      });
+
+  ConditionEditorState editor;
+  editor.windowSlot = AllocateConditionEditorWindowSlot();
+  editor.draft = conditions::BuildNewLibraryConditionTemplate(suggestedName);
   editor.isNew = true;
   editor.focusOnNextDraw = true;
   ConditionEditors().push_back(std::move(editor));
@@ -219,9 +315,41 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
   }
 
   a_editor.draft.name = TrimText(a_editor.draft.name);
-  a_editor.draft.color.w = 1.0f;
+  if (a_editor.draft.IsLibrary()) {
+    a_editor.draft.id = a_editor.draft.name;
+  }
+  if (auto *catalog = a_editor.draft.GetCatalog(); catalog != nullptr) {
+    catalog->color.w = 1.0f;
+  }
 
-  if (a_editor.isNew) {
+  if (a_editor.draft.IsLibrary() &&
+      !conditions::IsLibraryFileNameValid(a_editor.draft.name)) {
+    a_editor.error =
+        "Library condition names must be valid file names and cannot contain "
+        "\\ / : * ? \" < > |.";
+    return false;
+  }
+
+  if (a_editor.draft.IsLibrary()) {
+    conditions::LibraryChangeResult saveResult;
+    std::string saveError;
+    if (!conditions::CommitLibraryConditionEdit(
+            ConditionDefinitions(),
+            a_editor.isNew ? std::string_view{} : a_editor.sourceConditionId,
+            a_editor.draft, saveResult, saveError)) {
+      a_editor.error = saveError.empty() ? "Failed to save library condition."
+                                         : saveError;
+      return false;
+    }
+    ApplyLibraryChangeResult(saveResult);
+    if (const auto *savedDefinition =
+            conditions::FindDefinitionById(ConditionDefinitions(), a_editor.draft.id);
+        savedDefinition != nullptr) {
+      a_editor.draft = *savedDefinition;
+    }
+    a_editor.isNew = false;
+    a_editor.sourceConditionId = a_editor.draft.id;
+  } else if (a_editor.isNew) {
     a_editor.draft.id = conditions::BuildConditionId(NextConditionId()++);
     ConditionDefinitions().push_back(a_editor.draft);
     a_editor.isNew = false;
@@ -242,5 +370,26 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
 
   a_editor.error.clear();
   return true;
+}
+
+void Menu::ApplyLibraryChangeResult(
+    const conditions::LibraryChangeResult &a_result) {
+  ConditionDefinitions() = a_result.definitions;
+  for (const auto &[oldId, newId] : a_result.renamedIds) {
+    PropagateConditionIdRenameToEditors(ConditionEditors(), oldId, newId);
+  }
+  for (auto &editor : ConditionEditors()) {
+    if (!EditorMatchesRenamedSource(editor, a_result.renamedIds)) {
+      continue;
+    }
+    if (const auto *definition =
+            conditions::FindDefinitionById(ConditionDefinitions(),
+                                           editor.sourceConditionId);
+        definition != nullptr) {
+      editor.draft = *definition;
+    }
+  }
+  sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
+  sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
 }
 } // namespace sosr

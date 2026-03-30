@@ -31,6 +31,18 @@ void DrawConditionColorSwatch(const char *a_id,
   DrawHoverDescription(std::string(a_id), a_tooltip);
 }
 
+void DrawConditionPlaceholderSwatch(const char *a_id,
+                                    const std::string_view a_tooltip) {
+  const auto size = ImVec2(ImGui::GetFrameHeight() - 2.0f,
+                           ImGui::GetFrameHeight() - 2.0f);
+  const auto min = ImGui::GetCursorScreenPos();
+  const auto max = ImVec2(min.x + size.x, min.y + size.y);
+  ImGui::InvisibleButton(a_id, size);
+  ImGui::GetWindowDrawList()->AddRect(
+      min, max, ImGui::GetColorU32(ImGuiCol_Border), 3.0f);
+  DrawHoverDescription(std::string(a_id), a_tooltip);
+}
+
 float MeasureConditionRowHeight(const conditions::Definition &a_definition,
                                 const float a_wrapWidth) {
   const auto &style = ImGui::GetStyle();

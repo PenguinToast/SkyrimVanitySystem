@@ -23,7 +23,7 @@ Definition BuildDefaultPlayerCondition() {
   definition.id = std::string(kDefaultConditionId);
   definition.name = "Player";
   definition.description = "Applies to Player";
-  definition.color = kDefaultConditionColor;
+  definition.EnsureCatalog().color = kDefaultConditionColor;
   definition.clauses.push_back(BuildDefaultPlayerClause());
   return definition;
 }

@@ -159,21 +159,36 @@ BuildConditionFunctionItems(const std::vector<Definition> &a_conditions,
   const auto &infos = GetConditionFunctionInfos();
 
   std::vector<std::string> customNames;
+  std::vector<std::string> libraryNames;
   customNames.reserve(a_conditions.size());
+  libraryNames.reserve(a_conditions.size());
   for (const auto &condition : a_conditions) {
     if (condition.id == a_excludedConditionId) {
       continue;
     }
-    customNames.push_back(condition.name);
+    if (condition.IsLibrary()) {
+      libraryNames.push_back(condition.name);
+    } else {
+      customNames.push_back(condition.name);
+    }
   }
   std::ranges::sort(customNames, [](const auto &a_left, const auto &a_right) {
     return CompareTextInsensitive(a_left, a_right) < 0;
   });
+  std::ranges::sort(libraryNames, [](const auto &a_left, const auto &a_right) {
+    return CompareTextInsensitive(a_left, a_right) < 0;
+  });
 
-  items.reserve(customNames.size() + infos.size() + 2);
+  items.reserve(customNames.size() + libraryNames.size() + infos.size() + 3);
   if (!customNames.empty()) {
     items.push_back({.label = "Conditions", .value = std::nullopt});
     for (const auto &name : customNames) {
+      items.push_back({.label = name, .value = name});
+    }
+  }
+  if (!libraryNames.empty()) {
+    items.push_back({.label = "Condition Library", .value = std::nullopt});
+    for (const auto &name : libraryNames) {
       items.push_back({.label = name, .value = name});
     }
   }
