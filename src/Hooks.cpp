@@ -36,16 +36,24 @@ ShouldBlockKeyboardInputEvent(const RE::InputEvent *a_event) {
   }
 
   const auto *menu = sosr::Menu::GetSingleton();
-  if (!menu->IsEnabled() || !menu->WantsTextInput()) {
+  if (!menu->IsEnabled()) {
     return false;
   }
 
   switch (a_event->GetEventType()) {
   case RE::INPUT_EVENT_TYPE::kChar:
-    return true;
+    return menu->WantsTextInput();
   case RE::INPUT_EVENT_TYPE::kButton: {
     const auto *buttonEvent = static_cast<const RE::ButtonEvent *>(a_event);
-    return buttonEvent->device == RE::INPUT_DEVICE::kKeyboard;
+    if (buttonEvent->device != RE::INPUT_DEVICE::kKeyboard) {
+      return false;
+    }
+
+    if (buttonEvent->GetIDCode() == 0x0F) {
+      return true;
+    }
+
+    return menu->WantsTextInput();
   }
   default:
     return false;
