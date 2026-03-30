@@ -10,6 +10,7 @@
 #include "conditions/Status.h"
 #include "imgui_internal.h"
 #include "ui/TableReorder.h"
+#include "ui/catalog/Widgets.h"
 #include "ui/components/PinnableTooltip.h"
 #include "ui/conditions/DraftValidation.h"
 #include "ui/conditions/Widgets.h"
@@ -124,6 +125,7 @@ struct ConditionMoveToLibraryUsage {
 };
 
 constexpr char kIconTrash[] = "\xee\x86\x8c"; // ICON_LC_TRASH
+constexpr char kIconCircleHelp[] = "\xee\x82\x82"; // ICON_LC_CIRCLE_HELP
 [[nodiscard]] float ComputeCatalogConditionRowHeight(
     const ConditionDefinition &a_condition) {
   const auto &style = ImGui::GetStyle();
@@ -427,11 +429,18 @@ bool Menu::DrawConditionTab() {
   if (ImGui::BeginChild("##conditions-library-pane", ImVec2(0.0f, 0.0f),
                         ImGuiChildFlags_None)) {
     ImGui::TextUnformatted("Condition Library");
-    ui::condition_widgets::DrawHoverDescription(
-        "conditions:library:help",
-        "Reusable conditions stored as JSON files. Library conditions can be "
-        "composed into other conditions, but cannot be applied directly to "
-        "workbench rows.");
+    ImGui::SameLine();
+    ImGui::TextColored(ThemeConfig::GetSingleton()->GetColor("TEXT_DISABLED"),
+                       "%s", kIconCircleHelp);
+    const auto helpMin = ImGui::GetItemRectMin();
+    const auto helpSize = ImGui::GetItemRectSize();
+    ImGui::SetCursorScreenPos(helpMin);
+    ImGui::InvisibleButton("##conditions-library-help", helpSize);
+    ui::catalog::DrawCatalogTabHelpTooltip(
+        "conditions:library:help", ImGui::IsItemHovered(),
+        {"Reusable conditions stored as JSON files.",
+         "Library conditions can be composed into other conditions, but "
+         "cannot be applied directly to workbench rows."});
     ImGui::Spacing();
     DrawConditionLibraryTable();
   }
