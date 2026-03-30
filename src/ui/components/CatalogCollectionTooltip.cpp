@@ -135,7 +135,7 @@ auto BuildGroupedItemTree(
   grouped.reserve(a_items.size());
 
   for (const auto &item : a_items) {
-    const auto groupedChildren = BuildGroupedItemTree(item.children);
+    const auto groupedChildren = BuildGroupedItemTree(item.GetChildren());
     const bool isCollection = !groupedChildren.empty();
 
     auto existingIt = std::find_if(

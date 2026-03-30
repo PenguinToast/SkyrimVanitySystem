@@ -94,7 +94,7 @@ bool Menu::DrawKitTab() {
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
             workbench_.AddCatalogSelectionAsRows(
-                kit.armorFormIDs, ResolveNewWorkbenchRowConditionId());
+                kit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId());
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
@@ -160,7 +160,7 @@ bool Menu::DrawKitTab() {
         ImGui::TableSetColumnIndex(2);
         const auto availableWidth = ImGui::GetContentRegionAvail().x;
         const auto displayText =
-            ui::catalog::TruncateTextToWidth(kit.piecesText, availableWidth);
+            ui::catalog::TruncateTextToWidth(kit.GetPiecesText(), availableWidth);
         ImGui::TextUnformatted(displayText.c_str());
       }
     }
@@ -175,10 +175,10 @@ void Menu::AddKitEntryToWorkbench(const KitEntry &a_entry,
                                   const bool a_replaceExisting) {
   const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   if (a_replaceExisting) {
-    workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.armorFormIDs,
+    workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.GetArmorFormIDs(),
                                                   &visibleRowIndices);
   } else {
-    workbench_.AddCatalogSelectionToWorkbench(a_entry.armorFormIDs,
+    workbench_.AddCatalogSelectionToWorkbench(a_entry.GetArmorFormIDs(),
                                               &visibleRowIndices);
   }
 }
@@ -351,7 +351,7 @@ bool Menu::DeletePendingKit() {
 
 void Menu::PreviewKitEntry(const KitEntry &a_entry) {
   const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
-  workbench_.ApplyCatalogPreview(a_entry.id, a_entry.armorFormIDs,
+  workbench_.ApplyCatalogPreview(a_entry.id, a_entry.GetArmorFormIDs(),
                                  ResolveWorkbenchPreviewActor(),
                                  &visibleRowIndices);
 }

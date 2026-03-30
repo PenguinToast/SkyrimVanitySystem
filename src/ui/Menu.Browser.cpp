@@ -135,10 +135,10 @@ void Menu::AddOutfitEntryToWorkbench(const OutfitEntry &a_entry,
                                      const bool a_replaceExisting) {
   const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   if (a_replaceExisting) {
-    workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.armorFormIDs,
+    workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.GetArmorFormIDs(),
                                                   &visibleRowIndices);
   } else {
-    workbench_.AddCatalogSelectionToWorkbench(a_entry.armorFormIDs,
+    workbench_.AddCatalogSelectionToWorkbench(a_entry.GetArmorFormIDs(),
                                               &visibleRowIndices);
   }
 }
@@ -152,7 +152,7 @@ void Menu::PreviewGearEntry(const GearEntry &a_entry) {
 
 void Menu::PreviewOutfitEntry(const OutfitEntry &a_entry) {
   const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
-  workbench_.ApplyCatalogPreview(a_entry.id, a_entry.armorFormIDs,
+  workbench_.ApplyCatalogPreview(a_entry.id, a_entry.GetArmorFormIDs(),
                                  ResolveWorkbenchPreviewActor(),
                                  &visibleRowIndices);
 }

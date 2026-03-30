@@ -136,6 +136,10 @@ private:
   void OnMenuHide();
   void HandleCancel();
   void DrawWindow();
+  void DrawCatalogWindow();
+  void DrawCatalogHostControls(bool a_inPopout);
+  void DrawCatalogHostBody(bool a_drawBodyChild);
+  void DrawCatalogPaneBody();
   void QueueCatalogRefresh(
       ui::catalog::RefreshMode a_mode = ui::catalog::RefreshMode::Full);
   void UpdateCatalogRefresh();
@@ -189,7 +193,7 @@ private:
   [[nodiscard]] bool
   MatchesSelectedSlotsOr(const std::vector<std::string> &a_slots) const;
   [[nodiscard]] bool
-  MatchesSelectedSlotsAnd(const std::vector<std::string> &a_slots) const;
+  MatchesSelectedSlotsAnd(std::uint64_t a_slotMask) const;
   [[nodiscard]] std::string BuildSelectedSlotPreview() const;
 
   [[nodiscard]] bool MatchesGearFilters(const GearEntry &a_entry) const;

@@ -9,45 +9,8 @@
 #include <unordered_set>
 
 namespace {
-using BipedSlot = RE::BIPED_MODEL::BipedObjectSlot;
-
 const auto kModexKitPath =
     std::filesystem::path("data") / "interface" / "modex" / "user" / "kits";
-
-constexpr std::array<std::pair<BipedSlot, std::string_view>, 32>
-    kArmorSlotNames{
-        {{BipedSlot::kHead, "30 - Head"},
-         {BipedSlot::kHair, "31 - Hair"},
-         {BipedSlot::kBody, "32 - Body"},
-         {BipedSlot::kHands, "33 - Hands"},
-         {BipedSlot::kForearms, "34 - Forearms"},
-         {BipedSlot::kAmulet, "35 - Amulet"},
-         {BipedSlot::kRing, "36 - Ring"},
-         {BipedSlot::kFeet, "37 - Feet"},
-         {BipedSlot::kCalves, "38 - Calves"},
-         {BipedSlot::kShield, "39 - Shield"},
-         {BipedSlot::kTail, "40 - Tail"},
-         {BipedSlot::kLongHair, "41 - Long Hair"},
-         {BipedSlot::kCirclet, "42 - Circlet"},
-         {BipedSlot::kEars, "43 - Ears"},
-         {BipedSlot::kModMouth, "44 - Mod Mouth"},
-         {BipedSlot::kModNeck, "45 - Mod Neck"},
-         {BipedSlot::kModChestPrimary, "46 - Mod Chest Primary"},
-         {BipedSlot::kModBack, "47 - Mod Back"},
-         {BipedSlot::kModMisc1, "48 - Mod Misc1"},
-         {BipedSlot::kModPelvisPrimary, "49 - Mod Pelvis Primary"},
-         {BipedSlot::kDecapitateHead, "50 - Decapitate Head"},
-         {BipedSlot::kDecapitate, "51 - Decapitate"},
-         {BipedSlot::kModPelvisSecondary, "52 - Mod Pelvis Secondary"},
-         {BipedSlot::kModLegRight, "53 - Mod Leg Right"},
-         {BipedSlot::kModLegLeft, "54 - Mod Leg Left"},
-         {BipedSlot::kModFaceJewelry, "55 - Mod Face Jewelry"},
-         {BipedSlot::kModChestSecondary, "56 - Mod Chest Secondary"},
-         {BipedSlot::kModShoulder, "57 - Mod Shoulder"},
-         {BipedSlot::kModArmLeft, "58 - Mod Arm Left"},
-         {BipedSlot::kModArmRight, "59 - Mod Arm Right"},
-         {BipedSlot::kModMisc2, "60 - Mod Misc2"},
-         {BipedSlot::kFX01, "61 - FX01"}}};
 
 template <class Strings> std::string JoinStrings(const Strings &a_strings) {
   std::string output;
@@ -104,24 +67,31 @@ std::string GetArmorCategory(const RE::TESObjectARMO *a_armor) {
 }
 
 std::vector<std::string> GetArmorSlots(const RE::TESObjectARMO *a_armor) {
-  std::vector<std::string> slots;
+  return sosr::armor::GetArmorSlotLabels(a_armor ? a_armor->GetSlotMask().underlying()
+                                                 : 0);
+}
+
+const sosr::ArmorMetadata &
+GetOrBuildArmorMetadata(const RE::TESObjectARMO *a_armor,
+                        std::unordered_map<RE::FormID, sosr::ArmorMetadata>
+                            &a_cache) {
+  static const sosr::ArmorMetadata kEmptyMetadata{};
   if (!a_armor) {
-    return slots;
+    return kEmptyMetadata;
   }
 
-  const auto slotMask = a_armor->GetSlotMask().underlying();
-  for (const auto &[slot, label] : kArmorSlotNames) {
-    if ((slotMask & static_cast<std::uint32_t>(std::to_underlying(slot))) !=
-        0) {
-      slots.emplace_back(label);
-    }
+  const auto formID = a_armor->GetFormID();
+  const auto it = a_cache.find(formID);
+  if (it != a_cache.end()) {
+    return it->second;
   }
 
-  if (slots.empty()) {
-    slots.emplace_back("None");
-  }
-
-  return slots;
+  sosr::ArmorMetadata metadata{};
+  metadata.displayName = sosr::armor::GetDisplayName(a_armor);
+  metadata.category = GetArmorCategory(a_armor);
+  metadata.slotMask = a_armor->GetSlotMask().underlying();
+  metadata.slots = sosr::armor::GetArmorSlotLabels(metadata.slotMask);
+  return a_cache.emplace(formID, std::move(metadata)).first->second;
 }
 
 std::string GetPrimaryArmorSlot(const RE::TESObjectARMO *a_armor) {
@@ -131,7 +101,7 @@ std::string GetPrimaryArmorSlot(const RE::TESObjectARMO *a_armor) {
 
 sosr::CatalogCollectionItemNode BuildCachedCollectionNode(
     const RE::TESForm *a_form, const std::int32_t a_level,
-    std::vector<sosr::CatalogCollectionItemNode> a_children = {}) {
+    std::shared_ptr<const sosr::CatalogCollectionChildren> a_children = {}) {
   sosr::CatalogCollectionItemNode node{};
   node.formID = a_form ? a_form->GetFormID() : 0;
   node.level = a_level;
@@ -143,6 +113,15 @@ sosr::CatalogCollectionItemNode BuildCachedCollectionNode(
 
   node.cachedName = sosr::armor::GetDisplayName(a_form);
   return node;
+}
+
+std::shared_ptr<const sosr::CatalogCollectionChildren>
+MakeSharedChildren(std::vector<sosr::CatalogCollectionItemNode> a_children) {
+  if (a_children.empty()) {
+    return {};
+  }
+  return std::make_shared<const sosr::CatalogCollectionChildren>(
+      std::move(a_children));
 }
 
 template <class T> std::vector<std::string> GetKeywords(const T *a_form) {
@@ -207,8 +186,7 @@ std::string BuildOutfitSearchText(const sosr::OutfitEntry &a_entry) {
   AppendSearchToken(text, a_entry.editorID);
   AppendSearchToken(text, a_entry.plugin);
   AppendSearchToken(text, a_entry.summary);
-  AppendSearchToken(text, a_entry.tagsText);
-  AppendSearchToken(text, a_entry.piecesText);
+  AppendSearchToken(text, a_entry.GetPiecesText());
 
   return text;
 }
@@ -220,8 +198,7 @@ std::string BuildKitSearchText(const sosr::KitEntry &a_entry) {
   AppendSearchToken(text, a_entry.name);
   AppendSearchToken(text, a_entry.collection);
   AppendSearchToken(text, a_entry.summary);
-  AppendSearchToken(text, a_entry.piecesText);
-  AppendSearchToken(text, a_entry.slotsText);
+  AppendSearchToken(text, a_entry.GetPiecesText());
 
   return text;
 }
@@ -230,8 +207,6 @@ struct OutfitDescription {
   std::vector<RE::FormID> armorFormIDs;
   std::vector<sosr::CatalogCollectionItemNode> itemTree;
   std::vector<std::string> pieces;
-  std::vector<std::string> slots;
-  std::vector<std::string> tags;
   std::size_t armorCount{0};
 };
 
@@ -239,7 +214,6 @@ struct KitDescription {
   std::vector<RE::FormID> armorFormIDs;
   std::vector<sosr::CatalogCollectionItemNode> itemTree;
   std::vector<std::string> pieces;
-  std::vector<std::string> slots;
   bool hasMissingItems{false};
 };
 
@@ -249,10 +223,6 @@ void AppendCachedLeveledListDescription(
     std::unordered_set<RE::FormID> &a_seenArmor) {
   a_description.pieces.insert(a_description.pieces.end(),
                               a_cache.pieces.begin(), a_cache.pieces.end());
-  a_description.slots.insert(a_description.slots.end(), a_cache.slots.begin(),
-                             a_cache.slots.end());
-  a_description.tags.insert(a_description.tags.end(), a_cache.tags.begin(),
-                            a_cache.tags.end());
   for (const auto formID : a_cache.armorFormIDs) {
     if (a_seenArmor.insert(formID).second) {
       a_description.armorFormIDs.push_back(formID);
@@ -264,7 +234,8 @@ void AppendCachedLeveledListDescription(
 auto GetOrBuildLeveledListCache(
     const RE::FormID a_formID, const RE::TESLeveledList *a_list,
     std::unordered_map<RE::FormID, sosr::ResolvedReferenceCollection> &a_cache,
-    std::unordered_set<RE::FormID> &a_activeLeveledLists)
+    std::unordered_set<RE::FormID> &a_activeLeveledLists,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache)
     -> const sosr::ResolvedReferenceCollection & {
   const auto cacheIt = a_cache.find(a_formID);
   if (cacheIt != a_cache.end()) {
@@ -272,6 +243,7 @@ auto GetOrBuildLeveledListCache(
   }
 
   sosr::ResolvedReferenceCollection built;
+  std::vector<sosr::CatalogCollectionItemNode> builtItemTree;
   if (!a_activeLeveledLists.insert(a_formID).second) {
     return a_cache.emplace(a_formID, std::move(built)).first->second;
   }
@@ -285,22 +257,16 @@ auto GetOrBuildLeveledListCache(
     }
 
     if (const auto *armor = form->As<RE::TESObjectARMO>()) {
+      const auto &metadata =
+          GetOrBuildArmorMetadata(armor, a_armorMetadataCache);
       if (seenDirectArmorChildren.insert(armor->GetFormID()).second) {
-        built.itemTree.push_back(
+        builtItemTree.push_back(
             {.formID = armor->GetFormID(), .level = entry.level});
       }
-      built.pieces.push_back(sosr::armor::GetDisplayName(armor));
+      built.pieces.push_back(metadata.displayName);
 
       if (seenArmorForms.insert(armor->GetFormID()).second) {
         built.armorFormIDs.push_back(armor->GetFormID());
-        built.tags.emplace_back("Armor");
-        built.tags.push_back(GetArmorCategory(armor));
-
-        auto slots = GetArmorSlots(armor);
-        built.slots.insert(built.slots.end(), slots.begin(), slots.end());
-        built.tags.insert(built.tags.end(),
-                          std::make_move_iterator(slots.begin()),
-                          std::make_move_iterator(slots.end()));
       }
       continue;
     }
@@ -312,15 +278,12 @@ auto GetOrBuildLeveledListCache(
       }
 
       const auto &nestedCache = GetOrBuildLeveledListCache(
-          form->GetFormID(), nestedList, a_cache, a_activeLeveledLists);
-      built.itemTree.push_back(
+          form->GetFormID(), nestedList, a_cache, a_activeLeveledLists,
+          a_armorMetadataCache);
+      builtItemTree.push_back(
           BuildCachedCollectionNode(form, entry.level, nestedCache.itemTree));
       built.pieces.insert(built.pieces.end(), nestedCache.pieces.begin(),
                           nestedCache.pieces.end());
-      built.slots.insert(built.slots.end(), nestedCache.slots.begin(),
-                         nestedCache.slots.end());
-      built.tags.insert(built.tags.end(), nestedCache.tags.begin(),
-                        nestedCache.tags.end());
       for (const auto formID : nestedCache.armorFormIDs) {
         if (seenArmorForms.insert(formID).second) {
           built.armorFormIDs.push_back(formID);
@@ -329,25 +292,28 @@ auto GetOrBuildLeveledListCache(
       continue;
     }
 
-    built.itemTree.push_back(BuildCachedCollectionNode(form, entry.level));
+    builtItemTree.push_back(BuildCachedCollectionNode(form, entry.level));
     built.pieces.push_back(sosr::armor::GetDisplayName(form));
   }
 
   a_activeLeveledLists.erase(a_formID);
   SortUniqueStrings(built.pieces);
-  SortUniqueStrings(built.slots);
-  SortUniqueStrings(built.tags);
+  built.itemTree = MakeSharedChildren(std::move(builtItemTree));
   return a_cache.emplace(a_formID, std::move(built)).first->second;
 }
 
 void AccumulateArmorDescription(const RE::TESObjectARMO *a_armor,
                                 OutfitDescription &a_description,
-                                std::unordered_set<RE::FormID> &a_seenArmor) {
+                                std::unordered_set<RE::FormID> &a_seenArmor,
+                                std::unordered_map<RE::FormID, sosr::ArmorMetadata>
+                                    &a_armorMetadataCache) {
   if (!a_armor) {
     return;
   }
 
-  a_description.pieces.push_back(sosr::armor::GetDisplayName(a_armor));
+  a_description.pieces.push_back(
+      GetOrBuildArmorMetadata(a_armor, a_armorMetadataCache)
+          .displayName);
 
   if (!a_seenArmor.insert(a_armor->GetFormID()).second) {
     return;
@@ -355,15 +321,6 @@ void AccumulateArmorDescription(const RE::TESObjectARMO *a_armor,
 
   a_description.armorFormIDs.push_back(a_armor->GetFormID());
   ++a_description.armorCount;
-  a_description.tags.emplace_back("Armor");
-  a_description.tags.push_back(GetArmorCategory(a_armor));
-
-  auto slots = GetArmorSlots(a_armor);
-  a_description.slots.insert(a_description.slots.end(), slots.begin(),
-                             slots.end());
-  a_description.tags.insert(a_description.tags.end(),
-                            std::make_move_iterator(slots.begin()),
-                            std::make_move_iterator(slots.end()));
 }
 
 auto BuildOutfitItemNode(
@@ -371,13 +328,16 @@ auto BuildOutfitItemNode(
     std::unordered_set<RE::FormID> &a_seenArmor,
     std::unordered_set<RE::FormID> &a_activeLeveledLists,
     std::unordered_map<RE::FormID, sosr::ResolvedReferenceCollection>
-        &a_leveledListCache) -> std::optional<sosr::CatalogCollectionItemNode> {
+        &a_leveledListCache,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata>
+        &a_armorMetadataCache) -> std::optional<sosr::CatalogCollectionItemNode> {
   if (!a_item || a_item->IsDeleted() || a_item->IsIgnored()) {
     return std::nullopt;
   }
 
   if (const auto *armor = a_item->As<RE::TESObjectARMO>()) {
-    AccumulateArmorDescription(armor, a_description, a_seenArmor);
+    AccumulateArmorDescription(armor, a_description, a_seenArmor,
+                               a_armorMetadataCache);
     return sosr::CatalogCollectionItemNode{.formID = armor->GetFormID()};
   }
 
@@ -388,7 +348,8 @@ auto BuildOutfitItemNode(
     }
 
     const auto &cache = GetOrBuildLeveledListCache(
-        a_item->GetFormID(), list, a_leveledListCache, a_activeLeveledLists);
+        a_item->GetFormID(), list, a_leveledListCache, a_activeLeveledLists,
+        a_armorMetadataCache);
     AppendCachedLeveledListDescription(cache, a_description, a_seenArmor);
     return BuildCachedCollectionNode(a_item, -1, cache.itemTree);
   }
@@ -400,7 +361,9 @@ auto BuildOutfitItemNode(
 OutfitDescription
 DescribeOutfit(const RE::BGSOutfit *a_outfit,
                std::unordered_map<RE::FormID, sosr::ResolvedReferenceCollection>
-                   &a_leveledListCache) {
+                   &a_leveledListCache,
+               std::unordered_map<RE::FormID, sosr::ArmorMetadata>
+                   &a_armorMetadataCache) {
   OutfitDescription description;
   if (!a_outfit) {
     return description;
@@ -412,7 +375,8 @@ DescribeOutfit(const RE::BGSOutfit *a_outfit,
   a_outfit->ForEachItem([&](RE::TESForm *a_item) {
     if (const auto node =
             BuildOutfitItemNode(a_item, description, seenArmorForms,
-                                activeLeveledLists, a_leveledListCache)) {
+                                activeLeveledLists, a_leveledListCache,
+                                a_armorMetadataCache)) {
       description.itemTree.push_back(*node);
     }
 
@@ -420,9 +384,38 @@ DescribeOutfit(const RE::BGSOutfit *a_outfit,
   });
 
   SortUniqueStrings(description.pieces);
-  SortUniqueStrings(description.slots);
-  SortUniqueStrings(description.tags);
   return description;
+}
+
+std::shared_ptr<const sosr::CatalogResolvedData>
+FinalizeResolvedData(std::vector<RE::FormID> a_armorFormIDs,
+                     std::vector<sosr::CatalogCollectionItemNode> a_itemTree,
+                     std::vector<std::string> a_pieces,
+                     std::unordered_map<RE::FormID, sosr::ArmorMetadata>
+                         &a_armorMetadataCache) {
+  auto resolved = std::make_shared<sosr::CatalogResolvedData>();
+  resolved->armorFormIDs = std::move(a_armorFormIDs);
+  resolved->itemTree = MakeSharedChildren(std::move(a_itemTree));
+  resolved->pieces = std::move(a_pieces);
+
+  for (const auto formID : resolved->armorFormIDs) {
+    const auto *armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(formID);
+    if (!armor) {
+      continue;
+    }
+
+    const auto metadataIt = a_armorMetadataCache.find(formID);
+    const auto &metadata =
+        metadataIt != a_armorMetadataCache.end()
+            ? metadataIt->second
+            : GetOrBuildArmorMetadata(armor, a_armorMetadataCache);
+
+    resolved->slotMask |= metadata.slotMask;
+  }
+
+  SortUniqueStrings(resolved->pieces);
+  resolved->piecesText = JoinStrings(resolved->pieces);
+  return resolved;
 }
 
 std::string BuildOutfitSummary(const OutfitDescription &a_description) {
@@ -466,7 +459,9 @@ nlohmann::json OpenJsonFile(const std::filesystem::path &a_path) {
   }
 }
 
-KitDescription DescribeKitItems(const nlohmann::json &a_items) {
+KitDescription DescribeKitItems(
+    const nlohmann::json &a_items,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   KitDescription description;
   if (!a_items.is_object()) {
     return description;
@@ -490,16 +485,12 @@ KitDescription DescribeKitItems(const nlohmann::json &a_items) {
     }
 
     description.armorFormIDs.push_back(armor->GetFormID());
-    description.pieces.push_back(sosr::armor::GetDisplayName(armor));
+    const auto &metadata = GetOrBuildArmorMetadata(armor, a_armorMetadataCache);
+    description.pieces.push_back(metadata.displayName);
     description.itemTree.push_back({.formID = armor->GetFormID()});
-
-    auto slots = GetArmorSlots(armor);
-    description.slots.insert(description.slots.end(), slots.begin(),
-                             slots.end());
   }
 
   SortUniqueStrings(description.pieces);
-  SortUniqueStrings(description.slots);
   return description;
 }
 
@@ -521,14 +512,17 @@ std::string BuildKitSummary(const KitDescription &a_description) {
 namespace sosr::catalog {
 const std::filesystem::path &GetModexKitPath() { return kModexKitPath; }
 
-std::optional<GearEntry> BuildGearEntry(RE::TESObjectARMO *a_armor) {
+std::optional<GearEntry> BuildGearEntry(
+    RE::TESObjectARMO *a_armor,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   if (!a_armor || a_armor->IsDeleted() || a_armor->IsIgnored() ||
       !a_armor->GetFile(0)) {
     return std::nullopt;
   }
 
   const auto editorID = sosr::armor::GetEditorID(a_armor);
-  auto displayName = GetName(a_armor);
+  const auto &metadata = GetOrBuildArmorMetadata(a_armor, a_armorMetadataCache);
+  auto displayName = metadata.displayName;
   if (displayName.empty()) {
     displayName = editorID;
   }
@@ -542,8 +536,8 @@ std::optional<GearEntry> BuildGearEntry(RE::TESObjectARMO *a_armor) {
   entry.name = std::move(displayName);
   entry.editorID = editorID;
   entry.plugin = sosr::armor::GetPluginName(a_armor);
-  entry.category = GetArmorCategory(a_armor);
-  entry.slots = GetArmorSlots(a_armor);
+  entry.category = metadata.category;
+  entry.slots = metadata.slots;
   entry.slot = entry.slots.empty() ? std::string{} : entry.slots.front();
   entry.statValue = static_cast<int>(a_armor->GetArmorRating());
   entry.weight = a_armor->GetWeight();
@@ -560,13 +554,15 @@ std::optional<GearEntry> BuildGearEntry(RE::TESObjectARMO *a_armor) {
 std::optional<OutfitEntry> BuildOutfitEntry(
     const RE::BGSOutfit *a_outfit,
     std::unordered_map<RE::FormID, ResolvedReferenceCollection>
-        &a_leveledListCache) {
+        &a_leveledListCache,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   if (!a_outfit || a_outfit->IsDeleted() || a_outfit->IsIgnored() ||
       !a_outfit->GetFile(0)) {
     return std::nullopt;
   }
 
-  auto description = DescribeOutfit(a_outfit, a_leveledListCache);
+  auto description =
+      DescribeOutfit(a_outfit, a_leveledListCache, a_armorMetadataCache);
   if (description.pieces.empty()) {
     return std::nullopt;
   }
@@ -587,19 +583,17 @@ std::optional<OutfitEntry> BuildOutfitEntry(
   entry.editorID = std::move(editorID);
   entry.plugin = sosr::armor::GetPluginName(a_outfit);
   entry.summary = BuildOutfitSummary(description);
-  entry.armorFormIDs = std::move(description.armorFormIDs);
-  entry.itemTree = std::move(description.itemTree);
-  entry.pieces = std::move(description.pieces);
-  entry.slots = std::move(description.slots);
-  entry.tags = std::move(description.tags);
-  entry.piecesText = JoinStrings(entry.pieces);
-  entry.slotsText = JoinStrings(entry.slots);
-  entry.tagsText = JoinStrings(entry.tags);
+  entry.resolved = FinalizeResolvedData(std::move(description.armorFormIDs),
+                                        std::move(description.itemTree),
+                                        std::move(description.pieces),
+                                        a_armorMetadataCache);
   entry.searchText = BuildOutfitSearchText(entry);
   return entry;
 }
 
-std::optional<KitEntry> BuildKitEntry(const std::filesystem::path &a_path) {
+std::optional<KitEntry> BuildKitEntry(
+    const std::filesystem::path &a_path,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   if (!std::filesystem::is_regular_file(a_path) ||
       a_path.extension() != ".json") {
     return std::nullopt;
@@ -622,7 +616,8 @@ std::optional<KitEntry> BuildKitEntry(const std::filesystem::path &a_path) {
   }
 
   const auto description =
-      DescribeKitItems(kitData.value("Items", nlohmann::json::object()));
+      DescribeKitItems(kitData.value("Items", nlohmann::json::object()),
+                       a_armorMetadataCache);
   if (description.hasMissingItems || description.armorFormIDs.empty()) {
     return std::nullopt;
   }
@@ -639,12 +634,10 @@ std::optional<KitEntry> BuildKitEntry(const std::filesystem::path &a_path) {
   entry.collection = relativePath.parent_path().generic_string();
   entry.filepath = a_path.string();
   entry.summary = BuildKitSummary(description);
-  entry.armorFormIDs = description.armorFormIDs;
-  entry.itemTree = std::move(description.itemTree);
-  entry.pieces = description.pieces;
-  entry.slots = description.slots;
-  entry.piecesText = JoinStrings(entry.pieces);
-  entry.slotsText = JoinStrings(entry.slots);
+  entry.resolved = FinalizeResolvedData(std::move(description.armorFormIDs),
+                                        std::move(description.itemTree),
+                                        std::move(description.pieces),
+                                        a_armorMetadataCache);
   entry.searchText = BuildKitSearchText(entry);
   return entry;
 }

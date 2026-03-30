@@ -6,19 +6,42 @@
 #include <unordered_map>
 
 namespace sosr {
+struct CatalogCollectionItemNode;
+using CatalogCollectionChildren = std::vector<CatalogCollectionItemNode>;
+
 struct CatalogCollectionItemNode {
   RE::FormID formID{0};
   std::string cachedName;
   std::int32_t level{-1};
-  std::vector<CatalogCollectionItemNode> children;
+  std::shared_ptr<const CatalogCollectionChildren> children;
+
+  [[nodiscard]] const CatalogCollectionChildren &GetChildren() const {
+    static const CatalogCollectionChildren kEmptyChildren;
+    return children ? *children : kEmptyChildren;
+  }
+
+  [[nodiscard]] bool HasChildren() const { return children && !children->empty(); }
+};
+
+struct CatalogResolvedData {
+  std::vector<RE::FormID> armorFormIDs;
+  std::shared_ptr<const CatalogCollectionChildren> itemTree;
+  std::vector<std::string> pieces;
+  std::uint64_t slotMask{0};
+  std::string piecesText;
 };
 
 struct ResolvedReferenceCollection {
   std::vector<RE::FormID> armorFormIDs;
-  std::vector<CatalogCollectionItemNode> itemTree;
+  std::shared_ptr<const CatalogCollectionChildren> itemTree;
   std::vector<std::string> pieces;
+};
+
+struct ArmorMetadata {
+  std::string displayName;
+  std::string category;
+  std::uint64_t slotMask{0};
   std::vector<std::string> slots;
-  std::vector<std::string> tags;
 };
 
 struct GearEntry {
@@ -45,15 +68,14 @@ struct OutfitEntry {
   std::string editorID;
   std::string plugin;
   std::string summary;
-  std::vector<RE::FormID> armorFormIDs;
-  std::vector<CatalogCollectionItemNode> itemTree;
-  std::vector<std::string> pieces;
-  std::vector<std::string> slots;
-  std::vector<std::string> tags;
-  std::string piecesText;
-  std::string slotsText;
-  std::string tagsText;
+  std::shared_ptr<const CatalogResolvedData> resolved;
   std::string searchText;
+
+  [[nodiscard]] const std::vector<RE::FormID> &GetArmorFormIDs() const;
+  [[nodiscard]] const std::vector<CatalogCollectionItemNode> &GetItemTree() const;
+  [[nodiscard]] const std::vector<std::string> &GetPieces() const;
+  [[nodiscard]] std::uint64_t GetSlotMask() const;
+  [[nodiscard]] std::string_view GetPiecesText() const;
 };
 
 struct KitEntry {
@@ -63,13 +85,14 @@ struct KitEntry {
   std::string collection;
   std::string filepath;
   std::string summary;
-  std::vector<RE::FormID> armorFormIDs;
-  std::vector<CatalogCollectionItemNode> itemTree;
-  std::vector<std::string> pieces;
-  std::vector<std::string> slots;
-  std::string piecesText;
-  std::string slotsText;
+  std::shared_ptr<const CatalogResolvedData> resolved;
   std::string searchText;
+
+  [[nodiscard]] const std::vector<RE::FormID> &GetArmorFormIDs() const;
+  [[nodiscard]] const std::vector<CatalogCollectionItemNode> &GetItemTree() const;
+  [[nodiscard]] const std::vector<std::string> &GetPieces() const;
+  [[nodiscard]] std::uint64_t GetSlotMask() const;
+  [[nodiscard]] std::string_view GetPiecesText() const;
 };
 
 class EquipmentCatalog {
@@ -125,6 +148,7 @@ private:
   std::vector<std::string> gearSlots_;
   std::vector<std::string> outfitPlugins_;
   std::vector<std::string> kitCollections_;
+  std::unordered_map<RE::FormID, ArmorMetadata> armorMetadataCache_;
   std::unordered_map<RE::FormID, ResolvedReferenceCollection> leveledListCache_;
   std::unordered_map<RE::FormID, std::size_t> gearIndexByFormID_;
   std::unordered_map<RE::FormID, std::size_t> outfitIndexByFormID_;

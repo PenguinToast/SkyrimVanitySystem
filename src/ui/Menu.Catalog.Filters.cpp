@@ -1,5 +1,6 @@
 #include "Menu.h"
 
+#include "ArmorUtils.h"
 #include "InputManager.h"
 #include "PlayerInventory.h"
 #include "ThemeConfig.h"
@@ -8,6 +9,7 @@
 #include "ui/conditions/EditorSupport.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cfloat>
 #include <unordered_set>
 
@@ -22,6 +24,19 @@ enum class KitColumn : ImGuiID { Name = 1, Collection, Pieces };
 int CompareCatalogText(const std::string_view a_left,
                        const std::string_view a_right) {
   return ui::condition_editor::CompareTextInsensitive(a_left, a_right);
+}
+
+std::uint64_t GetCatalogSlotFilterMask(const std::string_view a_label) {
+  if (a_label == "None") {
+    return 0;
+  }
+
+  const auto delimiter = a_label.find(' ');
+  const auto numberText = a_label.substr(0, delimiter);
+  std::uint32_t slotNumber = 0;
+  const auto [_, error] = std::from_chars(
+      numberText.data(), numberText.data() + numberText.size(), slotNumber);
+  return error == std::errc{} ? armor::GetArmorSlotMask(slotNumber) : 0;
 }
 } // namespace
 
@@ -56,7 +71,7 @@ bool Menu::MatchesOutfitFilters(const OutfitEntry &a_entry) const {
     return false;
   }
 
-  return MatchesSelectedSlotsAnd(a_entry.slots) &&
+  return MatchesSelectedSlotsAnd(a_entry.GetSlotMask()) &&
          browser.outfitSearch.PassFilter(a_entry.searchText.c_str());
 }
 
@@ -74,7 +89,7 @@ bool Menu::MatchesKitFilters(const KitEntry &a_entry) const {
     return false;
   }
 
-  return MatchesSelectedSlotsAnd(a_entry.slots) &&
+  return MatchesSelectedSlotsAnd(a_entry.GetSlotMask()) &&
          browser.kitSearch.PassFilter(a_entry.searchText.c_str());
 }
 
@@ -111,8 +126,7 @@ bool Menu::MatchesSelectedSlotsOr(
   return false;
 }
 
-bool Menu::MatchesSelectedSlotsAnd(
-    const std::vector<std::string> &a_slots) const {
+bool Menu::MatchesSelectedSlotsAnd(const std::uint64_t a_slotMask) const {
   if (!HasAnySelectedSlotFilter()) {
     return true;
   }
@@ -123,7 +137,16 @@ bool Menu::MatchesSelectedSlotsAnd(
     if (!selectedSlotFilters[index]) {
       continue;
     }
-    if (std::ranges::find(a_slots, slotOptions[index]) == a_slots.end()) {
+
+    const auto requiredMask = GetCatalogSlotFilterMask(slotOptions[index]);
+    if (requiredMask == 0) {
+      if (a_slotMask != 0) {
+        return false;
+      }
+      continue;
+    }
+
+    if ((a_slotMask & requiredMask) == 0) {
       return false;
     }
   }
@@ -246,7 +269,7 @@ void Menu::SortOutfitRows(std::vector<const OutfitEntry *> &a_rows,
       compare = CompareCatalogText(a_left->plugin, a_right->plugin);
       break;
     case OutfitColumn::Pieces:
-      compare = CompareCatalogText(a_left->piecesText, a_right->piecesText);
+      compare = CompareCatalogText(a_left->GetPiecesText(), a_right->GetPiecesText());
       break;
     case OutfitColumn::Name:
     default:
@@ -283,7 +306,7 @@ void Menu::SortKitRows(std::vector<const KitEntry *> &a_rows,
       compare = CompareCatalogText(a_left->collection, a_right->collection);
       break;
     case KitColumn::Pieces:
-      compare = CompareCatalogText(a_left->piecesText, a_right->piecesText);
+      compare = CompareCatalogText(a_left->GetPiecesText(), a_right->GetPiecesText());
       break;
     case KitColumn::Name:
     default:

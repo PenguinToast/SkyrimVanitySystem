@@ -70,7 +70,7 @@ bool Menu::DrawOutfitTab() {
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
             workbench_.AddCatalogSelectionAsRows(
-                outfit.armorFormIDs, ResolveNewWorkbenchRowConditionId());
+                outfit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId());
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
@@ -127,7 +127,7 @@ bool Menu::DrawOutfitTab() {
         {
           const auto availableWidth = ImGui::GetContentRegionAvail().x;
           const auto displayText = ui::catalog::TruncateTextToWidth(
-              outfit.piecesText, availableWidth);
+              outfit.GetPiecesText(), availableWidth);
           ImGui::TextUnformatted(displayText.c_str());
         }
       }

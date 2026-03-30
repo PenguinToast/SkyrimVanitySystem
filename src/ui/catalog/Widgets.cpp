@@ -73,7 +73,7 @@ void DrawOutfitTooltip(const OutfitEntry &a_outfit,
 
   components::DrawCatalogCollectionTooltip("outfit:" + a_outfit.id,
                                            a_hoveredSource, a_outfit.name,
-                                           metaRows, a_outfit.itemTree);
+                                           metaRows, a_outfit.GetItemTree());
 }
 
 void DrawKitTooltip(const KitEntry &a_kit, const bool a_hoveredSource) {
@@ -86,7 +86,8 @@ void DrawKitTooltip(const KitEntry &a_kit, const bool a_hoveredSource) {
   metaRows.push_back({kIconIdentifier, "Identifier", a_kit.id});
 
   components::DrawCatalogCollectionTooltip(
-      "kit:" + a_kit.id, a_hoveredSource, a_kit.name, metaRows, a_kit.itemTree);
+      "kit:" + a_kit.id, a_hoveredSource, a_kit.name, metaRows,
+      a_kit.GetItemTree());
 }
 
 void DrawSimplePinnableTooltip(const std::string_view a_id,
