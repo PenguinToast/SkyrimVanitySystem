@@ -2,6 +2,7 @@
 
 #include "ArmorUtils.h"
 #include "imgui_internal.h"
+#include "ui/InputWidgets.h"
 #include "ui/ThemeConfig.h"
 #include "ui/components/PinnableTooltip.h"
 #include "workbench/ItemFactory.h"
@@ -302,8 +303,21 @@ DrawEquipmentWidget(const char *a_id,
       ImVec2(rectMax.x - paddingX - deletePaneWidth, rectMax.y - paddingY);
   const auto buttonMin = ImVec2(rectMax.x - deletePaneWidth, rectMin.y);
   const auto buttonMax = rectMax;
-  result.deleteHovered = a_options.showDeleteButton &&
-                         ImGui::IsMouseHoveringRect(buttonMin, buttonMax);
+  bool deleteHeld = false;
+  if (a_options.showDeleteButton) {
+    const auto deleteState = ui::input_widgets::EvaluateRectClickTarget(
+        ImGui::GetID("##equipment-widget-delete"), buttonMin, buttonMax);
+    result.deleteHovered = deleteState.hovered;
+    deleteHeld = deleteState.held;
+    result.deleteClicked = deleteState.pressed;
+  } else {
+    result.deleteHovered = false;
+  }
+  if (result.deleteHovered) {
+    result.clicked = false;
+    result.doubleClicked = false;
+    result.active = false;
+  }
   const auto nameColor = a_options.disabledAppearance
                              ? theme->GetColorU32("TEXT_DISABLED")
                              : theme->GetColorU32("TEXT");
@@ -317,7 +331,9 @@ DrawEquipmentWidget(const char *a_id,
   drawList->PopClipRect();
 
   if (a_options.showDeleteButton) {
-    const auto deleteFill = result.deleteHovered
+    const auto deleteFill = deleteHeld
+                                ? theme->GetColorU32("DECLINE")
+                            : result.deleteHovered
                                 ? theme->GetColorU32("DECLINE", 0.95f)
                                 : theme->GetColorU32("DECLINE", 0.78f);
     drawList->AddRectFilled(buttonMin, buttonMax, deleteFill, 8.0f,
@@ -332,10 +348,6 @@ DrawEquipmentWidget(const char *a_id,
         ImVec2(buttonMin.x + ((deletePaneWidth - labelSize.x) * 0.5f),
                rectMin.y + ((frameHeight - labelSize.y) * 0.5f) - 1.0f),
         theme->GetColorU32("TEXT"), deleteLabel);
-
-    if (result.deleteHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-      result.deleteClicked = true;
-    }
   }
 
   const auto tooltipId = "equipment:" + a_item.key;

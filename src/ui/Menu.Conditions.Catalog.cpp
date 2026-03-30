@@ -9,6 +9,7 @@
 #include "conditions/Library.h"
 #include "conditions/Status.h"
 #include "imgui_internal.h"
+#include "ui/InputWidgets.h"
 #include "ui/TableReorder.h"
 #include "ui/catalog/Widgets.h"
 #include "ui/components/PinnableTooltip.h"
@@ -544,8 +545,11 @@ bool Menu::DrawConditionCatalogTable() {
     const auto rounding = ImGui::GetStyle().FrameRounding;
     const ImVec2 deleteMin(max.x - deletePaneWidth, min.y);
     const ImVec2 deleteMax = max;
-    const bool deleteHovered =
-        ImGui::IsMouseHoveringRect(deleteMin, deleteMax, false);
+    const auto deleteState = ui::input_widgets::EvaluateRectClickTarget(
+        ImGui::GetID("##condition-row-delete"), deleteMin, deleteMax);
+    const bool deleteHovered = deleteState.hovered;
+    const bool deleteHeld = deleteState.held;
+    const bool deletePressed = deleteState.pressed;
     const auto hovered = ImGui::IsItemHovered() || deleteHovered;
     const bool rowBodyHovered =
         hovered && !deleteHovered &&
@@ -591,7 +595,8 @@ bool Menu::DrawConditionCatalogTable() {
         ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomLeft);
     const ImU32 deleteFillColor =
         deleteEnabled
-            ? (deleteHovered ? theme->GetColorU32("DECLINE", 0.95f)
+            ? (deleteHeld ? theme->GetColorU32("DECLINE")
+                          : deleteHovered ? theme->GetColorU32("DECLINE", 0.95f)
                              : theme->GetColorU32("DECLINE", 0.78f))
             : theme->GetColorU32("DECLINE", deleteHovered ? 0.35f : 0.24f);
     drawList->AddRectFilled(deleteMin, deleteMax, deleteFillColor, rounding,
@@ -642,12 +647,13 @@ bool Menu::DrawConditionCatalogTable() {
 
     if (deleteHovered) {
       if (deleteEnabled) {
-        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+        if (deletePressed) {
           pendingDeleteIndex = index;
         }
       } else if (!deleteTooltip.empty()) {
         ui::condition_widgets::DrawHoverDescription(
-            "conditions:delete-disabled:" + condition.id, deleteTooltip, 0.2f);
+            "conditions:delete-disabled:" + condition.id, true, deleteTooltip,
+            0.2f);
       }
     }
 

@@ -20,6 +20,34 @@ void DrawHoverDescription(const std::string_view a_id,
   });
 }
 
+void DrawHoverDescription(const std::string_view a_id,
+                          const bool a_hoveredSource,
+                          const std::string_view a_text,
+                          const float a_delaySeconds) {
+  auto *storage = ImGui::GetStateStorage();
+  const auto hoverId = ImGui::GetID(a_id.data());
+
+  if (!a_hoveredSource) {
+    storage->SetFloat(hoverId, 0.0f);
+    return;
+  }
+
+  float hoverStart = storage->GetFloat(hoverId, 0.0f);
+  if (hoverStart <= 0.0f) {
+    hoverStart = static_cast<float>(ImGui::GetTime());
+    storage->SetFloat(hoverId, hoverStart);
+  }
+  if ((static_cast<float>(ImGui::GetTime()) - hoverStart) < a_delaySeconds) {
+    return;
+  }
+
+  components::DrawPinnableTooltip(a_id, true, [&]() {
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 360.0f);
+    ImGui::TextUnformatted(a_text.data(), a_text.data() + a_text.size());
+    ImGui::PopTextWrapPos();
+  });
+}
+
 void DrawConditionColorSwatch(const char *a_id,
                               const conditions::Color &a_color,
                               const std::string_view a_tooltip) {

@@ -3,6 +3,28 @@
 #include "ui/ThemeConfig.h"
 
 namespace sosr::ui::input_widgets {
+RectClickTargetState EvaluateRectClickTarget(const ImGuiID a_id,
+                                             const ImVec2 &a_min,
+                                             const ImVec2 &a_max,
+                                             const ImGuiMouseButton a_mouseButton) {
+  RectClickTargetState state{};
+  state.hovered = ImGui::IsMouseHoveringRect(a_min, a_max, false);
+
+  auto *storage = ImGui::GetStateStorage();
+  if (state.hovered && ImGui::IsMouseClicked(a_mouseButton)) {
+    storage->SetBool(a_id, true);
+  }
+
+  const bool primed = storage->GetBool(a_id, false);
+  state.held = primed && ImGui::IsMouseDown(a_mouseButton);
+  if (primed && ImGui::IsMouseReleased(a_mouseButton)) {
+    state.pressed = state.hovered;
+    storage->SetBool(a_id, false);
+  }
+
+  return state;
+}
+
 void DrawInputOutline(const ImVec2 &a_min, const ImVec2 &a_max,
                       const bool a_hovered, const bool a_active,
                       const float a_rounding) {
