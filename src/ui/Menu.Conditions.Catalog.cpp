@@ -245,14 +245,6 @@ void DrawConditionWidgetTooltip(const ConditionDefinition &a_condition,
 bool Menu::DrawConditionTab() {
   EnsureDefaultConditions();
 
-  if (ImGui::Button("Add New")) {
-    OpenNewConditionDialog();
-  }
-  ImGui::SameLine();
-  ImGui::TextDisabled("%zu condition%s", ConditionDefinitions().size(),
-                      ConditionDefinitions().size() == 1 ? "" : "s");
-  ImGui::Spacing();
-
   if (!ImGui::BeginTable("##conditions-table", 2,
                          ImGuiTableFlags_SizingStretchProp |
                              ImGuiTableFlags_Resizable |
@@ -455,6 +447,14 @@ bool Menu::DrawConditionTab() {
     }
     ImGui::PopID();
   }
+
+  ImGui::TableNextRow();
+  ImGui::TableSetColumnIndex(0);
+  if (ImGui::Button("Add New", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+    OpenNewConditionDialog();
+  }
+  ImGui::TableSetColumnIndex(1);
+  ImGui::Dummy(ImVec2(0.0f, 0.0f));
 
   const auto *conditionTable = ImGui::GetCurrentTable();
   const bool hasConditionTable = conditionTable != nullptr;

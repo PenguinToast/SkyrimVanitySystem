@@ -134,7 +134,7 @@ void DrawOrGroupIndicator(const std::string &a_id, const ImRect &a_groupRect) {
 }
 } // namespace
 
-void Menu::DrawConditionEditorClauseTable(
+bool Menu::DrawConditionEditorClauseTable(
     ConditionEditorState &a_editor,
     const std::vector<ui::components::EditableDropdownItem<std::string>>
         &a_conditionFunctionItems,
@@ -146,7 +146,7 @@ void Menu::DrawConditionEditorClauseTable(
       ImGuiTableFlags_Resizable;
   if (!ImGui::BeginTable("##condition-clause-table", 8, clauseTableFlags,
                          ImVec2(0.0f, 0.0f))) {
-    return;
+    return false;
   }
 
   const auto tableOuterRect = ImGui::GetCurrentTable()->OuterRect;
@@ -517,6 +517,22 @@ void Menu::DrawConditionEditorClauseTable(
                ImVec2(startRect.Max.x, endRect.Max.y)));
   }
 
+  bool addClauseRequested = false;
+  ImGui::TableNextRow();
+  ImGui::TableSetColumnIndex(0);
+  ImGui::Dummy(ImVec2(0.0f, 0.0f));
+  ImGui::TableSetColumnIndex(1);
+  if (ImGui::Button("Add Clause",
+                    ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+    addClauseRequested = true;
+  }
+  DrawHoverDescription("conditions:editor:add-clause",
+                       "Append another clause to this condition.");
+  for (int column = 2; column < 8; ++column) {
+    ImGui::TableSetColumnIndex(column);
+    ImGui::Dummy(ImVec2(0.0f, 0.0f));
+  }
+
   ImGui::EndTable();
   if (reorderPreview.HasHoveredSlot() &&
       ImGui::BeginDragDropTargetCustom(
@@ -536,5 +552,6 @@ void Menu::DrawConditionEditorClauseTable(
     MoveConditionClauseToSlot(a_editor.draft.clauses, *acceptedSourceClauseIndex,
                               *acceptedSlotIndex);
   }
+  return addClauseRequested;
 }
 } // namespace sosr

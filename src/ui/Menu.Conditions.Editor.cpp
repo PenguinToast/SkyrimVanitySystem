@@ -63,12 +63,14 @@ void Menu::DrawConditionEditorDialog() {
       FocusedConditionEditorWindowSlot() = editor.windowSlot;
     }
 
-    const auto footerHeight =
-        ImGui::GetFrameHeightWithSpacing() * 2.0f +
-        ImGui::GetStyle().ItemSpacing.y * 3.0f +
-        ((!editor.error.empty())
-             ? (ImGui::GetTextLineHeightWithSpacing() * 2.0f)
-             : 0.0f);
+    const auto draftValidationError =
+        ValidateConditionDraft(editor.draft, ConditionDefinitions());
+    if (draftValidationError.empty()) {
+      editor.error.clear();
+    }
+    const auto &style = ImGui::GetStyle();
+    const auto buttonRowHeight = ImGui::GetFrameHeight();
+    const auto footerHeight = style.ItemSpacing.y + buttonRowHeight;
 
     if (ImGui::BeginChild("##condition-editor-body",
                           ImVec2(0.0f, -footerHeight), ImGuiChildFlags_None,
@@ -120,7 +122,6 @@ void Menu::DrawConditionEditorDialog() {
                                       editor.sourceConditionId);
       const auto clausePaneHeight =
           (std::max)(220.0f, ImGui::GetContentRegionAvail().y);
-      const auto &style = ImGui::GetStyle();
       const auto editButtonWidth =
           ImGui::CalcTextSize("Edit").x + style.FramePadding.x * 2.0f;
       const auto deleteButtonWidth =
@@ -131,40 +132,22 @@ void Menu::DrawConditionEditorDialog() {
       if (ImGui::BeginChild("##condition-clauses",
                             ImVec2(0.0f, clausePaneHeight),
                             ImGuiChildFlags_Borders)) {
-        DrawConditionEditorClauseTable(editor, conditionFunctionItems,
-                                       editButtonWidth, deleteButtonWidth,
-                                       actionsColumnWidth);
+        if (DrawConditionEditorClauseTable(editor, conditionFunctionItems,
+                                           editButtonWidth, deleteButtonWidth,
+                                           actionsColumnWidth)) {
+          editor.draft.clauses.push_back(conditions::BuildDefaultPlayerClause());
+        }
       }
       ImGui::EndChild();
     }
     ImGui::EndChild();
 
-    if (ImGui::Button("Add Clause")) {
-      editor.draft.clauses.push_back(conditions::BuildDefaultPlayerClause());
-    }
-    DrawHoverDescription("conditions:editor:add-clause",
-                         "Append another clause to this condition.");
-
-    const auto draftValidationError =
-        ValidateConditionDraft(editor.draft, ConditionDefinitions());
-    if (draftValidationError.empty()) {
-      editor.error.clear();
-    }
-    const bool showInlineError =
-        !editor.error.empty() && draftValidationError.empty();
-
-    if (showInlineError) {
-      ImGui::Spacing();
-      ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 205, 205, 255));
-      ImGui::TextWrapped("%s", editor.error.c_str());
-      ImGui::PopStyleColor();
-    }
-
-    ImGui::Spacing();
     ImGui::BeginDisabled(!draftValidationError.empty());
     if (ImGui::Button("Save")) {
       if (SaveConditionEditor(editor)) {
         editor.open = false;
+      } else if (!editor.error.empty()) {
+        ImGui::OpenPopup("##condition-save-error");
       }
     }
     ImGui::EndDisabled();
@@ -178,6 +161,24 @@ void Menu::DrawConditionEditorDialog() {
     if (ImGui::Button("Cancel")) {
       editor.error.clear();
       editor.open = false;
+    }
+
+    const auto *viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing,
+                            ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal("##condition-save-error", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+      ImGui::TextUnformatted("Condition could not be saved.");
+      ImGui::Spacing();
+      ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420.0f);
+      ImGui::TextWrapped("%s", editor.error.c_str());
+      ImGui::PopTextWrapPos();
+      ImGui::Spacing();
+      if (ImGui::Button("OK", ImVec2(120.0f, 0.0f))) {
+        editor.error.clear();
+        ImGui::CloseCurrentPopup();
+      }
+      ImGui::EndPopup();
     }
 
     ImGui::End();

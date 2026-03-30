@@ -158,7 +158,7 @@ private:
   [[nodiscard]] bool DrawConditionTab();
   void DrawOptionsTab();
   void DrawConditionEditorDialog();
-  void DrawConditionEditorClauseTable(
+  [[nodiscard]] bool DrawConditionEditorClauseTable(
       ConditionEditorState &a_editor,
       const std::vector<ui::components::EditableDropdownItem<std::string>>
           &a_conditionFunctionItems,
