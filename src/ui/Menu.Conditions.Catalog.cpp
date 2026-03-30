@@ -241,6 +241,14 @@ void DrawConditionTooltipSectionHeader(const char *a_title) {
   ImGui::Spacing();
 }
 
+void DrawConditionTooltipBulletLine(std::string_view a_text) {
+  ImGui::Bullet();
+  ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x + 4.0f);
+  ImGui::PushTextWrapPos(0.0f);
+  ImGui::TextUnformatted(a_text.data(), a_text.data() + a_text.size());
+  ImGui::PopTextWrapPos();
+}
+
 void DrawConditionTooltip(const ConditionDefinition &a_condition,
                           const bool a_hoveredSource,
                           std::vector<ConditionDefinition> &a_conditions,
@@ -280,11 +288,7 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
       for (const auto &missingChain : conditionStatus.missingDependencyChains) {
         const auto label =
             conditions::FormatMissingDependencyChain(missingChain, 1);
-        ImGui::Bullet();
-        ImGui::SameLine();
-        ImGui::PushTextWrapPos(0.0f);
-        ImGui::TextUnformatted(label.c_str());
-        ImGui::PopTextWrapPos();
+        DrawConditionTooltipBulletLine(label);
       }
       ImGui::Spacing();
     }
@@ -292,22 +296,18 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
     if (a_showActorRefs) {
       DrawConditionTooltipSectionHeader("Targeted Actor Refs");
       if (!materialized.has_value()) {
-        ImGui::BulletText("Condition could not be materialized.");
+        DrawConditionTooltipBulletLine("Condition could not be materialized.");
       } else if (!materialized->refreshTargets.actorFormIDs.empty()) {
         for (const auto actorFormID : materialized->refreshTargets.actorFormIDs) {
-          ImGui::Bullet();
-          ImGui::SameLine();
-          ImGui::PushTextWrapPos(0.0f);
           const auto label = BuildActorTargetLabel(actorFormID);
-          ImGui::TextUnformatted(label.c_str());
-          ImGui::PopTextWrapPos();
+          DrawConditionTooltipBulletLine(label);
         }
       } else {
-        ImGui::BulletText("No explicit actor refs targeted.");
+        DrawConditionTooltipBulletLine("No explicit actor refs targeted.");
       }
       if (materialized.has_value() &&
           materialized->refreshTargets.useNearbyFallback) {
-        ImGui::BulletText("Nearby actors within 2048 units.");
+        DrawConditionTooltipBulletLine("Nearby actors within 2048 units.");
       }
       ImGui::Spacing();
     }
