@@ -3,6 +3,7 @@
 #include "InputManager.h"
 #include "StringUtils.h"
 #include "imgui_internal.h"
+#include "ui/InputWidgets.h"
 #include "ui/ThemeConfig.h"
 
 #include <algorithm>
@@ -63,23 +64,6 @@ int EditableDropdownInputCallback(ImGuiInputTextCallbackData *a_data) {
 } // namespace
 
 namespace sosr::ui::components {
-void DrawTextInputOutline(const ImVec2 &a_min, const ImVec2 &a_max,
-                          const bool a_hovered, const bool a_active,
-                          const float a_rounding) {
-  if (!a_hovered && !a_active) {
-    return;
-  }
-
-  auto *theme = ThemeConfig::GetSingleton();
-  auto *drawList = ImGui::GetWindowDrawList();
-  const auto rounding =
-      a_rounding >= 0.0f ? a_rounding : ImGui::GetStyle().FrameRounding;
-  const auto color = a_active ? theme->GetColorU32("PRIMARY")
-                              : theme->GetColorU32("TABLE_HOVER", 0.75f);
-  const auto thickness = a_active ? 2.0f : 1.5f;
-  drawList->AddRect(a_min, a_max, color, rounding, 0, thickness);
-}
-
 bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
                                const std::vector<std::string> &a_options,
                                int &a_index, ImGuiTextFilter &a_filter) {
@@ -381,8 +365,9 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
       ImDrawFlags_RoundCornersTopRight | ImDrawFlags_RoundCornersBottomRight);
   drawList->AddRect(inputMin, fullControlMax, theme->GetColorU32("BORDER"),
                     ImGui::GetStyle().FrameRounding);
-  DrawTextInputOutline(inputMin, fullControlMax, wholeControlHovered,
-                       inputTextActive, ImGui::GetStyle().FrameRounding);
+  ui::input_widgets::DrawInputOutline(
+      inputMin, fullControlMax, wholeControlHovered, inputTextActive,
+      ImGui::GetStyle().FrameRounding);
   drawList->AddLine(ImVec2(arrowMin.x, inputMin.y + 1.0f),
                     ImVec2(arrowMin.x, inputMin.y + inputFrameHeight - 1.0f),
                     theme->GetColorU32("BORDER"));

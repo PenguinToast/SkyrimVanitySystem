@@ -3,6 +3,7 @@
 #include "InputManager.h"
 #include "PlayerInventory.h"
 #include "ThemeConfig.h"
+#include "ui/InputWidgets.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/conditions/EditorSupport.h"
 
@@ -323,7 +324,7 @@ void Menu::DrawCatalogFilters() {
     ImGui::PopItemWidth();
     const auto rectMin = ImGui::GetItemRectMin();
     const auto rectMax = ImGui::GetItemRectMax();
-    ui::components::DrawTextInputOutline(
+    ui::input_widgets::DrawInputOutline(
         rectMin, rectMax, ImGui::IsItemHovered(), ImGui::IsItemActive());
     if (ImGui::IsItemActivated()) {
       InputManager::GetSingleton()->Flush();

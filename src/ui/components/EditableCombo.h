@@ -25,10 +25,6 @@ template <class TValue> struct EditableDropdownItem {
   }
 };
 
-void DrawTextInputOutline(const ImVec2 &a_min, const ImVec2 &a_max,
-                          bool a_hovered, bool a_active,
-                          float a_rounding = -1.0f);
-
 namespace detail {
 bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
                                  char *a_buffer, std::size_t a_bufferSize,
