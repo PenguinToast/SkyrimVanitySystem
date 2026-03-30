@@ -57,6 +57,16 @@ BuildConditionIndicesByKind(const std::vector<ConditionDefinition> &a_conditions
   return indices;
 }
 
+void SortConditionIndicesByName(
+    const std::vector<ConditionDefinition> &a_conditions,
+    std::vector<std::size_t> &a_indices) {
+  std::ranges::sort(a_indices, [&](const std::size_t a_left,
+                                   const std::size_t a_right) {
+    return strings::CompareTextInsensitive(a_conditions[a_left].name,
+                                           a_conditions[a_right].name) < 0;
+  });
+}
+
 void MoveFilteredConditionDefinitionToSlot(
     std::vector<ConditionDefinition> &a_conditions,
     const std::vector<std::size_t> &a_filteredIndices,
@@ -851,9 +861,9 @@ bool Menu::DrawConditionCatalogTable() {
 }
 
 void Menu::DrawConditionLibraryTable() {
-  const auto libraryIndices =
-      BuildConditionIndicesByKind(ConditionDefinitions(),
-                                  conditions::DefinitionKind::Library);
+  auto libraryIndices = BuildConditionIndicesByKind(
+      ConditionDefinitions(), conditions::DefinitionKind::Library);
+  SortConditionIndicesByName(ConditionDefinitions(), libraryIndices);
   if (!ImGui::BeginTable("##condition-library-table", 2,
                          ImGuiTableFlags_SizingStretchProp |
                              ImGuiTableFlags_Resizable |
@@ -895,8 +905,7 @@ void Menu::DrawConditionLibraryTable() {
     ImGui::Selectable("##library-row-hit", false,
                       ImGuiSelectableFlags_SpanAllColumns |
                           ImGuiSelectableFlags_AllowDoubleClick,
-                      ImVec2(0.0f, ui::condition_widgets::MeasureConditionRowHeight(
-                                       condition, 360.0f)));
+                      ImVec2(0.0f, 0.0f));
     const bool rowHovered = ImGui::IsItemHovered();
     ImGui::SetCursorScreenPos(rowMin);
     if (broken) {
@@ -909,7 +918,10 @@ void Menu::DrawConditionLibraryTable() {
       OpenConditionEditorDialog(index);
     }
     DrawConditionTooltip(condition, rowHovered, ConditionDefinitions(), false);
-    if (ImGui::BeginPopupContextItem()) {
+    if (rowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+      ImGui::OpenPopup("##library-row-context");
+    }
+    if (ImGui::BeginPopup("##library-row-context")) {
       if (ImGui::MenuItem("Edit")) {
         OpenConditionEditorDialog(index);
       }
@@ -934,15 +946,35 @@ void Menu::DrawConditionLibraryTable() {
     if (condition.description.empty()) {
       ImGui::TextDisabled("No description.");
     } else {
-      if (broken) {
-        ImGui::PushStyleColor(ImGuiCol_Text,
-                              ThemeConfig::GetSingleton()->GetColor("WARN"));
-      }
-      ImGui::PushTextWrapPos(0.0f);
-      ImGui::TextUnformatted(condition.description.c_str());
-      ImGui::PopTextWrapPos();
-      if (broken) {
-        ImGui::PopStyleColor();
+      const auto *table = ImGui::GetCurrentTable();
+      if (table != nullptr) {
+        const auto cellRect = ImGui::TableGetCellBgRect(table, 1);
+        const auto &style = ImGui::GetStyle();
+        const auto textMin = ImVec2(cellRect.Min.x + style.CellPadding.x,
+                                    cellRect.Min.y + style.CellPadding.y);
+        const auto textMax = ImVec2(cellRect.Max.x - style.CellPadding.x,
+                                    textMin.y + ImGui::GetTextLineHeight());
+        const auto textSize = ImGui::CalcTextSize(condition.description.c_str());
+        if (broken) {
+          ImGui::PushStyleColor(ImGuiCol_Text,
+                                ThemeConfig::GetSingleton()->GetColor("WARN"));
+        }
+        ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), textMin, textMax,
+                                  textMax.x, condition.description.c_str(),
+                                  nullptr, &textSize);
+        if (broken) {
+          ImGui::PopStyleColor();
+        }
+        ImGui::Dummy(ImVec2(0.0f, ImGui::GetTextLineHeight()));
+      } else {
+        if (broken) {
+          ImGui::PushStyleColor(ImGuiCol_Text,
+                                ThemeConfig::GetSingleton()->GetColor("WARN"));
+        }
+        ImGui::TextUnformatted(condition.description.c_str());
+        if (broken) {
+          ImGui::PopStyleColor();
+        }
       }
     }
     ImGui::PopID();
