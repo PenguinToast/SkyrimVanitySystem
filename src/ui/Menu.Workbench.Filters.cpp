@@ -10,6 +10,15 @@
 #include <unordered_set>
 
 namespace sosr {
+namespace {
+bool AreWorkbenchFilterStatesEqual(const ui::workbench::FilterState &a_left,
+                                   const ui::workbench::FilterState &a_right) {
+  return a_left.kind == a_right.kind &&
+         a_left.actorFormID == a_right.actorFormID &&
+         a_left.conditionId == a_right.conditionId;
+}
+} // namespace
+
 void Menu::BuildWorkbenchFilterOptions(
     std::vector<WorkbenchFilterOption> &a_options) {
   a_options.clear();
@@ -120,14 +129,15 @@ void Menu::BuildWorkbenchFilterOptions(
 }
 
 void Menu::ValidateWorkbenchFilterSelection() {
-  std::vector<WorkbenchFilterOption> options;
-  BuildWorkbenchFilterOptions(options);
+  EnsureWorkbenchDerivedState();
+  if (!IsWorkbenchFilterSelectionValid()) {
+    workbenchFilter_ = {};
+  }
+}
 
+bool Menu::IsWorkbenchFilterSelectionValid() const {
   const auto matchesCurrentFilter = [&](const WorkbenchFilterOption &a_option) {
-    if (a_option.isSection) {
-      return false;
-    }
-    if (a_option.kind != workbenchFilter_.kind) {
+    if (a_option.isSection || a_option.kind != workbenchFilter_.kind) {
       return false;
     }
 
@@ -143,9 +153,9 @@ void Menu::ValidateWorkbenchFilterSelection() {
     return false;
   };
 
-  if (std::ranges::find_if(options, matchesCurrentFilter) == options.end()) {
-    workbenchFilter_ = {};
-  }
+  return std::ranges::find_if(workbenchDerived_.filterOptions,
+                              matchesCurrentFilter) !=
+         workbenchDerived_.filterOptions.end();
 }
 
 bool Menu::MatchesWorkbenchFilter(const workbench::VariantWorkbenchRow &a_row) {
@@ -172,19 +182,115 @@ bool Menu::MatchesWorkbenchFilter(const workbench::VariantWorkbenchRow &a_row) {
   return true;
 }
 
-std::vector<int> Menu::BuildVisibleWorkbenchRowIndices() {
-  ValidateWorkbenchFilterSelection();
+void Menu::BumpConditionStoreRevision() { ++conditionStore_.revision; }
 
-  std::vector<int> visibleRowIndices;
+void Menu::EnsureWorkbenchDerivedState() {
+  if (workbenchDerived_.revisionsInitialized &&
+      workbenchDerived_.workbenchRevision == workbench_.GetRevision() &&
+      workbenchDerived_.conditionRevision == conditionStore_.revision &&
+      workbenchDerived_.filterStateInitialized &&
+      AreWorkbenchFilterStatesEqual(workbenchDerived_.filterState,
+                                    workbenchFilter_)) {
+    return;
+  }
+
+  RebuildWorkbenchDerivedState();
+}
+
+void Menu::RebuildWorkbenchDerivedState() {
+  auto &derived = workbenchDerived_;
+  derived.filterOptions.clear();
+  BuildWorkbenchFilterOptions(derived.filterOptions);
+
+  const auto matchesCurrentFilter = [&](const WorkbenchFilterOption &a_option) {
+    if (a_option.isSection || a_option.kind != workbenchFilter_.kind) {
+      return false;
+    }
+
+    switch (a_option.kind) {
+    case WorkbenchFilterKind::All:
+      return true;
+    case WorkbenchFilterKind::ActorRef:
+      return a_option.actorFormID == workbenchFilter_.actorFormID;
+    case WorkbenchFilterKind::Condition:
+      return a_option.conditionId == workbenchFilter_.conditionId;
+    }
+
+    return false;
+  };
+  if (std::ranges::find_if(derived.filterOptions, matchesCurrentFilter) ==
+      derived.filterOptions.end()) {
+    workbenchFilter_ = {};
+  }
+
   const auto &rows = workbench_.GetRows();
-  visibleRowIndices.reserve(rows.size());
+  derived.rowConditionStates.clear();
+  derived.rowConditionStates.reserve(rows.size());
+  for (const auto &row : rows) {
+    derived.rowConditionStates.push_back(
+        ui::workbench::ResolveRowConditionVisualState(row, ConditionDefinitions()));
+  }
+
+  auto rowsForConflicts = rows;
+  for (std::size_t index = 0; index < rowsForConflicts.size(); ++index) {
+    const auto &conditionState = derived.rowConditionStates[index];
+    if (conditionState.missing || conditionState.disabledCondition ||
+        conditionState.brokenCondition) {
+      rowsForConflicts[index].conditionId = std::nullopt;
+    }
+  }
+  derived.conflictState =
+      ui::workbench_conflicts::BuildConflictState(rowsForConflicts);
+
+  derived.visibleRowIndices.clear();
+  derived.visibleRowIndices.reserve(rows.size());
+  std::unordered_map<std::string, bool> actorFilterMatchesByConditionId;
   for (int rowIndex = 0; rowIndex < static_cast<int>(rows.size()); ++rowIndex) {
-    if (MatchesWorkbenchFilter(rows[static_cast<std::size_t>(rowIndex)])) {
-      visibleRowIndices.push_back(rowIndex);
+    const auto &row = rows[static_cast<std::size_t>(rowIndex)];
+
+    bool matches = false;
+    switch (workbenchFilter_.kind) {
+    case WorkbenchFilterKind::All:
+      matches = true;
+      break;
+    case WorkbenchFilterKind::Condition:
+      matches = row.conditionId.has_value() &&
+                *row.conditionId == workbenchFilter_.conditionId;
+      break;
+    case WorkbenchFilterKind::ActorRef:
+      if (row.conditionId.has_value()) {
+        const auto [it, inserted] = actorFilterMatchesByConditionId.try_emplace(
+            *row.conditionId, false);
+        if (inserted) {
+          if (const auto materialized = conditions::MaterializeConditionById(
+                  *row.conditionId, ConditionDefinitions());
+              materialized.has_value()) {
+            it->second =
+                std::ranges::find(materialized->refreshTargets.actorFormIDs,
+                                  workbenchFilter_.actorFormID) !=
+                materialized->refreshTargets.actorFormIDs.end();
+          }
+        }
+        matches = it->second;
+      }
+      break;
+    }
+
+    if (matches) {
+      derived.visibleRowIndices.push_back(rowIndex);
     }
   }
 
-  return visibleRowIndices;
+  derived.workbenchRevision = workbench_.GetRevision();
+  derived.conditionRevision = conditionStore_.revision;
+  derived.revisionsInitialized = true;
+  derived.filterState = workbenchFilter_;
+  derived.filterStateInitialized = true;
+}
+
+const std::vector<int> &Menu::BuildVisibleWorkbenchRowIndices() {
+  EnsureWorkbenchDerivedState();
+  return workbenchDerived_.visibleRowIndices;
 }
 
 std::optional<std::string>
@@ -201,6 +307,7 @@ void Menu::ApplyInitialWorkbenchFilterSelection() {
   if (selection.createdCondition.has_value()) {
     ConditionDefinitions().push_back(std::move(*selection.createdCondition));
     ++NextConditionId();
+    BumpConditionStoreRevision();
     conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
     conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
   }
@@ -243,7 +350,10 @@ RE::Actor *Menu::ResolveWorkbenchPreviewActor() {
 }
 
 void Menu::SyncWorkbenchRowsForCurrentFilter() {
-  ValidateWorkbenchFilterSelection();
+  EnsureWorkbenchDerivedState();
+  if (!IsWorkbenchFilterSelectionValid()) {
+    workbenchFilter_ = {};
+  }
 
   if (workbenchFilter_.kind == WorkbenchFilterKind::ActorRef &&
       workbenchFilter_.actorFormID != 0) {

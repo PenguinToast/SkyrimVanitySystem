@@ -16,28 +16,12 @@
 
 namespace sosr {
 void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
+  EnsureWorkbenchDerivedState();
   const auto &rows = workbench_.GetRows();
-
-  std::vector<ui::workbench::RowConditionVisualState> rowConditionStates;
-  rowConditionStates.reserve(rows.size());
-  for (const auto &row : rows) {
-    rowConditionStates.push_back(
-        ui::workbench::ResolveRowConditionVisualState(row, ConditionDefinitions()));
-  }
-
-  auto rowsForConflicts = rows;
-  for (std::size_t index = 0; index < rowsForConflicts.size(); ++index) {
-    if (rowConditionStates[index].missing ||
-        rowConditionStates[index].disabledCondition ||
-        rowConditionStates[index].brokenCondition) {
-      rowsForConflicts[index].conditionId = std::nullopt;
-    }
-  }
-
-  const auto conflictState =
-      ui::workbench_conflicts::BuildConflictState(rowsForConflicts);
-  const auto &rowConflicts = conflictState.rowConflicts;
-  const auto &overrideConflicts = conflictState.overrideConflicts;
+  const auto &rowConditionStates = workbenchDerived_.rowConditionStates;
+  const auto &rowConflicts = workbenchDerived_.conflictState.rowConflicts;
+  const auto &overrideConflicts =
+      workbenchDerived_.conflictState.overrideConflicts;
 
   const auto tableHeight = (std::max)(0.0f, ImGui::GetContentRegionAvail().y);
   if (ImGui::BeginChild("##variant-workbench-scroll", ImVec2(0.0f, tableHeight),

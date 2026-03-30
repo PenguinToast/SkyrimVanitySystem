@@ -126,14 +126,14 @@ void Menu::DrawCatalogLoadingPane() const {
 }
 
 void Menu::AddGearEntryToWorkbench(const GearEntry &a_entry) {
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   workbench_.AddCatalogSelectionToWorkbench(
       std::vector<RE::FormID>{a_entry.formID}, &visibleRowIndices);
 }
 
 void Menu::AddOutfitEntryToWorkbench(const OutfitEntry &a_entry,
                                      const bool a_replaceExisting) {
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   if (a_replaceExisting) {
     workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.GetArmorFormIDs(),
                                                   &visibleRowIndices);
@@ -144,14 +144,14 @@ void Menu::AddOutfitEntryToWorkbench(const OutfitEntry &a_entry,
 }
 
 void Menu::PreviewGearEntry(const GearEntry &a_entry) {
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   workbench_.ApplyCatalogPreview(
       a_entry.id, std::vector<RE::FormID>{a_entry.formID},
       ResolveWorkbenchPreviewActor(), &visibleRowIndices);
 }
 
 void Menu::PreviewOutfitEntry(const OutfitEntry &a_entry) {
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   workbench_.ApplyCatalogPreview(a_entry.id, a_entry.GetArmorFormIDs(),
                                  ResolveWorkbenchPreviewActor(),
                                  &visibleRowIndices);

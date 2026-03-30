@@ -20,8 +20,8 @@ struct WorkbenchToolbarAction {
 
 namespace sosr {
 void Menu::DrawWorkbenchFilterBar() {
-  std::vector<WorkbenchFilterOption> filterOptions;
-  BuildWorkbenchFilterOptions(filterOptions);
+  EnsureWorkbenchDerivedState();
+  const auto &filterOptions = workbenchDerived_.filterOptions;
 
   std::vector<ui::components::EditableDropdownItem<WorkbenchFilterOption>>
       filterItems;

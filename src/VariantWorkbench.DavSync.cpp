@@ -513,5 +513,6 @@ void VariantWorkbench::Revert() {
   rows_.clear();
   RebuildRowOrder();
   activeDavVariants_.clear();
+  MarkChanged();
 }
 } // namespace sosr::workbench

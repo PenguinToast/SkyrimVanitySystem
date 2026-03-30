@@ -227,6 +227,7 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
 
   NextConditionId() = (std::max)(NextConditionId(), maxConditionId + 1);
   EnsureDefaultConditions();
+  BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
   sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
 }
@@ -236,5 +237,6 @@ void Menu::RevertConditions() {
   LoadConditionLibrary();
   ConditionEditors().clear();
   NextConditionId() = 1;
+  BumpConditionStoreRevision();
 }
 } // namespace sosr

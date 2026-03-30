@@ -13,9 +13,12 @@
 #include "ui/catalog/PaneState.h"
 #include "ui/conditions/EditorState.h"
 #include "ui/conditions/PaneState.h"
+#include "ui/WorkbenchConflicts.h"
+#include "ui/workbench/Tooltips.h"
 #include "ui/workbench/FilterState.h"
 
 #include <array>
+#include <limits>
 #include <optional>
 #include <unordered_set>
 #include <vector>
@@ -213,7 +216,11 @@ private:
   void PreviewKitEntry(const KitEntry &a_entry);
   void SyncWorkbenchRowsForCurrentFilter();
   void ValidateWorkbenchFilterSelection();
-  [[nodiscard]] std::vector<int> BuildVisibleWorkbenchRowIndices();
+  void EnsureWorkbenchDerivedState();
+  void RebuildWorkbenchDerivedState();
+  void BumpConditionStoreRevision();
+  [[nodiscard]] bool IsWorkbenchFilterSelectionValid() const;
+  [[nodiscard]] const std::vector<int> &BuildVisibleWorkbenchRowIndices();
   [[nodiscard]] bool
   MatchesWorkbenchFilter(const workbench::VariantWorkbenchRow &a_row);
   void ApplyInitialWorkbenchFilterSelection();
@@ -323,5 +330,17 @@ private:
   std::vector<FontOption> bundledFontOptions_;
   std::vector<FontOption> systemFontOptions_;
   workbench::VariantWorkbench workbench_;
+  struct WorkbenchDerivedState {
+    std::uint64_t workbenchRevision{0};
+    std::uint64_t conditionRevision{0};
+    bool revisionsInitialized{false};
+    WorkbenchFilterState filterState{};
+    bool filterStateInitialized{false};
+    std::vector<WorkbenchFilterOption> filterOptions;
+    std::vector<ui::workbench::RowConditionVisualState> rowConditionStates;
+    std::vector<int> visibleRowIndices;
+    ui::workbench_conflicts::ConflictState conflictState;
+  };
+  WorkbenchDerivedState workbenchDerived_;
 };
 } // namespace sosr

@@ -183,6 +183,8 @@ void VariantWorkbench::RebuildRowOrder() {
   }
 }
 
+void VariantWorkbench::MarkChanged() { ++revision_; }
+
 int VariantWorkbench::FindBestCatalogTargetRowIndex(
     const EquipmentWidgetItem &a_item, bool a_requireAcceptable,
     const std::vector<PlannedCatalogAssignment> *a_pendingAssignments,
@@ -288,8 +290,13 @@ bool VariantWorkbench::PlanCatalogAssignments(
 void VariantWorkbench::SyncRowsFromActor(
     RE::Actor *a_actor, std::optional<std::string> a_newRowConditionId) {
   if (!a_actor) {
+    bool changed = false;
     for (auto &row : rows_) {
+      changed = changed || row.isEquipped;
       row.isEquipped = false;
+    }
+    if (changed) {
+      MarkChanged();
     }
     return;
   }
@@ -395,6 +402,7 @@ void VariantWorkbench::SyncRowsFromActor(
       row.isEquipped = (row.equipped.slotMask & occupiedSlotMask) != 0;
     }
   }
+  MarkChanged();
 }
 
 void VariantWorkbench::SyncRowsFromPlayer(
@@ -451,6 +459,7 @@ bool VariantWorkbench::AddCatalogOverride(int a_targetRowIndex,
 
   rows_[static_cast<std::size_t>(a_targetRowIndex)].overrides.push_back(
       std::move(item));
+  MarkChanged();
   return true;
 }
 
@@ -508,6 +517,10 @@ bool VariantWorkbench::AddCatalogSelectionAsRows(
     addedAny = true;
   }
 
+  if (addedAny) {
+    MarkChanged();
+  }
+
   return addedAny;
 }
 
@@ -520,6 +533,7 @@ bool VariantWorkbench::AddSlotRow(const std::uint64_t a_slotMask,
 
   rowOrder_.push_back(row->key);
   rows_.push_back(std::move(*row));
+  MarkChanged();
   return true;
 }
 
@@ -617,6 +631,7 @@ bool VariantWorkbench::MoveOverride(int a_sourceRowIndex, int a_sourceItemIndex,
   sourceOverrides.erase(sourceOverrides.begin() + a_sourceItemIndex);
   rows_[static_cast<std::size_t>(a_targetRowIndex)].overrides.push_back(
       std::move(item));
+  MarkChanged();
   return true;
 }
 
@@ -632,6 +647,7 @@ bool VariantWorkbench::DeleteOverride(int a_rowIndex, int a_itemIndex) {
   }
 
   overrides.erase(overrides.begin() + a_itemIndex);
+  MarkChanged();
   return true;
 }
 
@@ -642,6 +658,7 @@ bool VariantWorkbench::DeleteRow(int a_rowIndex) {
 
   rows_.erase(rows_.begin() + a_rowIndex);
   RebuildRowOrder();
+  MarkChanged();
   return true;
 }
 
@@ -664,6 +681,7 @@ std::size_t VariantWorkbench::DeleteRowsByConditionId(
 
   if (removedCount != 0) {
     RebuildRowOrder();
+    MarkChanged();
   }
 
   return removedCount;
@@ -698,6 +716,7 @@ bool VariantWorkbench::SetConditionId(
   row.conditionId = std::move(a_conditionId);
   UpdateRowIdentity(row);
   RebuildRowOrder();
+  MarkChanged();
   return true;
 }
 
@@ -707,6 +726,7 @@ bool VariantWorkbench::SetHideEquipped(int a_rowIndex, bool a_hideEquipped) {
   }
 
   rows_[static_cast<std::size_t>(a_rowIndex)].hideEquipped = a_hideEquipped;
+  MarkChanged();
   return true;
 }
 
@@ -725,6 +745,10 @@ bool VariantWorkbench::ResetEquippedRows() {
       row.hideEquipped = false;
       changed = true;
     }
+  }
+
+  if (changed) {
+    MarkChanged();
   }
 
   return changed;
@@ -792,6 +816,7 @@ bool VariantWorkbench::InsertCatalogRow(
   rows_.insert(rows_.begin() + insertIndex, std::move(newRows.front()));
 
   RebuildRowOrder();
+  MarkChanged();
   return true;
 }
 
@@ -813,6 +838,7 @@ bool VariantWorkbench::InsertSlotRow(const std::uint64_t a_slotMask,
   rows_.insert(rows_.begin() + insertIndex, std::move(*row));
 
   RebuildRowOrder();
+  MarkChanged();
   return true;
 }
 
@@ -842,6 +868,7 @@ bool VariantWorkbench::ApplyRowReorder(int a_sourceRowIndex,
   rows_.insert(rows_.begin() + insertIndex, std::move(movedRow));
 
   RebuildRowOrder();
+  MarkChanged();
   return true;
 }
 } // namespace sosr::workbench

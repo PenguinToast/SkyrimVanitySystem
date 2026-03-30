@@ -722,6 +722,7 @@ bool Menu::DrawConditionCatalogTable() {
     ImGui::BeginDisabled(broken);
     if (ImGui::Checkbox("##condition-disabled", &disabled)) {
       condition.EnsureCatalog().enabled = !disabled;
+      BumpConditionStoreRevision();
     }
     ImGui::EndDisabled();
     if (broken) {
@@ -788,6 +789,7 @@ bool Menu::DrawConditionCatalogTable() {
               static_cast<std::size_t>(
                   std::distance(catalogIndices.begin(), filteredSourceIt)),
               *reorderPreview.hoveredSlotIndex);
+          BumpConditionStoreRevision();
         }
       }
     }
@@ -818,6 +820,7 @@ bool Menu::DrawConditionCatalogTable() {
       catalog->color = conditions::PickDistinctConditionColor(existingColors);
     }
     ConditionDefinitions().push_back(std::move(copy));
+    BumpConditionStoreRevision();
     conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
     conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
   }
@@ -865,6 +868,7 @@ bool Menu::DrawConditionCatalogTable() {
     workbench_.DeleteRowsByConditionId(deletedConditionId, true);
     ConditionDefinitions().erase(ConditionDefinitions().begin() +
                       static_cast<std::ptrdiff_t>(*pendingDeleteIndex));
+    BumpConditionStoreRevision();
     sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
     sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
     for (auto &editor : ConditionEditors()) {
@@ -1015,6 +1019,7 @@ void Menu::DrawConditionLibraryTable() {
       return;
     }
     ConditionDefinitions() = std::move(deleteResult.definitions);
+    BumpConditionStoreRevision();
     conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
     conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
     for (auto &editor : ConditionEditors()) {

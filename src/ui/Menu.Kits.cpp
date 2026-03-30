@@ -173,7 +173,7 @@ bool Menu::DrawKitTab() {
 
 void Menu::AddKitEntryToWorkbench(const KitEntry &a_entry,
                                   const bool a_replaceExisting) {
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   if (a_replaceExisting) {
     workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.GetArmorFormIDs(),
                                                   &visibleRowIndices);
@@ -350,7 +350,7 @@ bool Menu::DeletePendingKit() {
 }
 
 void Menu::PreviewKitEntry(const KitEntry &a_entry) {
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   workbench_.ApplyCatalogPreview(a_entry.id, a_entry.GetArmorFormIDs(),
                                  ResolveWorkbenchPreviewActor(),
                                  &visibleRowIndices);

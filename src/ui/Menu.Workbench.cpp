@@ -68,13 +68,17 @@ void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
 }
 
 void Menu::DrawVariantWorkbenchPane() {
-  ValidateWorkbenchFilterSelection();
+  EnsureWorkbenchDerivedState();
+  if (!IsWorkbenchFilterSelectionValid()) {
+    workbenchFilter_ = {};
+    EnsureWorkbenchDerivedState();
+  }
   DrawWorkbenchFilterBar();
   ImGui::Separator();
   DrawWorkbenchToolbar();
 
   const auto &rows = workbench_.GetRows();
-  const auto visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   if (rows.empty()) {
     DrawWorkbenchEmptyState(
         "##variant-workbench-empty", "##empty-workbench-row-target",

@@ -104,6 +104,7 @@ public:
     return rows_;
   }
   [[nodiscard]] std::size_t GetRowCount() const { return rows_.size(); }
+  [[nodiscard]] std::uint64_t GetRevision() const { return revision_; }
 
 private:
   struct PlannedCatalogAssignment {
@@ -135,9 +136,11 @@ private:
   FindBestCatalogTargetRowIndex(const EquipmentWidgetItem &a_item,
                                 bool a_requireAcceptable) const;
   void RebuildRowOrder();
+  void MarkChanged();
 
   std::vector<VariantWorkbenchRow> rows_;
   std::vector<std::string> rowOrder_;
+  std::uint64_t revision_{0};
   struct ActiveDavVariantState {
     std::string variantJson;
     std::string conditionSignature;

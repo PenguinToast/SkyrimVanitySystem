@@ -65,6 +65,7 @@ void Menu::EnsureDefaultConditions() {
 
   ConditionDefinitions().push_back(conditions::BuildDefaultPlayerCondition());
   NextConditionId() = 2;
+  BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
   sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
 }
@@ -81,6 +82,7 @@ void Menu::LoadConditionLibrary() {
   definitions.insert(definitions.end(),
                      std::make_move_iterator(loaded.begin()),
                      std::make_move_iterator(loaded.end()));
+  BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(definitions);
   sosr::conditions::InvalidateConditionMaterializationCaches(definitions);
 }
@@ -364,6 +366,7 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
     *it = a_editor.draft;
   }
 
+  BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
   sosr::conditions::InvalidateConditionMaterializationCachesFrom(
       ConditionDefinitions(), a_editor.draft.id);
@@ -375,6 +378,7 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
 void Menu::ApplyLibraryChangeResult(
     const conditions::LibraryChangeResult &a_result) {
   ConditionDefinitions() = a_result.definitions;
+  BumpConditionStoreRevision();
   for (const auto &[oldId, newId] : a_result.renamedIds) {
     PropagateConditionIdRenameToEditors(ConditionEditors(), oldId, newId);
   }

@@ -203,5 +203,7 @@ void VariantWorkbench::Deserialize(
     rows_.push_back(std::move(row));
     rowOrder_.push_back(rows_.back().key);
   }
+
+  MarkChanged();
 }
 } // namespace sosr::workbench
