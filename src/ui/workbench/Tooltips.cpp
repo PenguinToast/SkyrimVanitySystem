@@ -186,13 +186,11 @@ RowConditionVisualState ResolveRowConditionVisualState(
       }
       state.description.append(
           "This condition references missing conditions and will not apply.");
-      state.description.append("\nMissing: ");
-      for (std::size_t index = 0;
-           index < conditionStatus.missingDependencyIds.size(); ++index) {
-        if (index != 0) {
-          state.description.append(", ");
-        }
-        state.description.append(conditionStatus.missingDependencyIds[index]);
+      state.description.append("\nMissing:");
+      for (const auto &missingChain : conditionStatus.missingDependencyChains) {
+        state.description.append("\n- ");
+        state.description.append(
+            ::sosr::conditions::FormatMissingDependencyChain(missingChain, 1));
       }
       state.disabled = true;
       state.brokenCondition = true;

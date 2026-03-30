@@ -21,10 +21,15 @@ ResolveDefinitionForValidation(const std::vector<Definition> &a_conditions,
   return sosr::conditions::FindDefinitionById(a_conditions, a_conditionId);
 }
 
-void CollectMissingDependencyIdsRecursive(
+std::string BuildDependencyLabel(const Definition &a_definition) {
+  return !a_definition.name.empty() ? a_definition.name : a_definition.id;
+}
+
+void CollectMissingDependencyChainsRecursive(
     const Definition &a_definition, const std::vector<Definition> &a_conditions,
-    std::vector<std::string> &a_missingIds,
-    std::vector<std::string_view> &a_visitStack) {
+    std::vector<sosr::conditions::MissingDependencyChain> &a_missingChains,
+    std::vector<std::string_view> &a_visitStack,
+    sosr::conditions::MissingDependencyChain &a_path) {
   if (!a_definition.id.empty()) {
     if (std::ranges::find(a_visitStack, std::string_view{a_definition.id}) !=
         a_visitStack.end()) {
@@ -32,6 +37,7 @@ void CollectMissingDependencyIdsRecursive(
     }
     a_visitStack.push_back(a_definition.id);
   }
+  a_path.push_back(BuildDependencyLabel(a_definition));
 
   for (const auto &clause : a_definition.clauses) {
     if (clause.customConditionId.empty()) {
@@ -41,17 +47,20 @@ void CollectMissingDependencyIdsRecursive(
     const auto *referenced =
         sosr::conditions::FindDefinitionById(a_conditions, clause.customConditionId);
     if (!referenced) {
-      if (std::ranges::find(a_missingIds, clause.customConditionId) ==
-          a_missingIds.end()) {
-        a_missingIds.push_back(clause.customConditionId);
+      auto chain = a_path;
+      chain.push_back(clause.customConditionId);
+      if (std::ranges::find(a_missingChains, chain) == a_missingChains.end()) {
+        a_missingChains.push_back(std::move(chain));
       }
       continue;
     }
 
-    CollectMissingDependencyIdsRecursive(*referenced, a_conditions, a_missingIds,
-                                         a_visitStack);
+    CollectMissingDependencyChainsRecursive(*referenced, a_conditions,
+                                            a_missingChains, a_visitStack,
+                                            a_path);
   }
 
+  a_path.pop_back();
   if (!a_definition.id.empty()) {
     a_visitStack.pop_back();
   }
@@ -141,14 +150,30 @@ bool HasDependencyCycle(const Definition &a_draft,
   return false;
 }
 
-std::vector<std::string>
-CollectMissingDependencyIds(const Definition &a_definition,
-                            const std::vector<Definition> &a_conditions) {
-  std::vector<std::string> missingIds;
+std::vector<MissingDependencyChain>
+CollectMissingDependencyChains(const Definition &a_definition,
+                               const std::vector<Definition> &a_conditions) {
+  std::vector<MissingDependencyChain> missingChains;
   std::vector<std::string_view> visitStack;
-  CollectMissingDependencyIdsRecursive(a_definition, a_conditions, missingIds,
-                                       visitStack);
-  return missingIds;
+  MissingDependencyChain path;
+  CollectMissingDependencyChainsRecursive(a_definition, a_conditions,
+                                          missingChains, visitStack, path);
+  return missingChains;
+}
+
+std::string FormatMissingDependencyChain(const MissingDependencyChain &a_chain,
+                                        const std::size_t a_skipFrontCount) {
+  std::string formatted;
+  const auto start = (std::min)(a_skipFrontCount, a_chain.size());
+  bool first = true;
+  for (std::size_t index = start; index < a_chain.size(); ++index) {
+    if (!first) {
+      formatted.append(" -> ");
+    }
+    formatted.append(a_chain[index]);
+    first = false;
+  }
+  return formatted;
 }
 
 void RenameConditionReferences(std::vector<Definition> &a_definitions,

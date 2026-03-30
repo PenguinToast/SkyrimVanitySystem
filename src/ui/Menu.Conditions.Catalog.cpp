@@ -275,10 +275,16 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
       ImGui::Spacing();
     }
 
-    if (!conditionStatus.missingDependencyIds.empty()) {
+    if (!conditionStatus.missingDependencyChains.empty()) {
       DrawConditionTooltipSectionHeader("Missing References");
-      for (const auto &missingId : conditionStatus.missingDependencyIds) {
-        ImGui::BulletText("%s", missingId.c_str());
+      for (const auto &missingChain : conditionStatus.missingDependencyChains) {
+        const auto label =
+            conditions::FormatMissingDependencyChain(missingChain, 1);
+        ImGui::Bullet();
+        ImGui::SameLine();
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextUnformatted(label.c_str());
+        ImGui::PopTextWrapPos();
       }
       ImGui::Spacing();
     }

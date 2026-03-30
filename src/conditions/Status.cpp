@@ -10,9 +10,9 @@ bool IsWorkbenchSelectable(const Definition &a_definition) {
 DefinitionStatus EvaluateDefinitionStatus(const Definition &a_definition,
                                           const std::vector<Definition> &a_conditions) {
   DefinitionStatus status;
-  status.missingDependencyIds =
-      CollectMissingDependencyIds(a_definition, a_conditions);
-  if (!status.missingDependencyIds.empty()) {
+  status.missingDependencyChains =
+      CollectMissingDependencyChains(a_definition, a_conditions);
+  if (!status.missingDependencyChains.empty()) {
     status.availability = DefinitionAvailability::Broken;
     return status;
   }

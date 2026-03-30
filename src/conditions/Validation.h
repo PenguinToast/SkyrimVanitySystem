@@ -8,6 +8,8 @@
 #include <vector>
 
 namespace sosr::conditions {
+using MissingDependencyChain = std::vector<std::string>;
+
 [[nodiscard]] const Definition *
 FindDefinitionById(const std::vector<Definition> &a_conditions,
                    std::string_view a_id);
@@ -25,9 +27,13 @@ FindDefinitionByName(const std::vector<Definition> &a_conditions,
 HasDependencyCycle(const Definition &a_draft,
                    const std::vector<Definition> &a_conditions);
 
-[[nodiscard]] std::vector<std::string>
-CollectMissingDependencyIds(const Definition &a_definition,
-                            const std::vector<Definition> &a_conditions);
+[[nodiscard]] std::vector<MissingDependencyChain>
+CollectMissingDependencyChains(const Definition &a_definition,
+                               const std::vector<Definition> &a_conditions);
+
+[[nodiscard]] std::string
+FormatMissingDependencyChain(const MissingDependencyChain &a_chain,
+                             std::size_t a_skipFrontCount = 0);
 
 void RenameConditionReferences(std::vector<Definition> &a_definitions,
                                std::string_view a_oldId,

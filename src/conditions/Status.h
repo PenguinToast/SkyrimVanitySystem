@@ -1,6 +1,7 @@
 #pragma once
 
 #include "conditions/Definition.h"
+#include "conditions/Validation.h"
 
 #include <vector>
 
@@ -9,7 +10,7 @@ enum class DefinitionAvailability : std::uint8_t { Active, Disabled, Broken };
 
 struct DefinitionStatus {
   DefinitionAvailability availability{DefinitionAvailability::Active};
-  std::vector<std::string> missingDependencyIds;
+  std::vector<MissingDependencyChain> missingDependencyChains;
 
   [[nodiscard]] bool IsActive() const {
     return availability == DefinitionAvailability::Active;
