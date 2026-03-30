@@ -11,21 +11,16 @@
 #include <string_view>
 
 namespace {
-constexpr std::string_view kSectionPrefix = "\x1fsection:";
+using OptionView = sosr::ui::components::EditableDropdownOptionView;
 
-bool IsSectionEntry(std::string_view a_option) {
-  return a_option.size() >= kSectionPrefix.size() &&
-         sosr::strings::EqualsInsensitive(
-             a_option.substr(0, kSectionPrefix.size()), kSectionPrefix);
+bool IsSectionEntry(const OptionView &a_option) { return a_option.isSection; }
+
+std::string_view GetSectionLabel(const OptionView &a_option) {
+  return a_option.label;
 }
 
-std::string_view GetSectionLabel(std::string_view a_option) {
-  return IsSectionEntry(a_option) ? a_option.substr(kSectionPrefix.size())
-                                  : a_option;
-}
-
-const std::string *
-FindTopAutocompleteOption(const std::vector<std::string> &a_options,
+const OptionView *
+FindTopAutocompleteOption(std::span<const OptionView> a_options,
                           std::string_view a_buffer) {
   const auto needle = sosr::strings::TrimText(a_buffer);
   for (const auto &option : a_options) {
@@ -33,7 +28,7 @@ FindTopAutocompleteOption(const std::vector<std::string> &a_options,
       continue;
     }
     if (!needle.empty() &&
-        !sosr::strings::ContainsInsensitive(option, needle)) {
+        !sosr::strings::ContainsInsensitive(option.label, needle)) {
       continue;
     }
     return std::addressof(option);
@@ -42,26 +37,26 @@ FindTopAutocompleteOption(const std::vector<std::string> &a_options,
 }
 
 struct EditableDropdownAutocompleteData {
-  const std::vector<std::string> *options{nullptr};
+  std::span<const OptionView> options;
 };
 
 int EditableDropdownInputCallback(ImGuiInputTextCallbackData *a_data) {
   auto *userData =
       static_cast<EditableDropdownAutocompleteData *>(a_data->UserData);
-  if (!userData || !userData->options ||
+  if (!userData || userData->options.empty() ||
       a_data->EventFlag != ImGuiInputTextFlags_CallbackCompletion) {
     return 0;
   }
 
   const std::string_view buffer{a_data->Buf,
                                 static_cast<std::size_t>(a_data->BufTextLen)};
-  const auto *topOption = FindTopAutocompleteOption(*userData->options, buffer);
+  const auto *topOption = FindTopAutocompleteOption(userData->options, buffer);
   if (!topOption) {
     return 0;
   }
 
   a_data->DeleteChars(0, a_data->BufTextLen);
-  a_data->InsertChars(0, topOption->c_str());
+  a_data->InsertChars(0, std::string(topOption->label).c_str());
   a_data->SelectAll();
   return 0;
 }
@@ -132,10 +127,46 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
 
 bool DrawEditableDropdown(const char *a_label, const char *a_hint,
                           char *a_buffer, const std::size_t a_bufferSize,
-                          const std::vector<std::string> &a_options,
+                          std::span<const EditableDropdownOptionView> a_options,
                           const float a_width, std::string *a_selectedOption,
                           const bool a_allowCustomInput,
                           const std::string *a_fallbackSelection) {
+  int fallbackIndex = -1;
+  if (a_fallbackSelection) {
+    for (std::size_t index = 0; index < a_options.size(); ++index) {
+      if (a_options[index].isSection) {
+        continue;
+      }
+      if (sosr::strings::EqualsInsensitive(a_options[index].label,
+                                           *a_fallbackSelection)) {
+        fallbackIndex = static_cast<int>(index);
+        break;
+      }
+    }
+  }
+
+  int selectedIndex = -1;
+  const bool changed =
+      DrawEditableDropdownIndexed(a_label, a_hint, a_buffer, a_bufferSize,
+                                  a_options, a_width, &selectedIndex,
+                                  a_allowCustomInput, fallbackIndex);
+
+  if (a_selectedOption && selectedIndex >= 0 &&
+      selectedIndex < static_cast<int>(a_options.size()) &&
+      !a_options[static_cast<std::size_t>(selectedIndex)].isSection) {
+    *a_selectedOption =
+        std::string(a_options[static_cast<std::size_t>(selectedIndex)].label);
+  }
+
+  return changed;
+}
+
+bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
+                                 char *a_buffer, const std::size_t a_bufferSize,
+                                 std::span<const EditableDropdownOptionView> a_options,
+                                 const float a_width, int *a_selectedIndex,
+                                 const bool a_allowCustomInput,
+                                 const int a_fallbackIndex) {
   bool changed = false;
   const bool acceptAutocompleteOnEnter = !a_allowCustomInput;
   const auto popupId = std::string(a_label) + "##popup";
@@ -144,7 +175,7 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
   const auto filterHashId = std::string(a_label) + "##filterhash";
   const auto arrowAreaWidth = ImGui::GetFrameHeight();
   const auto inputWidth = (std::max)(1.0f, a_width - arrowAreaWidth);
-  EditableDropdownAutocompleteData autocompleteData{std::addressof(a_options)};
+  EditableDropdownAutocompleteData autocompleteData{a_options};
   ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_AutoSelectAll |
                                    ImGuiInputTextFlags_CallbackCompletion;
   if (acceptAutocompleteOnEnter) {
@@ -216,42 +247,40 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
 
       const auto rawNeedle = sosr::strings::TrimText(a_buffer);
       const auto exactMatchIt =
-          std::ranges::find_if(a_options, [&](const std::string &option) {
+          std::ranges::find_if(a_options, [&](const EditableDropdownOptionView &option) {
             if (IsSectionEntry(option)) {
               return false;
             }
-            return sosr::strings::EqualsInsensitive(option, rawNeedle);
+            return sosr::strings::EqualsInsensitive(option.label, rawNeedle);
           });
-      const std::string *exactMatch = exactMatchIt != a_options.end()
-                                          ? std::addressof(*exactMatchIt)
-                                          : nullptr;
-      const auto needle = exactMatch ? std::string{} : rawNeedle;
+      const int exactMatchIndex = exactMatchIt != a_options.end()
+                                      ? static_cast<int>(std::distance(a_options.begin(),
+                                                                       exactMatchIt))
+                                      : -1;
+      const auto needle = exactMatchIndex >= 0 ? std::string{} : rawNeedle;
       bool anyVisible = false;
-      std::vector<const std::string *> visibleOptions;
+      std::vector<int> visibleOptions;
       visibleOptions.reserve(a_options.size());
-      for (const auto &option : a_options) {
+      for (std::size_t optionIndex = 0; optionIndex < a_options.size();
+           ++optionIndex) {
+        const auto &option = a_options[optionIndex];
         if (IsSectionEntry(option)) {
           continue;
         }
         if (!needle.empty() &&
-            !sosr::strings::ContainsInsensitive(option, needle)) {
+            !sosr::strings::ContainsInsensitive(option.label, needle)) {
           continue;
         }
-        visibleOptions.push_back(std::addressof(option));
+        visibleOptions.push_back(static_cast<int>(optionIndex));
       }
 
-      const std::string *topOption =
-          visibleOptions.empty()
-              ? nullptr
-              : (exactMatch ? exactMatch : visibleOptions.front());
-      const auto findVisibleOptionIndex =
-          [&](const std::string *a_option) -> int {
-        if (!a_option) {
+      const auto findVisibleOptionIndex = [&](const int a_optionIndex) -> int {
+        if (a_optionIndex < 0) {
           return -1;
         }
         for (std::size_t visibleIndex = 0; visibleIndex < visibleOptions.size();
              ++visibleIndex) {
-          if (visibleOptions[visibleIndex] == a_option) {
+          if (visibleOptions[visibleIndex] == a_optionIndex) {
             return static_cast<int>(visibleIndex);
           }
         }
@@ -260,8 +289,11 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
 
       int highlightedIndex = storage->GetInt(highlightStorageId, -1);
       const int preferredHighlightIndex =
-          exactMatch ? findVisibleOptionIndex(exactMatch)
-                     : findVisibleOptionIndex(topOption);
+          exactMatchIndex >= 0
+              ? findVisibleOptionIndex(exactMatchIndex)
+              : (!visibleOptions.empty()
+                     ? findVisibleOptionIndex(visibleOptions.front())
+                     : -1);
       const int filterHash =
           static_cast<int>(ImHashStr(rawNeedle.c_str(), rawNeedle.size()));
       const int previousFilterHash = storage->GetInt(
@@ -299,17 +331,21 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
       }
       storage->SetInt(highlightStorageId, highlightedIndex);
 
-      const auto commitOption = [&](const std::string &a_option) {
-        std::snprintf(a_buffer, a_bufferSize, "%s", a_option.c_str());
-        if (a_selectedOption) {
-          *a_selectedOption = a_option;
+      const auto commitOption = [&](const int a_optionIndex) {
+        const auto &option = a_options[static_cast<std::size_t>(a_optionIndex)];
+        std::snprintf(a_buffer, a_bufferSize, "%.*s",
+                      static_cast<int>(option.label.size()), option.label.data());
+        if (a_selectedIndex) {
+          *a_selectedIndex = a_optionIndex;
         }
         changed = true;
         dropdownOpen = false;
         ImGui::CloseCurrentPopup();
       };
       int visibleIndex = 0;
-      for (const auto &option : a_options) {
+      for (std::size_t optionIndex = 0; optionIndex < a_options.size();
+           ++optionIndex) {
+        const auto &option = a_options[optionIndex];
         if (IsSectionEntry(option)) {
           if (anyVisible) {
             ImGui::Spacing();
@@ -320,21 +356,22 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
           continue;
         }
         if (!needle.empty() &&
-            !sosr::strings::ContainsInsensitive(option, needle)) {
+            !sosr::strings::ContainsInsensitive(option.label, needle)) {
           continue;
         }
 
         anyVisible = true;
         const bool selected = visibleIndex == highlightedIndex;
-        if (ImGui::Selectable(option.c_str(), selected,
+        if (ImGui::Selectable(std::string(option.label).c_str(), selected,
                               ImGuiSelectableFlags_SelectOnClick)) {
-          commitOption(option);
+          commitOption(static_cast<int>(optionIndex));
           ImGui::SetKeyboardFocusHere(-1);
         }
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary) ||
             ImGui::IsItemHovered()) {
           ImGui::BeginTooltip();
-          ImGui::TextUnformatted(option.c_str());
+          ImGui::TextUnformatted(option.label.data(),
+                                 option.label.data() + option.label.size());
           ImGui::EndTooltip();
         }
         if (selected) {
@@ -355,7 +392,7 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
           acceptAutocompleteOnEnter && highlightedIndex >= 0 &&
           highlightedIndex < static_cast<int>(visibleOptions.size())) {
         commitOption(
-            *visibleOptions[static_cast<std::size_t>(highlightedIndex)]);
+            visibleOptions[static_cast<std::size_t>(highlightedIndex)]);
         ImGui::SetKeyboardFocusHere(-1);
       }
 
@@ -403,22 +440,41 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
   storage->SetBool(openStorageId, dropdownOpen);
   ImGui::PopID();
   if (!a_allowCustomInput) {
-    const auto exactMatch =
-        std::ranges::find_if(a_options, [&](const std::string &option) {
-          return sosr::strings::EqualsInsensitive(option, a_buffer);
+      const auto exactMatch =
+        std::ranges::find_if(a_options, [&](const EditableDropdownOptionView &option) {
+          return !option.isSection &&
+                 sosr::strings::EqualsInsensitive(option.label, a_buffer);
         });
     if (exactMatch == a_options.end() && !inputTextActive && !dropdownOpen) {
-      if (a_fallbackSelection && !a_fallbackSelection->empty()) {
-        std::snprintf(a_buffer, a_bufferSize, "%s",
-                      a_fallbackSelection->c_str());
-      } else if (a_selectedOption && !a_selectedOption->empty()) {
-        std::snprintf(a_buffer, a_bufferSize, "%s", a_selectedOption->c_str());
-      } else if (const auto *topOption =
-                     FindTopAutocompleteOption(a_options, a_buffer);
+      if (a_fallbackIndex >= 0 &&
+          a_fallbackIndex < static_cast<int>(a_options.size()) &&
+          !a_options[static_cast<std::size_t>(a_fallbackIndex)].isSection) {
+        const auto &fallbackOption =
+            a_options[static_cast<std::size_t>(a_fallbackIndex)];
+        std::snprintf(a_buffer, a_bufferSize, "%.*s",
+                      static_cast<int>(fallbackOption.label.size()),
+                      fallbackOption.label.data());
+      } else if (a_selectedIndex && *a_selectedIndex >= 0 &&
+                 *a_selectedIndex < static_cast<int>(a_options.size()) &&
+                 !a_options[static_cast<std::size_t>(*a_selectedIndex)].isSection) {
+        const auto &selectedOption =
+            a_options[static_cast<std::size_t>(*a_selectedIndex)];
+        std::snprintf(a_buffer, a_bufferSize, "%.*s",
+                      static_cast<int>(selectedOption.label.size()),
+                      selectedOption.label.data());
+      } else if (const auto *topOption = FindTopAutocompleteOption(a_options, a_buffer);
                  topOption) {
-        std::snprintf(a_buffer, a_bufferSize, "%s", topOption->c_str());
-      } else if (!a_options.empty()) {
-        std::snprintf(a_buffer, a_bufferSize, "%s", a_options.front().c_str());
+        std::snprintf(a_buffer, a_bufferSize, "%.*s",
+                      static_cast<int>(topOption->label.size()),
+                      topOption->label.data());
+      } else if (const auto firstOptionIt = std::ranges::find_if(
+                     a_options, [](const EditableDropdownOptionView &option) {
+                       return !option.isSection;
+                     });
+                 firstOptionIt != a_options.end()) {
+        std::snprintf(a_buffer, a_bufferSize, "%.*s",
+                      static_cast<int>(firstOptionIt->label.size()),
+                      firstOptionIt->label.data());
       } else if (a_bufferSize > 0) {
         a_buffer[0] = '\0';
       }
@@ -426,6 +482,35 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
   }
 
   return changed;
+}
+
+bool DrawEditableDropdown(const char *a_label, const char *a_hint,
+                          char *a_buffer, const std::size_t a_bufferSize,
+                          const std::vector<std::string> &a_options,
+                          const float a_width, std::string *a_selectedOption,
+                          const bool a_allowCustomInput,
+                          const std::string *a_fallbackSelection) {
+  std::vector<EditableDropdownOptionView> optionViews;
+  optionViews.reserve(a_options.size());
+  for (const auto &option : a_options) {
+    constexpr std::string_view kSectionPrefix = "\x1fsection:";
+    const bool isSection =
+        option.size() >= kSectionPrefix.size() &&
+        sosr::strings::EqualsInsensitive(
+            std::string_view(option).substr(0, kSectionPrefix.size()),
+            kSectionPrefix);
+    optionViews.push_back({.label = isSection
+                                        ? std::string_view(option).substr(
+                                              kSectionPrefix.size())
+                                        : std::string_view(option),
+                           .isSection = isSection});
+  }
+
+  return DrawEditableDropdown(a_label, a_hint, a_buffer, a_bufferSize,
+                              std::span<const EditableDropdownOptionView>(
+                                  optionViews.data(), optionViews.size()),
+                              a_width, a_selectedOption, a_allowCustomInput,
+                              a_fallbackSelection);
 }
 
 bool DrawSearchableDropdown(const char *a_label, const char *a_hint,

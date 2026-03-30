@@ -24,6 +24,10 @@ void Menu::DrawWorkbenchFilterBar() {
   std::vector<std::string> filterLabels;
   BuildWorkbenchFilterOptions(filterOptions, filterLabels);
 
+  std::vector<ui::components::EditableDropdownItem<WorkbenchFilterOption>>
+      filterItems;
+  filterItems.reserve(filterOptions.size());
+
   const auto matchesCurrentFilter = [&](const WorkbenchFilterOption &a_option) {
     if (a_option.kind != workbenchFilter_.kind) {
       return false;
@@ -42,23 +46,33 @@ void Menu::DrawWorkbenchFilterBar() {
   };
 
   std::string selectedFilterLabel = "Show All";
+  int selectedFilterIndex = -1;
   if (const auto it = std::ranges::find_if(filterOptions, matchesCurrentFilter);
       it != filterOptions.end()) {
     selectedFilterLabel = it->label;
+    selectedFilterIndex =
+        static_cast<int>(std::distance(filterOptions.begin(), it));
   }
 
+  for (const auto &option : filterOptions) {
+    filterItems.push_back(
+        {.label = option.label,
+         .value = option.label.starts_with("\x1fsection:")
+                      ? std::nullopt
+                      : std::optional<WorkbenchFilterOption>(option)});
+  }
+
+  std::optional<WorkbenchFilterOption> selectedFilterOption;
   if (ui::components::DrawSearchableDropdown(
           "##workbench-filter", "Filter workbench...", selectedFilterLabel,
-          filterLabels, ImGui::GetContentRegionAvail().x)) {
-    if (const auto it =
-            std::ranges::find_if(filterOptions,
-                                 [&](const WorkbenchFilterOption &a_option) {
-                                   return a_option.label == selectedFilterLabel;
-                                 });
-        it != filterOptions.end()) {
-      workbenchFilter_.kind = it->kind;
-      workbenchFilter_.actorFormID = it->actorFormID;
-      workbenchFilter_.conditionId = it->conditionId;
+          std::span<const ui::components::EditableDropdownItem<
+              WorkbenchFilterOption>>(filterItems),
+          ImGui::GetContentRegionAvail().x, &selectedFilterIndex,
+          &selectedFilterOption)) {
+    if (selectedFilterOption.has_value()) {
+      workbenchFilter_.kind = selectedFilterOption->kind;
+      workbenchFilter_.actorFormID = selectedFilterOption->actorFormID;
+      workbenchFilter_.conditionId = selectedFilterOption->conditionId;
       workbench_.ClearPreview();
       SyncWorkbenchRowsForCurrentFilter();
     }
