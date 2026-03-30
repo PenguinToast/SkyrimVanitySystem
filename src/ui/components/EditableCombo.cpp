@@ -96,10 +96,10 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
   }
 
   std::optional<std::string> selectedOption;
-  const bool changed = DrawEditableDropdown(
+  const bool changed = DrawEditableStringDropdown(
       a_label, preview, a_filter.InputBuf, IM_ARRAYSIZE(a_filter.InputBuf),
       std::span<const EditableDropdownItem<std::string>>(items), width, &a_index,
-      &selectedOption, false, a_index);
+      &selectedOption, a_index);
 
   if (a_filter.InputBuf[0] == '\0') {
     a_index = 0;
@@ -122,6 +122,7 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
   return changed;
 }
 
+namespace detail {
 bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
                                  char *a_buffer, const std::size_t a_bufferSize,
                                  std::span<const EditableDropdownOptionView> a_options,
@@ -439,6 +440,41 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
       } else if (a_bufferSize > 0) {
         a_buffer[0] = '\0';
       }
+    }
+  }
+
+  return changed;
+}
+} // namespace detail
+
+bool DrawEditableStringDropdown(
+    const char *a_label, const char *a_hint, char *a_buffer,
+    const std::size_t a_bufferSize,
+    std::span<const EditableDropdownItem<std::string>> a_items,
+    const float a_width, int *a_selectedIndex,
+    std::optional<std::string> *a_selectedValue, const int a_fallbackIndex) {
+  std::vector<EditableDropdownOptionView> optionViews;
+  optionViews.reserve(a_items.size());
+  for (const auto &item : a_items) {
+    optionViews.push_back(item.AsView());
+  }
+
+  int selectedIndex = a_selectedIndex ? *a_selectedIndex : -1;
+  const bool changed = detail::DrawEditableDropdownIndexed(
+      a_label, a_hint, a_buffer, a_bufferSize, optionViews, a_width,
+      &selectedIndex, true, a_fallbackIndex);
+
+  if (a_selectedIndex) {
+    *a_selectedIndex = selectedIndex;
+  }
+  if (a_selectedValue) {
+    if (selectedIndex >= 0 &&
+        selectedIndex < static_cast<int>(a_items.size()) &&
+        a_items[static_cast<std::size_t>(selectedIndex)].value.has_value()) {
+      *a_selectedValue =
+          a_items[static_cast<std::size_t>(selectedIndex)].value;
+    } else {
+      a_selectedValue->reset();
     }
   }
 
