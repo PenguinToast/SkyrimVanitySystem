@@ -72,18 +72,17 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
                    : a_options[static_cast<std::size_t>(a_index - 1)].c_str();
   const float width = ImGui::CalcItemWidth();
 
-  std::vector<EditableDropdownItem<std::string>> items;
-  items.reserve(a_options.size() + 1);
-  items.push_back({.label = a_allLabel, .value = std::string(a_allLabel)});
+  std::vector<EditableDropdownOptionView> optionViews;
+  optionViews.reserve(a_options.size() + 1);
+  optionViews.push_back({.label = a_allLabel, .isSection = false});
   for (const auto &option : a_options) {
-    items.push_back({.label = option, .value = option});
+    optionViews.push_back({.label = option, .isSection = false});
   }
 
-  std::optional<std::string> selectedOption;
-  const bool changed = DrawEditableStringDropdown(
+  const bool changed = detail::DrawEditableDropdownIndexed(
       a_label, preview, a_filter.InputBuf, IM_ARRAYSIZE(a_filter.InputBuf),
-      std::span<const EditableDropdownItem<std::string>>(items), width, &a_index,
-      &selectedOption, a_index);
+      std::span<const EditableDropdownOptionView>(optionViews), width,
+      &a_index, false, a_index);
 
   if (a_filter.InputBuf[0] == '\0') {
     a_index = 0;
@@ -91,8 +90,8 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
     return changed;
   }
 
-  for (std::size_t index = 0; index < items.size(); ++index) {
-    if (sosr::strings::CompareTextInsensitive(items[index].label,
+  for (std::size_t index = 0; index < optionViews.size(); ++index) {
+    if (sosr::strings::CompareTextInsensitive(optionViews[index].label,
                                               a_filter.InputBuf) != 0) {
       continue;
     }
