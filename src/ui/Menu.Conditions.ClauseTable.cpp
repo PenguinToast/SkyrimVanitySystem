@@ -4,6 +4,7 @@
 #include "conditions/Validation.h"
 #include "imgui_internal.h"
 #include "ui/components/EditableCombo.h"
+#include "ui/components/PinnableTooltip.h"
 #include "ui/conditions/EditorSupport.h"
 #include "ui/conditions/Widgets.h"
 
@@ -32,6 +33,20 @@ using ui::condition_widgets::DrawHoverDescription;
 constexpr char kIconTrash[] = "\xee\x86\x8c";        // ICON_LC_TRASH
 constexpr char kIconGripVertical[] = "\xee\x83\xae"; // ICON_LC_GRIP_VERTICAL
 constexpr char kConditionClausePayloadType[] = "SVS_CONDITION_CLAUSE";
+constexpr float kOrGroupIndicatorWidth = 6.0f;
+constexpr float kOrGroupIndicatorInsetX = 4.0f;
+constexpr float kOrGroupBoundaryGap = 4.0f;
+constexpr float kOrGroupIndicatorRounding = 4.0f;
+constexpr float kOrGroupTooltipWrapWidth = 360.0f;
+constexpr std::string_view kOrGroupTooltip =
+    "In Skyrim, consecutive OR clauses are evaluated as a grouped block "
+    "before surrounding AND clauses. Example: A AND B OR C AND D becomes "
+    "A AND (B OR C) AND D.";
+
+struct OrGroupSpan {
+  std::size_t startIndex{0};
+  std::size_t endIndex{0};
+};
 
 void DrawClauseDragHandle(const char *a_id, const ImVec2 a_size) {
   ImGui::InvisibleButton(a_id, a_size);
@@ -97,6 +112,33 @@ void DrawClauseHeaderCell(const char *a_id, const char *a_label,
                           const std::string_view a_tooltip) {
   ImGui::TextDisabled("%s", a_label);
   DrawHoverDescription(a_id, a_tooltip);
+}
+
+void DrawOrGroupIndicator(const std::string &a_id, const ImRect &a_groupRect) {
+  constexpr ImDrawFlags drawFlags =
+      ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersTopRight |
+      ImDrawFlags_RoundCornersBottomLeft | ImDrawFlags_RoundCornersBottomRight;
+
+  const auto indicatorMin = ImVec2(a_groupRect.Min.x + kOrGroupIndicatorInsetX,
+                                   a_groupRect.Min.y + kOrGroupBoundaryGap);
+  const auto indicatorMax =
+      ImVec2(indicatorMin.x + kOrGroupIndicatorWidth,
+             a_groupRect.Max.y - kOrGroupBoundaryGap);
+
+  const auto *theme = ThemeConfig::GetSingleton();
+  const bool hovered =
+      ImGui::IsMouseHoveringRect(indicatorMin, indicatorMax, false);
+  const auto color =
+      theme->GetColorU32("PRIMARY", hovered ? 0.95f : 0.78f);
+  ImGui::GetWindowDrawList()->AddRectFilled(indicatorMin, indicatorMax, color,
+                                            kOrGroupIndicatorRounding, drawFlags);
+
+  ui::components::DrawPinnableTooltip(a_id, hovered, [&]() {
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + kOrGroupTooltipWrapWidth);
+    ImGui::TextUnformatted(kOrGroupTooltip.data(),
+                           kOrGroupTooltip.data() + kOrGroupTooltip.size());
+    ImGui::PopTextWrapPos();
+  });
 }
 } // namespace
 
@@ -170,10 +212,35 @@ void Menu::DrawConditionEditorClauseTable(
   bool hoveredClauseInsertAfter = false;
   std::optional<std::size_t> acceptedSourceClauseIndex;
   bool acceptedInsertAfter = false;
+  std::vector<std::optional<ImRect>> joinCellRects(a_editor.draft.clauses.size());
+  std::vector<OrGroupSpan> orGroupSpans;
+  for (std::size_t index = 0; index < a_editor.draft.clauses.size();) {
+    if (a_editor.draft.clauses[index].connectiveToNext !=
+        ConditionConnective::Or) {
+      ++index;
+      continue;
+    }
+
+    std::size_t endIndex = index + 1;
+    while (endIndex < a_editor.draft.clauses.size() &&
+           a_editor.draft.clauses[endIndex - 1].connectiveToNext ==
+               ConditionConnective::Or) {
+      ++endIndex;
+    }
+
+    orGroupSpans.push_back(
+        OrGroupSpan{.startIndex = index, .endIndex = endIndex - 1});
+    index = endIndex;
+  }
 
   for (std::size_t index = 0; index < a_editor.draft.clauses.size();) {
     ImGui::PushID(static_cast<int>(index));
     auto &clause = a_editor.draft.clauses[index];
+    const bool previousClauseOr =
+        index > 0 &&
+        a_editor.draft.clauses[index - 1].connectiveToNext == ConditionConnective::Or;
+    const bool nextClauseOr = clause.connectiveToNext == ConditionConnective::Or;
+    const bool inOrGroup = previousClauseOr || nextClauseOr;
     std::optional<ConditionFunctionInfo> customFunctionInfo;
     const auto *functionInfo =
         ResolveConditionFunctionInfo(clause, ConditionDefinitions(), customFunctionInfo);
@@ -181,6 +248,11 @@ void Menu::DrawConditionEditorClauseTable(
         functionInfo ? functionInfo->name : clause.functionName;
 
     ImGui::TableNextRow();
+    if (inOrGroup) {
+      ImGui::TableSetBgColor(
+          ImGuiTableBgTarget_RowBg0,
+          ThemeConfig::GetSingleton()->GetColorU32("PRIMARY", 0.05f));
+    }
 
     ImGui::TableSetColumnIndex(0);
     DrawClauseDragHandle(
@@ -347,6 +419,8 @@ void Menu::DrawConditionEditorClauseTable(
             : "Numeric value compared against the function result.");
 
     ImGui::TableSetColumnIndex(6);
+    joinCellRects[index] =
+        ImGui::TableGetCellBgRect(ImGui::GetCurrentTable(), 6);
     const bool hasNextClause = index + 1 < a_editor.draft.clauses.size();
     ImGui::BeginDisabled(!hasNextClause);
     int connectiveIndex =
@@ -437,6 +511,22 @@ void Menu::DrawConditionEditorClauseTable(
                         2.0f);
       drawList->PopClipRect();
     }
+  }
+
+  for (const auto &group : orGroupSpans) {
+    if (group.startIndex >= joinCellRects.size() ||
+        group.endIndex >= joinCellRects.size() ||
+        !joinCellRects[group.startIndex].has_value() ||
+        !joinCellRects[group.endIndex].has_value()) {
+      continue;
+    }
+
+    const auto &startRect = *joinCellRects[group.startIndex];
+    const auto &endRect = *joinCellRects[group.endIndex];
+    DrawOrGroupIndicator(
+        "conditions:editor:or-group:" + std::to_string(group.startIndex),
+        ImRect(ImVec2(startRect.Min.x, startRect.Min.y),
+               ImVec2(startRect.Max.x, endRect.Max.y)));
   }
 
   ImGui::EndTable();
