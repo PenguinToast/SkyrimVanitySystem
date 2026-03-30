@@ -4,6 +4,7 @@
 #include "ConditionMaterializer.h"
 #include "ThemeConfig.h"
 #include "imgui_internal.h"
+#include "ui/TableReorder.h"
 #include "ui/components/PinnableTooltip.h"
 #include "ui/conditions/Widgets.h"
 
@@ -252,7 +253,7 @@ bool Menu::DrawConditionTab() {
                       ConditionDefinitions().size() == 1 ? "" : "s");
   ImGui::Spacing();
 
-  if (!ImGui::BeginTable("##conditions-table", 1,
+  if (!ImGui::BeginTable("##conditions-table", 2,
                          ImGuiTableFlags_SizingStretchProp |
                              ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_BordersInnerV,
@@ -261,13 +262,18 @@ bool Menu::DrawConditionTab() {
   }
 
   ImGui::TableSetupColumn("Condition", ImGuiTableColumnFlags_WidthStretch);
+  ImGui::TableSetupColumn("Disable",
+                          ImGuiTableColumnFlags_WidthFixed |
+                              ImGuiTableColumnFlags_NoResize,
+                          72.0f);
+  ImGui::TableHeadersRow();
   bool rowClicked = false;
   std::optional<std::size_t> pendingDeleteIndex;
-  std::vector<ImRect> conditionRowRects;
-  conditionRowRects.reserve(ConditionDefinitions().size());
+  std::vector<ImRect> reorderRowRects;
+  reorderRowRects.reserve(ConditionDefinitions().size());
 
   for (std::size_t index = 0; index < ConditionDefinitions().size(); ++index) {
-    const auto &condition = ConditionDefinitions()[index];
+    auto &condition = ConditionDefinitions()[index];
     ConditionDeleteUsage deleteUsage;
     for (const auto &otherCondition : ConditionDefinitions()) {
       if (otherCondition.id == condition.id) {
@@ -290,7 +296,7 @@ bool Menu::DrawConditionTab() {
     const bool deleteEnabled = deleteUsage.CanDelete();
 
     const auto rowWrapWidth =
-        (std::max)(ImGui::GetContentRegionAvail().x - 52.0f, 120.0f);
+        (std::max)(ImGui::GetContentRegionAvail().x - 124.0f, 120.0f);
     const auto rowHeight = ui::condition_widgets::MeasureConditionRowHeight(
         condition, rowWrapWidth);
 
@@ -298,8 +304,27 @@ bool Menu::DrawConditionTab() {
     ImGui::TableSetColumnIndex(0);
     ImGui::PushID(static_cast<int>(index));
 
-    const auto width = ImGui::GetContentRegionAvail().x;
-    ImGui::InvisibleButton("##condition-row", ImVec2(width, rowHeight));
+    if (const auto *rowTable = ImGui::GetCurrentTable(); rowTable != nullptr) {
+      reorderRowRects.emplace_back();
+      const auto rowCellRect = ImGui::TableGetCellBgRect(rowTable, 0);
+      const auto cellPadding = ImGui::GetStyle().CellPadding;
+      const auto cellContentHeight =
+          (rowCellRect.Max.y - rowCellRect.Min.y) - (cellPadding.y * 2.0f);
+      const auto cellContentOffsetY =
+          (std::max)(0.0f, (cellContentHeight - rowHeight) * 0.5f);
+      ImGui::SetCursorScreenPos(
+          ImVec2(rowCellRect.Min.x + cellPadding.x,
+                 rowCellRect.Min.y + cellPadding.y + cellContentOffsetY));
+      const auto width =
+          (std::max)(0.0f, (rowCellRect.Max.x - rowCellRect.Min.x) -
+                                (cellPadding.x * 2.0f));
+      ImGui::InvisibleButton("##condition-row", ImVec2(width, rowHeight));
+    } else {
+      const auto width = ImGui::GetContentRegionAvail().x;
+      ImGui::InvisibleButton("##condition-row", ImVec2(width, rowHeight));
+      reorderRowRects.emplace_back(ImGui::GetItemRectMin(),
+                                   ImGui::GetItemRectMax());
+    }
     const auto min = ImGui::GetItemRectMin();
     const auto max = ImGui::GetItemRectMax();
     const auto stripeWidth = 6.0f;
@@ -320,17 +345,21 @@ bool Menu::DrawConditionTab() {
     }
 
     auto *drawList = ImGui::GetWindowDrawList();
-    const auto bodyColor =
-        hovered ? IM_COL32(42, 42, 44, 240) : IM_COL32(34, 34, 36, 225);
+    const bool enabled = condition.enabled;
+    const auto bodyColor = enabled ? (hovered ? IM_COL32(42, 42, 44, 240)
+                                              : IM_COL32(34, 34, 36, 225))
+                                   : (hovered ? IM_COL32(35, 35, 38, 225)
+                                              : IM_COL32(28, 28, 30, 210));
     drawList->AddRectFilled(min, max, bodyColor, rounding);
     drawList->AddRect(
         min, max,
         ImGui::GetColorU32(ImVec4(condition.color.x, condition.color.y,
-                                  condition.color.z, 0.75f)),
+                                  condition.color.z, enabled ? 0.75f : 0.42f)),
         rounding);
     drawList->AddRectFilled(
         min, ImVec2(min.x + stripeWidth, max.y),
-        ImGui::GetColorU32(ui::conditions::ToImGuiColor(condition.color)),
+        ImGui::GetColorU32(ImVec4(condition.color.x, condition.color.y,
+                                  condition.color.z, enabled ? 1.0f : 0.55f)),
         rounding,
         ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomLeft);
 
@@ -356,20 +385,28 @@ bool Menu::DrawConditionTab() {
         kIconTrash);
 
     const auto contentMin = ImVec2(min.x + stripeWidth + 10.0f,
-                                   min.y + ImGui::GetStyle().FramePadding.y);
+                                   min.y + ImGui::GetStyle().CellPadding.y);
     const auto textColor = ImGui::GetColorU32(
         ImVec4(condition.color.x, condition.color.y, condition.color.z, 1.0f));
     const auto clipRect =
         ImVec4(contentMin.x, min.y, deleteMin.x - 8.0f, max.y);
+    const auto titleColor = enabled
+                                ? textColor
+                                : ImGui::GetColorU32(
+                                      ImVec4(condition.color.x, condition.color.y,
+                                             condition.color.z, 0.68f));
+    const auto descriptionColor =
+        enabled ? ImGui::GetColorU32(ImVec4(0.70f, 0.72f, 0.75f, 1.0f))
+                : theme->GetColorU32("TEXT_DISABLED", 0.92f);
     drawList->PushClipRect(ImVec2(clipRect.x, clipRect.y),
                            ImVec2(clipRect.z, clipRect.w), true);
-    drawList->AddText(contentMin, textColor, condition.name.c_str());
+    drawList->AddText(contentMin, titleColor, condition.name.c_str());
     if (!condition.description.empty()) {
       drawList->AddText(
           ImGui::GetFont(), ImGui::GetFontSize(),
           ImVec2(contentMin.x, contentMin.y + ImGui::GetTextLineHeight() +
                                    ImGui::GetStyle().ItemSpacing.y),
-          ImGui::GetColorU32(ImVec4(0.70f, 0.72f, 0.75f, 1.0f)),
+          descriptionColor,
           condition.description.c_str(), nullptr, rowWrapWidth);
     }
     drawList->PopClipRect();
@@ -396,73 +433,53 @@ bool Menu::DrawConditionTab() {
       }
       ImGui::EndDragDropSource();
     }
-
-    conditionRowRects.emplace_back(min, max);
-
+    ImGui::TableSetColumnIndex(1);
+    const auto *checkboxTable = ImGui::GetCurrentTable();
+    if (checkboxTable != nullptr) {
+      const auto checkboxCellRect = ImGui::TableGetCellBgRect(checkboxTable, 1);
+      const auto checkboxSize =
+          ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight());
+      ImGui::SetCursorScreenPos(ImVec2(
+          checkboxCellRect.Min.x +
+              ((checkboxCellRect.Max.x - checkboxCellRect.Min.x) - checkboxSize.x) *
+                  0.5f,
+          checkboxCellRect.Min.y +
+              ((checkboxCellRect.Max.y - checkboxCellRect.Min.y) - checkboxSize.y) *
+                  0.5f));
+    }
+    bool disabled = !condition.enabled;
+    if (ImGui::Checkbox("##condition-disabled", &disabled)) {
+      condition.enabled = !disabled;
+    }
+    if (const auto *rowTable = ImGui::GetCurrentTable(); rowTable != nullptr) {
+      reorderRowRects.back() = ImGui::TableGetCellBgRect(rowTable, 0);
+    }
     ImGui::PopID();
   }
 
+  const auto *conditionTable = ImGui::GetCurrentTable();
+  const bool hasConditionTable = conditionTable != nullptr;
+  const auto conditionTableRect =
+      hasConditionTable ? conditionTable->OuterRect : ImRect{};
+  const auto reorderPreview =
+      ImGui::IsDragDropActive() && hasConditionTable && !reorderRowRects.empty()
+          ? ui::table_reorder::ComputeLinearReorderPreview(
+                reorderRowRects, conditionTableRect.Min.x + 2.0f,
+                conditionTableRect.Max.x - 2.0f)
+          : ui::table_reorder::LinearReorderPreview{};
   ImGui::EndTable();
-
-  std::optional<std::size_t> hoveredInsertionSlot;
-  ImRect hoveredInsertionRect;
-  float insertionLineY = -1.0f;
-  float insertionLineXMin = 0.0f;
-  float insertionLineXMax = 0.0f;
-
-  if (ImGui::IsDragDropActive() && !conditionRowRects.empty()) {
-    const float fallbackBandHalfHeight =
-        (std::max)(6.0f, ImGui::GetStyle().ItemSpacing.y * 0.5f);
-    const auto xMin = conditionRowRects.front().Min.x;
-    const auto xMax = conditionRowRects.front().Max.x;
-    std::vector<float> insertionLineYs;
-    insertionLineYs.reserve(conditionRowRects.size() + 1);
-    insertionLineYs.push_back(conditionRowRects.front().Min.y -
-                              fallbackBandHalfHeight);
-    for (std::size_t index = 0; index + 1 < conditionRowRects.size(); ++index) {
-      const auto &currentRect = conditionRowRects[index];
-      const auto &nextRect = conditionRowRects[index + 1];
-      insertionLineYs.push_back((currentRect.Max.y + nextRect.Min.y) * 0.5f);
-    }
-    insertionLineYs.push_back(conditionRowRects.back().Max.y +
-                              fallbackBandHalfHeight);
-
-    for (std::size_t slotIndex = 0; slotIndex < insertionLineYs.size();
-         ++slotIndex) {
-      const float lineY = insertionLineYs[slotIndex];
-      const float bandMinY =
-          slotIndex == 0 ? (lineY - fallbackBandHalfHeight)
-                         : ((insertionLineYs[slotIndex - 1] + lineY) * 0.5f);
-      const float bandMaxY =
-          slotIndex + 1 == insertionLineYs.size()
-              ? (lineY + fallbackBandHalfHeight)
-              : ((lineY + insertionLineYs[slotIndex + 1]) * 0.5f);
-      const ImRect slotRect(ImVec2(xMin, bandMinY), ImVec2(xMax, bandMaxY));
-      if (!ImGui::IsMouseHoveringRect(slotRect.Min, slotRect.Max, false)) {
-        continue;
-      }
-
-      hoveredInsertionSlot = slotIndex;
-      hoveredInsertionRect = slotRect;
-      insertionLineY = lineY;
-      insertionLineXMin = xMin;
-      insertionLineXMax = xMax;
-      break;
-    }
+  if (hasConditionTable) {
+    ui::table_reorder::DrawLinearReorderInsertionLine(
+        reorderPreview,
+        ImGui::GetColorU32(ThemeConfig::GetSingleton()->GetActive("PRIMARY")),
+        3.0f);
   }
 
-  if (insertionLineY >= 0.0f && insertionLineXMax > insertionLineXMin) {
-    ImGui::GetWindowDrawList()->AddLine(
-        ImVec2(insertionLineXMin, insertionLineY),
-        ImVec2(insertionLineXMax, insertionLineY),
-        ThemeConfig::GetSingleton()->GetColorU32("PRIMARY"), 2.0f);
-  }
-
-  if (hoveredInsertionSlot &&
+  if (reorderPreview.HasHoveredSlot() &&
       ImGui::BeginDragDropTargetCustom(
-          hoveredInsertionRect,
+          reorderPreview.hoveredSlotRect,
           ImGui::GetID(("##condition-reorder-slot-" +
-                        std::to_string(*hoveredInsertionSlot))
+                        std::to_string(*reorderPreview.hoveredSlotIndex))
                            .c_str()))) {
     if (const auto *payload = ImGui::AcceptDragDropPayload(
             "SVS_CONDITION", ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
@@ -476,7 +493,7 @@ bool Menu::DrawConditionTab() {
         const auto sourceIndex =
             static_cast<std::size_t>(std::distance(ConditionDefinitions().begin(), it));
         MoveConditionDefinitionToSlot(ConditionDefinitions(), sourceIndex,
-                                      *hoveredInsertionSlot);
+                                      *reorderPreview.hoveredSlotIndex);
       }
     }
     ImGui::EndDragDropTarget();

@@ -112,7 +112,8 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
                                  std::span<const EditableDropdownOptionView> a_options,
                                  const float a_width, int *a_selectedIndex,
                                  const bool a_allowCustomInput,
-                                 const int a_fallbackIndex) {
+                                 const int a_fallbackIndex,
+                                 const std::function<void(int)> *a_drawItemTooltip) {
   bool changed = false;
   const bool acceptAutocompleteOnEnter = !a_allowCustomInput;
   const auto popupId = std::string(a_label) + "##popup";
@@ -318,6 +319,10 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
           ImGui::BeginTooltip();
           ImGui::TextUnformatted(option.label.data(),
                                  option.label.data() + option.label.size());
+          if (a_drawItemTooltip) {
+            ImGui::Separator();
+            (*a_drawItemTooltip)(static_cast<int>(optionIndex));
+          }
           ImGui::EndTooltip();
         }
         if (selected) {

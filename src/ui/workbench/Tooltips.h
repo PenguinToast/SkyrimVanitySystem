@@ -4,6 +4,7 @@
 #include "ui/ConditionData.h"
 #include "ui/ThemeConfig.h"
 #include "ui/WorkbenchConflicts.h"
+#include "ui/workbench/FilterState.h"
 
 #include <functional>
 #include <optional>
@@ -18,6 +19,7 @@ struct RowConditionVisualState {
   std::string description;
   bool disabled{false};
   bool missing{false};
+  bool disabledCondition{false};
 };
 
 void DrawWrappedColoredTextRuns(
@@ -34,6 +36,9 @@ void DrawConflictTooltipSection(
 void DrawSimplePinnableTooltip(const std::string_view a_id,
                                bool a_hoveredSource,
                                const std::function<void()> &a_drawBody);
+void DrawWorkbenchFilterOptionTooltip(
+    const ui::workbench::FilterOption &a_option,
+    const std::vector<ui::conditions::Definition> &a_conditions);
 
 RowConditionVisualState ResolveRowConditionVisualState(
     const ::sosr::workbench::VariantWorkbenchRow &a_row,

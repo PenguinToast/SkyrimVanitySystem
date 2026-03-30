@@ -4,6 +4,7 @@
 
 #include <cstdio>
 #include <cstddef>
+#include <functional>
 #include <optional>
 #include <span>
 #include <string>
@@ -32,7 +33,9 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
                                  float a_width,
                                  int *a_selectedIndex = nullptr,
                                  bool a_allowCustomInput = true,
-                                 int a_fallbackIndex = -1);
+                                 int a_fallbackIndex = -1,
+                                 const std::function<void(int)> *a_drawItemTooltip =
+                                     nullptr);
 } // namespace detail
 
 bool DrawEditableStringDropdown(
@@ -48,7 +51,8 @@ bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
                             std::string &a_value,
                             std::span<const EditableDropdownItem<TValue>> a_items,
                             float a_width, int *a_selectedIndex = nullptr,
-                            std::optional<TValue> *a_selectedValue = nullptr) {
+                            std::optional<TValue> *a_selectedValue = nullptr,
+                            std::function<void(const TValue &)> a_drawItemTooltip = {}) {
   std::vector<EditableDropdownOptionView> optionViews;
   optionViews.reserve(a_items.size());
   for (const auto &item : a_items) {
@@ -58,9 +62,22 @@ bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
   int selectedIndex = a_selectedIndex ? *a_selectedIndex : -1;
   char buffer[128];
   std::snprintf(buffer, sizeof(buffer), "%s", a_value.c_str());
+  std::function<void(int)> drawItemTooltip;
+  if (a_drawItemTooltip) {
+    drawItemTooltip = [&](const int a_index) {
+      if (a_index < 0 || a_index >= static_cast<int>(a_items.size())) {
+        return;
+      }
+      const auto &item = a_items[static_cast<std::size_t>(a_index)];
+      if (item.value.has_value()) {
+        a_drawItemTooltip(*item.value);
+      }
+    };
+  }
   const bool changed = detail::DrawEditableDropdownIndexed(
       a_label, a_hint, buffer, sizeof(buffer), optionViews, a_width,
-      &selectedIndex, false, selectedIndex);
+      &selectedIndex, false, selectedIndex,
+      drawItemTooltip ? &drawItemTooltip : nullptr);
 
   if (a_selectedIndex) {
     *a_selectedIndex = selectedIndex;

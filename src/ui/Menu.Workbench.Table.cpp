@@ -1,6 +1,7 @@
 #include "Menu.h"
 
 #include "imgui_internal.h"
+#include "ui/TableReorder.h"
 #include "ui/WorkbenchConflicts.h"
 #include "ui/components/EquipmentWidget.h"
 #include "ui/workbench/Common.h"
@@ -25,7 +26,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
 
   auto rowsForConflicts = rows;
   for (std::size_t index = 0; index < rowsForConflicts.size(); ++index) {
-    if (rowConditionStates[index].missing) {
+    if (rowConditionStates[index].missing ||
+        rowConditionStates[index].disabledCondition) {
       rowsForConflicts[index].conditionId = std::nullopt;
     }
   }
@@ -69,21 +71,15 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                    a_payload->sourceKind ==
                        static_cast<std::uint32_t>(DragSourceKind::SlotCatalog);
           })(static_cast<const DraggedEquipmentPayload *>(activePayload->Data));
-      float insertionLineY = -1.0f;
-      float insertionLineX1 = -1.0f;
-      float insertionLineX2 = -1.0f;
       std::optional<DraggedEquipmentPayload> acceptedRowReorderPayload;
       int acceptedRowReorderIndex = -1;
       bool acceptedRowInsertAfter = false;
-      int hoveredVisibleReorderIndex = -1;
-      bool hoveredRowInsertAfter = false;
+      bool suppressRowReorderPreview = false;
       std::unordered_map<std::string, ImRect> widgetRects;
       widgetRects.reserve(a_visibleRowIndices.size() * 3);
       std::vector<std::string> hoveredConflictWidgetIds;
-      std::vector<float> rowTopY;
-      std::vector<float> rowBottomY;
-      rowTopY.reserve(a_visibleRowIndices.size());
-      rowBottomY.reserve(a_visibleRowIndices.size());
+      std::vector<ImRect> reorderRowRects;
+      reorderRowRects.reserve(a_visibleRowIndices.size());
 
       for (int visibleRowIndex = 0;
            visibleRowIndex < static_cast<int>(a_visibleRowIndices.size());
@@ -296,43 +292,7 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
         }
         if (table) {
           const ImRect leftCellRect = ImGui::TableGetCellBgRect(table, 0);
-          rowTopY.push_back(leftCellRect.Min.y);
-          const bool insertAfter =
-              ImGui::GetIO().MousePos.y >
-              ((leftCellRect.Min.y + leftCellRect.Max.y) * 0.5f);
-
-          if (reorderPreviewActive &&
-              ImGui::IsMouseHoveringRect(leftCellRect.Min, leftCellRect.Max)) {
-            hoveredVisibleReorderIndex = visibleRowIndex;
-            hoveredRowInsertAfter = insertAfter;
-            insertionLineX1 = table->OuterRect.Min.x + 2.0f;
-            insertionLineX2 = table->OuterRect.Max.x - 2.0f;
-          }
-
-          if (ImGui::BeginDragDropTargetCustom(
-                  leftCellRect,
-                  ImGui::GetID(
-                      ("##row-reorder-" + std::to_string(rowIndex)).c_str()))) {
-            if (const auto *payload = ImGui::AcceptDragDropPayload(
-                    ui::workbench::kVariantItemPayloadType,
-                    ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
-                payload && payload->Data != nullptr &&
-                payload->DataSize == sizeof(DraggedEquipmentPayload)) {
-              DraggedEquipmentPayload dragPayload{};
-              std::memcpy(&dragPayload, payload->Data, sizeof(dragPayload));
-              if (dragPayload.sourceKind ==
-                      static_cast<std::uint32_t>(DragSourceKind::Row) ||
-                  dragPayload.sourceKind ==
-                      static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
-                  dragPayload.sourceKind ==
-                      static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
-                acceptedRowReorderPayload = dragPayload;
-                acceptedRowReorderIndex = rowIndex;
-                acceptedRowInsertAfter = insertAfter;
-              }
-            }
-            ImGui::EndDragDropTarget();
-          }
+          reorderRowRects.push_back(leftCellRect);
         }
 
         ImGui::TableSetColumnIndex(1);
@@ -458,53 +418,37 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
           workbench_.SetHideEquipped(rowIndex, hideEquipped);
         }
 
-        if (const auto *rowTable = ImGui::GetCurrentTable()) {
-          const auto bottomRect = ImGui::TableGetCellBgRect(rowTable, 2);
-          rowBottomY.push_back(bottomRect.Max.y);
-        } else {
-          rowBottomY.push_back(ImGui::GetItemRectMax().y);
-        }
-
         const ImRect overrideDropRect(
             overrideDropMin,
-            ImVec2(overrideDropMaxX, rowBottomY.back() - cellPadding.y));
+            ImVec2(overrideDropMaxX, overrideCellRect.Max.y - cellPadding.y));
         ImGui::TableSetColumnIndex(1);
-        if (ImGui::BeginDragDropTargetCustom(
+        if (const bool overrideTargetActive = ImGui::BeginDragDropTargetCustom(
                 overrideDropRect, ImGui::GetID(("##override-cell-target-" +
                                                 std::to_string(rowIndex))
-                                                   .c_str()))) {
+                                                   .c_str()));
+            overrideTargetActive) {
+          suppressRowReorderPreview = true;
           AcceptOverridePayload(rowIndex);
           ImGui::EndDragDropTarget();
         }
       }
 
-      if (hoveredVisibleReorderIndex >= 0 &&
-          hoveredVisibleReorderIndex < static_cast<int>(rowTopY.size()) &&
-          hoveredVisibleReorderIndex < static_cast<int>(rowBottomY.size())) {
-        insertionLineY =
-            hoveredRowInsertAfter
-                ? rowBottomY[static_cast<std::size_t>(
-                      hoveredVisibleReorderIndex)]
-                : rowTopY[static_cast<std::size_t>(hoveredVisibleReorderIndex)];
-      }
-
-      if (reorderPreviewActive && insertionLineY >= 0.0f &&
-          insertionLineX2 > insertionLineX1) {
-        auto *drawList = ImGui::GetWindowDrawList();
-        if (const auto *table = ImGui::GetCurrentTable(); table != nullptr) {
-          drawList->PushClipRect(table->OuterRect.Min, table->OuterRect.Max,
-                                 false);
-          drawList->AddLine(ImVec2(insertionLineX1, insertionLineY),
-                            ImVec2(insertionLineX2, insertionLineY),
-                            ThemeConfig::GetSingleton()->GetColorU32("PRIMARY"),
-                            2.0f);
-          drawList->PopClipRect();
-        } else {
-          drawList->AddLine(ImVec2(insertionLineX1, insertionLineY),
-                            ImVec2(insertionLineX2, insertionLineY),
-                            ThemeConfig::GetSingleton()->GetColorU32("PRIMARY"),
-                            2.0f);
-        }
+      const auto *reorderTable = ImGui::GetCurrentTable();
+      const auto reorderTableRect =
+          reorderTable != nullptr ? reorderTable->OuterRect : ImRect{};
+      const auto reorderPreview =
+          reorderPreviewActive && !suppressRowReorderPreview &&
+                  reorderTable != nullptr
+              ? ui::table_reorder::ComputeLinearReorderPreview(
+                    reorderRowRects, reorderTable->OuterRect.Min.x + 2.0f,
+                    reorderTable->OuterRect.Max.x - 2.0f)
+              : ui::table_reorder::LinearReorderPreview{};
+      if (reorderPreviewActive && !suppressRowReorderPreview &&
+          reorderTable != nullptr) {
+        ui::table_reorder::DrawLinearReorderInsertionLine(
+            reorderPreview,
+            ImGui::GetColorU32(ThemeConfig::GetSingleton()->GetActive("PRIMARY")),
+            3.0f, &reorderTable->OuterRect);
       }
 
       if (!hoveredConflictWidgetIds.empty()) {
@@ -530,6 +474,38 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
       }
 
       ImGui::EndTable();
+
+      if (reorderPreview.HasHoveredSlot() &&
+          ImGui::BeginDragDropTargetCustom(
+              reorderTableRect,
+              ImGui::GetID("##variant-workbench-reorder-target"))) {
+        if (const auto *payload = ImGui::AcceptDragDropPayload(
+                ui::workbench::kVariantItemPayloadType,
+                ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
+            payload && payload->Data != nullptr &&
+            payload->DataSize == sizeof(DraggedEquipmentPayload)) {
+          DraggedEquipmentPayload dragPayload{};
+          std::memcpy(&dragPayload, payload->Data, sizeof(dragPayload));
+          if (dragPayload.sourceKind ==
+                  static_cast<std::uint32_t>(DragSourceKind::Row) ||
+              dragPayload.sourceKind ==
+                  static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
+              dragPayload.sourceKind ==
+                  static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
+            acceptedRowReorderPayload = dragPayload;
+            if (*reorderPreview.hoveredSlotIndex >= a_visibleRowIndices.size()) {
+              acceptedRowReorderIndex = a_visibleRowIndices.empty()
+                                            ? -1
+                                            : a_visibleRowIndices.back();
+              acceptedRowInsertAfter = true;
+            } else {
+              acceptedRowReorderIndex = a_visibleRowIndices[*reorderPreview.hoveredSlotIndex];
+              acceptedRowInsertAfter = false;
+            }
+          }
+        }
+        ImGui::EndDragDropTarget();
+      }
 
       if (acceptedRowReorderPayload && acceptedRowReorderIndex >= 0) {
         ApplyWorkbenchRowDrop(*acceptedRowReorderPayload,

@@ -41,6 +41,7 @@ struct Definition {
   std::string name;
   std::string description;
   Color color{};
+  bool enabled{true};
   std::vector<Clause> clauses;
 };
 } // namespace sosr::conditions

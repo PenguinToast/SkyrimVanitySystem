@@ -3,6 +3,7 @@
 #include "ThemeConfig.h"
 #include "conditions/Validation.h"
 #include "imgui_internal.h"
+#include "ui/TableReorder.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/components/PinnableTooltip.h"
 #include "ui/conditions/EditorSupport.h"
@@ -62,30 +63,21 @@ void DrawClauseDragHandle(const char *a_id, const ImVec2 a_size) {
                     color, kIconGripVertical);
 }
 
-void MoveConditionClause(std::vector<ConditionClause> &a_clauses,
-                         const std::size_t a_sourceIndex,
-                         const std::size_t a_targetIndex,
-                         const bool a_insertAfter) {
-  if (a_sourceIndex >= a_clauses.size() || a_targetIndex >= a_clauses.size()) {
-    return;
-  }
-
-  auto destinationIndex = a_targetIndex;
-  if (a_insertAfter) {
-    ++destinationIndex;
-  }
-  if (a_sourceIndex < destinationIndex) {
-    --destinationIndex;
-  }
-  if (a_sourceIndex == destinationIndex) {
+void MoveConditionClauseToSlot(std::vector<ConditionClause> &a_clauses,
+                               const std::size_t a_sourceIndex,
+                               std::size_t a_slotIndex) {
+  if (a_sourceIndex >= a_clauses.size() || a_slotIndex > a_clauses.size()) {
     return;
   }
 
   auto clause = std::move(a_clauses[a_sourceIndex]);
   a_clauses.erase(a_clauses.begin() +
                   static_cast<std::ptrdiff_t>(a_sourceIndex));
+  if (a_sourceIndex < a_slotIndex) {
+    --a_slotIndex;
+  }
   a_clauses.insert(a_clauses.begin() +
-                       static_cast<std::ptrdiff_t>(destinationIndex),
+                       static_cast<std::ptrdiff_t>(a_slotIndex),
                    std::move(clause));
 }
 
@@ -206,14 +198,11 @@ void Menu::DrawConditionEditorClauseTable(
       activePayload && activePayload->Data != nullptr &&
       activePayload->IsDataType(kConditionClausePayloadType) &&
       activePayload->DataSize == sizeof(int);
-  float insertionLineY = -1.0f;
-  float insertionLineX1 = -1.0f;
-  float insertionLineX2 = -1.0f;
-  int hoveredClauseReorderIndex = -1;
-  bool hoveredClauseInsertAfter = false;
   std::optional<std::size_t> acceptedSourceClauseIndex;
-  bool acceptedInsertAfter = false;
+  std::optional<std::size_t> acceptedSlotIndex;
   std::vector<std::optional<ImRect>> joinCellRects(a_editor.draft.clauses.size());
+  std::vector<ImRect> clauseRowRects;
+  clauseRowRects.reserve(a_editor.draft.clauses.size());
   std::vector<OrGroupSpan> orGroupSpans;
   for (std::size_t index = 0; index < a_editor.draft.clauses.size();) {
     if (a_editor.draft.clauses[index].connectiveToNext !=
@@ -490,33 +479,26 @@ void Menu::DrawConditionEditorClauseTable(
       const auto rowDropRect =
           ImRect(ImVec2(tableOuterRect.Min.x, firstCellRect.Min.y),
                  ImVec2(tableOuterRect.Max.x, lastCellRect.Max.y));
-      const bool insertAfter = ImGui::GetIO().MousePos.y >
-                               ((rowDropRect.Min.y + rowDropRect.Max.y) * 0.5f);
-      if (reorderPreviewActive &&
-          ImGui::IsMouseHoveringRect(rowDropRect.Min, rowDropRect.Max, false)) {
-        hoveredClauseReorderIndex = static_cast<int>(index);
-        hoveredClauseInsertAfter = insertAfter;
-        insertionLineY = insertAfter ? rowDropRect.Max.y : rowDropRect.Min.y;
-        insertionLineX1 = table->OuterRect.Min.x + 2.0f;
-        insertionLineX2 = table->OuterRect.Max.x - 2.0f;
-      }
+      clauseRowRects.push_back(rowDropRect);
     }
 
     ImGui::PopID();
     ++index;
   }
 
-  if (reorderPreviewActive && insertionLineY >= 0.0f &&
-      insertionLineX2 > insertionLineX1) {
-    auto *drawList = ImGui::GetWindowDrawList();
-    if (const auto *table = ImGui::GetCurrentTable(); table != nullptr) {
-      drawList->PushClipRect(table->OuterRect.Min, table->OuterRect.Max, false);
-      drawList->AddLine(ImVec2(insertionLineX1, insertionLineY),
-                        ImVec2(insertionLineX2, insertionLineY),
-                        ThemeConfig::GetSingleton()->GetColorU32("PRIMARY"),
-                        2.0f);
-      drawList->PopClipRect();
-    }
+  const auto *currentTable = ImGui::GetCurrentTable();
+  const auto tableRect = currentTable ? currentTable->OuterRect : ImRect{};
+  const auto reorderPreview =
+      reorderPreviewActive && currentTable != nullptr
+          ? ui::table_reorder::ComputeLinearReorderPreview(
+                clauseRowRects, currentTable->OuterRect.Min.x + 2.0f,
+                currentTable->OuterRect.Max.x - 2.0f)
+          : ui::table_reorder::LinearReorderPreview{};
+  if (reorderPreviewActive && currentTable != nullptr) {
+    ui::table_reorder::DrawLinearReorderInsertionLine(
+        reorderPreview,
+        ImGui::GetColorU32(ThemeConfig::GetSingleton()->GetActive("PRIMARY")),
+        3.0f, &currentTable->OuterRect);
   }
 
   for (const auto &group : orGroupSpans) {
@@ -536,9 +518,9 @@ void Menu::DrawConditionEditorClauseTable(
   }
 
   ImGui::EndTable();
-  if (hoveredClauseReorderIndex >= 0 &&
+  if (reorderPreview.HasHoveredSlot() &&
       ImGui::BeginDragDropTargetCustom(
-          tableOuterRect, ImGui::GetID("##condition-clause-reorder-target"))) {
+          tableRect, ImGui::GetID("##condition-clause-reorder-target"))) {
     if (const auto *payload = ImGui::AcceptDragDropPayload(
             kConditionClausePayloadType,
             ImGuiDragDropFlags_AcceptNoDrawDefaultRect);
@@ -546,14 +528,13 @@ void Menu::DrawConditionEditorClauseTable(
         payload->DataSize == sizeof(int)) {
       acceptedSourceClauseIndex =
           static_cast<std::size_t>(*static_cast<const int *>(payload->Data));
-      acceptedInsertAfter = hoveredClauseInsertAfter;
+      acceptedSlotIndex = reorderPreview.hoveredSlotIndex;
     }
     ImGui::EndDragDropTarget();
   }
-  if (acceptedSourceClauseIndex && hoveredClauseReorderIndex >= 0) {
-    MoveConditionClause(a_editor.draft.clauses, *acceptedSourceClauseIndex,
-                        static_cast<std::size_t>(hoveredClauseReorderIndex),
-                        acceptedInsertAfter);
+  if (acceptedSourceClauseIndex && acceptedSlotIndex) {
+    MoveConditionClauseToSlot(a_editor.draft.clauses, *acceptedSourceClauseIndex,
+                              *acceptedSlotIndex);
   }
 }
 } // namespace sosr

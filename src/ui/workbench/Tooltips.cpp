@@ -1,5 +1,6 @@
 #include "ui/workbench/Tooltips.h"
 
+#include "ArmorUtils.h"
 #include "conditions/Validation.h"
 #include "ui/components/PinnableTooltip.h"
 
@@ -112,6 +113,49 @@ void DrawSimplePinnableTooltip(const std::string_view a_id,
   ui::components::DrawPinnableTooltip(a_id, a_hoveredSource, a_drawBody);
 }
 
+void DrawWorkbenchFilterOptionTooltip(
+    const ui::workbench::FilterOption &a_option,
+    const std::vector<ui::conditions::Definition> &a_conditions) {
+  switch (a_option.kind) {
+  case ui::workbench::FilterKind::All:
+    ImGui::TextDisabled("Show every workbench row.");
+    return;
+  case ui::workbench::FilterKind::ActorRef:
+    if (auto *actor = RE::TESForm::LookupByID<RE::Actor>(a_option.actorFormID);
+        actor != nullptr) {
+      ImGui::Text("Ref Name: %s", armor::GetDisplayName(actor).c_str());
+    } else {
+      ImGui::TextDisabled("Reference could not be resolved.");
+    }
+    return;
+  case ui::workbench::FilterKind::Condition:
+    if (const auto *condition =
+            ::sosr::conditions::FindDefinitionById(a_conditions,
+                                                   a_option.conditionId);
+        condition != nullptr) {
+      const auto color = ui::conditions::ToImGuiColor(condition->color);
+      const float size = ImGui::GetTextLineHeight();
+      const auto min = ImGui::GetCursorScreenPos();
+      const auto max = ImVec2(min.x + size, min.y + size);
+      ImGui::GetWindowDrawList()->AddRectFilled(
+          min, max, ImGui::GetColorU32(color), 3.0f);
+      ImGui::Dummy(ImVec2(size, size));
+      ImGui::SameLine();
+      ImGui::TextUnformatted(condition->name.c_str());
+      if (!condition->description.empty()) {
+        ImGui::PushTextWrapPos(360.0f);
+        ImGui::TextDisabled("%s", condition->description.c_str());
+        ImGui::PopTextWrapPos();
+      } else {
+        ImGui::TextDisabled("No description.");
+      }
+    } else {
+      ImGui::TextDisabled("Condition could not be resolved.");
+    }
+    return;
+  }
+}
+
 RowConditionVisualState ResolveRowConditionVisualState(
     const ::sosr::workbench::VariantWorkbenchRow &a_row,
     const std::vector<ui::conditions::Definition> &a_conditions) {
@@ -128,6 +172,18 @@ RowConditionVisualState ResolveRowConditionVisualState(
                                                  *a_row.conditionId);
       condition != nullptr) {
     state.color = ui::conditions::ToImGuiColor(condition->color);
+    if (!condition->enabled) {
+      state.name = condition->name;
+      state.description = condition->description;
+      if (!state.description.empty()) {
+        state.description.append("\n\n");
+      }
+      state.description.append(
+          "This condition is disabled, so this row will not apply.");
+      state.disabled = true;
+      state.disabledCondition = true;
+      return state;
+    }
     state.name = condition->name;
     state.description = condition->description;
     return state;

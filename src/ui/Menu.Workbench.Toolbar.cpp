@@ -62,12 +62,17 @@ void Menu::DrawWorkbenchFilterBar() {
   }
 
   std::optional<WorkbenchFilterOption> selectedFilterOption;
+  const std::function<void(const WorkbenchFilterOption &)>
+      drawFilterTooltip = [&](const WorkbenchFilterOption &a_option) {
+        ui::workbench::DrawWorkbenchFilterOptionTooltip(a_option,
+                                                        ConditionDefinitions());
+      };
   if (ui::components::DrawSearchableDropdown(
           "##workbench-filter", "Filter workbench...", selectedFilterLabel,
           std::span<const ui::components::EditableDropdownItem<
               WorkbenchFilterOption>>(filterItems),
           ImGui::GetContentRegionAvail().x, &selectedFilterIndex,
-          &selectedFilterOption)) {
+          &selectedFilterOption, drawFilterTooltip)) {
     if (selectedFilterOption.has_value()) {
       workbenchFilter_.kind = selectedFilterOption->kind;
       workbenchFilter_.actorFormID = selectedFilterOption->actorFormID;

@@ -387,6 +387,11 @@ void VariantWorkbench::SyncDynamicArmorVariantsExtended(
     if (!row.conditionId.has_value()) {
       continue;
     }
+    const auto *condition =
+        sosr::conditions::FindDefinitionById(a_conditions, *row.conditionId);
+    if (condition == nullptr || !condition->enabled) {
+      continue;
+    }
 
     const auto descriptor = BuildDavVariantDescriptor(
         row, overrideArmors, BuildDavVariantPriority(rowIndex, rows_.size()));

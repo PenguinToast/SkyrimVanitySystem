@@ -91,6 +91,7 @@ void Menu::SerializeConditions(SKSE::SerializationInterface *a_skse) const {
         {"name", condition.name},
         {"description", condition.description},
         {"color", SerializeConditionColor(condition.color)},
+        {"enabled", condition.enabled},
         {"clauses", nlohmann::json::array()}};
     for (const auto &clause : condition.clauses) {
       conditionJson["clauses"].push_back(
@@ -165,6 +166,7 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
       condition.id = conditionJson.value("id", std::string{});
       condition.name = conditionJson.value("name", std::string{});
       condition.description = conditionJson.value("description", std::string{});
+      condition.enabled = conditionJson.value("enabled", true);
       condition.color = ParseConditionColor(
           conditionJson.value("color", nlohmann::json{}), condition.color);
 
