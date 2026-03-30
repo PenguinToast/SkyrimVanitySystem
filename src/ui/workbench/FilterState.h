@@ -16,6 +16,7 @@ struct FilterState {
 
 struct FilterOption {
   std::string label;
+  bool isSection{false};
   FilterKind kind{FilterKind::All};
   RE::FormID actorFormID{0};
   std::string conditionId;

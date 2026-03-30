@@ -74,14 +74,6 @@ bool DrawEditableDropdown(const char *a_label, const char *a_hint,
   return changed;
 }
 
-bool DrawEditableDropdown(const char *a_label, const char *a_hint,
-                          char *a_buffer, std::size_t a_bufferSize,
-                          const std::vector<std::string> &a_options,
-                          float a_width,
-                          std::string *a_selectedOption = nullptr,
-                          bool a_allowCustomInput = true,
-                          const std::string *a_fallbackSelection = nullptr);
-
 template <class TValue>
 bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
                             std::string &a_value,
@@ -105,11 +97,6 @@ bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
   }
   return changed;
 }
-
-bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
-                            std::string &a_value,
-                            const std::vector<std::string> &a_options,
-                            float a_width);
 
 bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
                                const std::vector<std::string> &a_options,

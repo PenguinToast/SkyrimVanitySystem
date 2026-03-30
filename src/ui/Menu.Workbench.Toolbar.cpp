@@ -21,8 +21,7 @@ struct WorkbenchToolbarAction {
 namespace sosr {
 void Menu::DrawWorkbenchFilterBar() {
   std::vector<WorkbenchFilterOption> filterOptions;
-  std::vector<std::string> filterLabels;
-  BuildWorkbenchFilterOptions(filterOptions, filterLabels);
+  BuildWorkbenchFilterOptions(filterOptions);
 
   std::vector<ui::components::EditableDropdownItem<WorkbenchFilterOption>>
       filterItems;
@@ -57,9 +56,9 @@ void Menu::DrawWorkbenchFilterBar() {
   for (const auto &option : filterOptions) {
     filterItems.push_back(
         {.label = option.label,
-         .value = option.label.starts_with("\x1fsection:")
-                      ? std::nullopt
-                      : std::optional<WorkbenchFilterOption>(option)});
+         .value = option.isSection ? std::nullopt
+                                   : std::optional<WorkbenchFilterOption>(
+                                         option)});
   }
 
   std::optional<WorkbenchFilterOption> selectedFilterOption;

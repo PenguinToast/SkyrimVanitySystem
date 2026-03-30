@@ -373,6 +373,18 @@ void Menu::DrawCreateKitDialog() {
   }
   std::ranges::sort(existingNames);
 
+  std::vector<ui::components::EditableDropdownItem<std::string>> existingNameItems;
+  existingNameItems.reserve(existingNames.size());
+  for (const auto &name : existingNames) {
+    existingNameItems.push_back({.label = name, .value = name});
+  }
+
+  std::vector<ui::components::EditableDropdownItem<std::string>> collectionItems;
+  collectionItems.reserve(catalog.GetKitCollections().size());
+  for (const auto &collection : catalog.GetKitCollections()) {
+    collectionItems.push_back({.label = collection, .value = collection});
+  }
+
   createDialog.open = false;
   if (ImGui::BeginPopupModal("Create Modex Kit", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -388,7 +400,7 @@ void Menu::DrawCreateKitDialog() {
     ImGui::Text("Items: %zu", createDialog.pendingFormIDs.size());
 
     constexpr float fieldWidth = 360.0f;
-    std::string selectedName;
+    std::optional<std::string> selectedName;
     ImGui::TextUnformatted("Name");
     if (popupAppearing) {
       ImGui::SetKeyboardFocusHere();
@@ -396,12 +408,14 @@ void Menu::DrawCreateKitDialog() {
     if (ui::components::DrawEditableDropdown(
             "kit-name", "New or existing kit name",
             createDialog.pendingName.data(), createDialog.pendingName.size(),
-            existingNames, fieldWidth, &selectedName, true) &&
-        !selectedName.empty()) {
+            std::span<const ui::components::EditableDropdownItem<std::string>>(
+                existingNameItems),
+            fieldWidth, nullptr, &selectedName, true) &&
+        selectedName.has_value() && !selectedName->empty()) {
       if (const auto it = std::ranges::find_if(catalog.GetKits(),
                                                [&](const KitEntry &a_entry) {
                                                  return a_entry.name ==
-                                                        selectedName;
+                                                        *selectedName;
                                                });
           it != catalog.GetKits().end()) {
         std::snprintf(createDialog.pendingCollection.data(),
@@ -412,11 +426,14 @@ void Menu::DrawCreateKitDialog() {
 
     ImGui::Spacing();
     ImGui::TextUnformatted("Collection");
+    std::optional<std::string> selectedCollection;
     ui::components::DrawEditableDropdown(
         "kit-collection", "Collection (optional)",
         createDialog.pendingCollection.data(),
-        createDialog.pendingCollection.size(), catalog.GetKitCollections(),
-        fieldWidth, nullptr, true);
+        createDialog.pendingCollection.size(),
+        std::span<const ui::components::EditableDropdownItem<std::string>>(
+            collectionItems),
+        fieldWidth, nullptr, &selectedCollection, true);
 
     if (!createDialog.error.empty()) {
       ImGui::Spacing();

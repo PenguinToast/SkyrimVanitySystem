@@ -144,7 +144,8 @@ void DrawOrGroupIndicator(const std::string &a_id, const ImRect &a_groupRect) {
 
 void Menu::DrawConditionEditorClauseTable(
     ConditionEditorState &a_editor,
-    const std::vector<std::string> &a_conditionFunctionNames,
+    const std::vector<ui::components::EditableDropdownItem<std::string>>
+        &a_conditionFunctionItems,
     const float a_editButtonWidth, const float a_deleteButtonWidth,
     const float a_actionsColumnWidth) {
   constexpr ImGuiTableFlags clauseTableFlags =
@@ -284,9 +285,14 @@ void Menu::DrawConditionEditorClauseTable(
       ImGui::SameLine(0.0f, spacing);
       functionWidth = (std::max)(0.0f, functionWidth - swatchSize - spacing);
     }
+    std::optional<std::string> selectedFunctionValue;
     if (ui::components::DrawSearchableDropdown(
             "##function", "Condition function", selectedFunctionName,
-            a_conditionFunctionNames, functionWidth)) {
+            std::span<const ui::components::EditableDropdownItem<std::string>>(
+                a_conditionFunctionItems),
+            functionWidth, nullptr, &selectedFunctionValue) &&
+        selectedFunctionValue.has_value()) {
+      selectedFunctionName = *selectedFunctionValue;
       clause.arguments[0].clear();
       clause.arguments[1].clear();
       if (const auto *selectedCustomCondition =

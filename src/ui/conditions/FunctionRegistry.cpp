@@ -12,15 +12,8 @@
 namespace {
 using Clause = sosr::conditions::Clause;
 using Definition = sosr::conditions::Definition;
+using DropdownItem = sosr::ui::components::EditableDropdownItem<std::string>;
 using FunctionInfo = sosr::ui::condition_editor::FunctionInfo;
-
-constexpr std::string_view kDropdownSectionPrefix = "\x1fsection:";
-
-std::string BuildSectionEntry(std::string_view a_label) {
-  std::string entry{kDropdownSectionPrefix};
-  entry.append(a_label);
-  return entry;
-}
 
 bool SupportsTypedParamInput(const RE::SCRIPT_PARAM_TYPE a_type) {
   return sosr::ui::condition_editor::GetEditorKindForParamType(a_type) !=
@@ -159,10 +152,10 @@ ResolveClauseDisplayName(const Clause &a_clause,
   return a_clause.functionName;
 }
 
-std::vector<std::string>
-BuildConditionFunctionNames(const std::vector<Definition> &a_conditions,
+std::vector<DropdownItem>
+BuildConditionFunctionItems(const std::vector<Definition> &a_conditions,
                             std::string_view a_excludedConditionId) {
-  std::vector<std::string> names;
+  std::vector<DropdownItem> items;
   const auto &infos = GetConditionFunctionInfos();
 
   std::vector<std::string> customNames;
@@ -177,15 +170,17 @@ BuildConditionFunctionNames(const std::vector<Definition> &a_conditions,
     return CompareTextInsensitive(a_left, a_right) < 0;
   });
 
-  names.reserve(customNames.size() + infos.size() + 2);
+  items.reserve(customNames.size() + infos.size() + 2);
   if (!customNames.empty()) {
-    names.push_back(BuildSectionEntry("Conditions"));
-    names.insert(names.end(), customNames.begin(), customNames.end());
+    items.push_back({.label = "Conditions", .value = std::nullopt});
+    for (const auto &name : customNames) {
+      items.push_back({.label = name, .value = name});
+    }
   }
-  names.push_back(BuildSectionEntry("Condition Functions"));
+  items.push_back({.label = "Condition Functions", .value = std::nullopt});
   for (const auto &info : infos) {
-    names.push_back(info.name);
+    items.push_back({.label = info.name, .value = info.name});
   }
-  return names;
+  return items;
 }
 } // namespace sosr::ui::condition_editor

@@ -13,7 +13,7 @@
 
 namespace sosr {
 namespace {
-using ui::condition_editor::BuildConditionFunctionNames;
+using ui::condition_editor::BuildConditionFunctionItems;
 using ui::condition_editor::ValidateConditionDraft;
 using ui::condition_widgets::DrawHoverDescription;
 
@@ -115,8 +115,9 @@ void Menu::DrawConditionEditorDialog() {
       ImGui::TextUnformatted("Clauses");
       ImGui::Separator();
 
-      const auto conditionFunctionNames =
-          BuildConditionFunctionNames(ConditionDefinitions(), editor.sourceConditionId);
+      const auto conditionFunctionItems =
+          BuildConditionFunctionItems(ConditionDefinitions(),
+                                      editor.sourceConditionId);
       const auto clausePaneHeight =
           (std::max)(220.0f, ImGui::GetContentRegionAvail().y);
       const auto &style = ImGui::GetStyle();
@@ -130,7 +131,7 @@ void Menu::DrawConditionEditorDialog() {
       if (ImGui::BeginChild("##condition-clauses",
                             ImVec2(0.0f, clausePaneHeight),
                             ImGuiChildFlags_Borders)) {
-        DrawConditionEditorClauseTable(editor, conditionFunctionNames,
+        DrawConditionEditorClauseTable(editor, conditionFunctionItems,
                                        editButtonWidth, deleteButtonWidth,
                                        actionsColumnWidth);
       }

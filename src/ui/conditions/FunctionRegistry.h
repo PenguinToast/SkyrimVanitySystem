@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/ConditionData.h"
+#include "ui/components/EditableCombo.h"
 
 #include <RE/Skyrim.h>
 
@@ -35,7 +36,8 @@ FindConditionFunctionInfo(std::string_view a_name);
 [[nodiscard]] std::string ResolveClauseDisplayName(
     const sosr::conditions::Clause &a_clause,
     const std::vector<sosr::conditions::Definition> &a_conditions);
-[[nodiscard]] std::vector<std::string> BuildConditionFunctionNames(
+[[nodiscard]] std::vector<sosr::ui::components::EditableDropdownItem<std::string>>
+BuildConditionFunctionItems(
     const std::vector<sosr::conditions::Definition> &a_conditions,
     std::string_view a_excludedConditionId);
 } // namespace sosr::ui::condition_editor

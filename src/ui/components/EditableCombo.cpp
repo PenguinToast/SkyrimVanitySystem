@@ -88,21 +88,18 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
                    : a_options[static_cast<std::size_t>(a_index - 1)].c_str();
   const float width = ImGui::CalcItemWidth();
 
-  std::vector<std::string> options;
-  options.reserve(a_options.size() + 1);
-  options.emplace_back(a_allLabel);
-  options.insert(options.end(), a_options.begin(), a_options.end());
+  std::vector<EditableDropdownItem<std::string>> items;
+  items.reserve(a_options.size() + 1);
+  items.push_back({.label = a_allLabel, .value = std::string(a_allLabel)});
+  for (const auto &option : a_options) {
+    items.push_back({.label = option, .value = option});
+  }
 
-  const std::string fallbackSelection = preview;
-  std::string selectedOption;
+  std::optional<std::string> selectedOption;
   const bool changed = DrawEditableDropdown(
       a_label, preview, a_filter.InputBuf, IM_ARRAYSIZE(a_filter.InputBuf),
-      options, width, &selectedOption, false, &fallbackSelection);
-
-  if (!selectedOption.empty()) {
-    std::snprintf(a_filter.InputBuf, IM_ARRAYSIZE(a_filter.InputBuf), "%s",
-                  selectedOption.c_str());
-  }
+      std::span<const EditableDropdownItem<std::string>>(items), width, &a_index,
+      &selectedOption, false, a_index);
 
   if (a_filter.InputBuf[0] == '\0') {
     a_index = 0;
@@ -110,8 +107,8 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
     return changed;
   }
 
-  for (std::size_t index = 0; index < options.size(); ++index) {
-    if (sosr::strings::CompareTextInsensitive(options[index],
+  for (std::size_t index = 0; index < items.size(); ++index) {
+    if (sosr::strings::CompareTextInsensitive(items[index].label,
                                               a_filter.InputBuf) != 0) {
       continue;
     }
@@ -122,42 +119,6 @@ bool DrawSearchableStringCombo(const char *a_label, const char *a_allLabel,
   }
 
   a_filter.Build();
-  return changed;
-}
-
-bool DrawEditableDropdown(const char *a_label, const char *a_hint,
-                          char *a_buffer, const std::size_t a_bufferSize,
-                          std::span<const EditableDropdownOptionView> a_options,
-                          const float a_width, std::string *a_selectedOption,
-                          const bool a_allowCustomInput,
-                          const std::string *a_fallbackSelection) {
-  int fallbackIndex = -1;
-  if (a_fallbackSelection) {
-    for (std::size_t index = 0; index < a_options.size(); ++index) {
-      if (a_options[index].isSection) {
-        continue;
-      }
-      if (sosr::strings::EqualsInsensitive(a_options[index].label,
-                                           *a_fallbackSelection)) {
-        fallbackIndex = static_cast<int>(index);
-        break;
-      }
-    }
-  }
-
-  int selectedIndex = -1;
-  const bool changed =
-      DrawEditableDropdownIndexed(a_label, a_hint, a_buffer, a_bufferSize,
-                                  a_options, a_width, &selectedIndex,
-                                  a_allowCustomInput, fallbackIndex);
-
-  if (a_selectedOption && selectedIndex >= 0 &&
-      selectedIndex < static_cast<int>(a_options.size()) &&
-      !a_options[static_cast<std::size_t>(selectedIndex)].isSection) {
-    *a_selectedOption =
-        std::string(a_options[static_cast<std::size_t>(selectedIndex)].label);
-  }
-
   return changed;
 }
 
@@ -481,50 +442,6 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
     }
   }
 
-  return changed;
-}
-
-bool DrawEditableDropdown(const char *a_label, const char *a_hint,
-                          char *a_buffer, const std::size_t a_bufferSize,
-                          const std::vector<std::string> &a_options,
-                          const float a_width, std::string *a_selectedOption,
-                          const bool a_allowCustomInput,
-                          const std::string *a_fallbackSelection) {
-  std::vector<EditableDropdownOptionView> optionViews;
-  optionViews.reserve(a_options.size());
-  for (const auto &option : a_options) {
-    constexpr std::string_view kSectionPrefix = "\x1fsection:";
-    const bool isSection =
-        option.size() >= kSectionPrefix.size() &&
-        sosr::strings::EqualsInsensitive(
-            std::string_view(option).substr(0, kSectionPrefix.size()),
-            kSectionPrefix);
-    optionViews.push_back({.label = isSection
-                                        ? std::string_view(option).substr(
-                                              kSectionPrefix.size())
-                                        : std::string_view(option),
-                           .isSection = isSection});
-  }
-
-  return DrawEditableDropdown(a_label, a_hint, a_buffer, a_bufferSize,
-                              std::span<const EditableDropdownOptionView>(
-                                  optionViews.data(), optionViews.size()),
-                              a_width, a_selectedOption, a_allowCustomInput,
-                              a_fallbackSelection);
-}
-
-bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
-                            std::string &a_value,
-                            const std::vector<std::string> &a_options,
-                            const float a_width) {
-  char buffer[128];
-  std::snprintf(buffer, sizeof(buffer), "%s", a_value.c_str());
-  const std::string fallbackSelection = a_value;
-  std::string selectedOption;
-  const bool changed =
-      DrawEditableDropdown(a_label, a_hint, buffer, sizeof(buffer), a_options,
-                           a_width, &selectedOption, false, &fallbackSelection);
-  a_value = selectedOption.empty() ? buffer : selectedOption;
   return changed;
 }
 } // namespace sosr::ui::components

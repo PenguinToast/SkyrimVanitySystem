@@ -11,16 +11,14 @@
 
 namespace sosr {
 void Menu::BuildWorkbenchFilterOptions(
-    std::vector<WorkbenchFilterOption> &a_options,
-    std::vector<std::string> &a_labels) {
+    std::vector<WorkbenchFilterOption> &a_options) {
   a_options.clear();
-  a_labels.clear();
 
   a_options.push_back({.label = "Show All",
+                       .isSection = false,
                        .kind = WorkbenchFilterKind::All,
                        .actorFormID = 0,
                        .conditionId = {}});
-  a_labels.push_back(a_options.back().label);
 
   std::vector<WorkbenchFilterOption> actorOptions;
   std::unordered_set<RE::FormID> seenActorFormIDs;
@@ -55,6 +53,7 @@ void Menu::BuildWorkbenchFilterOptions(
 
   if (playerFormID != 0 && seenActorFormIDs.insert(playerFormID).second) {
     actorOptions.push_back({.label = "Actor: " + buildActorLabel(playerFormID),
+                            .isSection = false,
                             .kind = WorkbenchFilterKind::ActorRef,
                             .actorFormID = playerFormID,
                             .conditionId = {}});
@@ -73,6 +72,7 @@ void Menu::BuildWorkbenchFilterOptions(
       }
 
       actorOptions.push_back({.label = "Actor: " + buildActorLabel(actorFormID),
+                              .isSection = false,
                               .kind = WorkbenchFilterKind::ActorRef,
                               .actorFormID = actorFormID,
                               .conditionId = {}});
@@ -80,8 +80,7 @@ void Menu::BuildWorkbenchFilterOptions(
   }
 
   if (!actorOptions.empty()) {
-    a_options.push_back({.label = "\x1fsection:Actor Ref Filter"});
-    a_labels.push_back(a_options.back().label);
+    a_options.push_back({.label = "Actor Ref Filter", .isSection = true});
 
     std::stable_sort(
         actorOptions.begin(), actorOptions.end(),
@@ -98,30 +97,30 @@ void Menu::BuildWorkbenchFilterOptions(
         });
 
     for (auto &option : actorOptions) {
-      a_labels.push_back(option.label);
       a_options.push_back(std::move(option));
     }
   }
 
   if (!ConditionDefinitions().empty()) {
-    a_options.push_back({.label = "\x1fsection:Condition Filter"});
-    a_labels.push_back(a_options.back().label);
+    a_options.push_back({.label = "Condition Filter", .isSection = true});
     for (const auto &condition : ConditionDefinitions()) {
       a_options.push_back({.label = "Condition: " + condition.name,
+                           .isSection = false,
                            .kind = WorkbenchFilterKind::Condition,
                            .actorFormID = 0,
                            .conditionId = condition.id});
-      a_labels.push_back(a_options.back().label);
     }
   }
 }
 
 void Menu::ValidateWorkbenchFilterSelection() {
   std::vector<WorkbenchFilterOption> options;
-  std::vector<std::string> labels;
-  BuildWorkbenchFilterOptions(options, labels);
+  BuildWorkbenchFilterOptions(options);
 
   const auto matchesCurrentFilter = [&](const WorkbenchFilterOption &a_option) {
+    if (a_option.isSection) {
+      return false;
+    }
     if (a_option.kind != workbenchFilter_.kind) {
       return false;
     }

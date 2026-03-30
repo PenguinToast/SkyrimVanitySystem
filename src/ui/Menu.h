@@ -8,6 +8,7 @@
 #include "components/EquipmentWidget.h"
 #include "imgui.h"
 #include "ui/ConditionData.h"
+#include "ui/components/EditableCombo.h"
 #include "ui/catalog/PaneState.h"
 #include "ui/conditions/EditorState.h"
 #include "ui/conditions/PaneState.h"
@@ -159,7 +160,8 @@ private:
   void DrawConditionEditorDialog();
   void DrawConditionEditorClauseTable(
       ConditionEditorState &a_editor,
-      const std::vector<std::string> &a_conditionFunctionNames,
+      const std::vector<ui::components::EditableDropdownItem<std::string>>
+          &a_conditionFunctionItems,
       float a_editButtonWidth, float a_deleteButtonWidth,
       float a_actionsColumnWidth);
   void DrawCreateKitDialog();
@@ -209,9 +211,8 @@ private:
   [[nodiscard]] bool
   MatchesWorkbenchFilter(const workbench::VariantWorkbenchRow &a_row);
   void ApplyInitialWorkbenchFilterSelection();
-  void
-  BuildWorkbenchFilterOptions(std::vector<WorkbenchFilterOption> &a_options,
-                              std::vector<std::string> &a_labels);
+  void BuildWorkbenchFilterOptions(
+      std::vector<WorkbenchFilterOption> &a_options);
   [[nodiscard]] std::optional<std::string>
   ResolveFirstConditionForActorFilter(RE::FormID a_actorFormID);
   [[nodiscard]] std::optional<std::string> ResolveNewWorkbenchRowConditionId();
