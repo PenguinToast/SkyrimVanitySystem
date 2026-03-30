@@ -2,7 +2,8 @@
 
 #include "ArmorUtils.h"
 #include "ConditionMaterializer.h"
-#include "ui/conditions/EditorSupport.h"
+#include "StringUtils.h"
+#include "workbench/InitialFilterSelection.h"
 
 #include <algorithm>
 #include <optional>
@@ -28,14 +29,24 @@ void Menu::BuildWorkbenchFilterOptions(
 
   const auto buildActorLabel = [&](const RE::FormID a_actorFormID) {
     if (playerFormID != 0 && a_actorFormID == playerFormID) {
-      return std::string("Player");
+      return std::string("Player [") + armor::FormatFormID(a_actorFormID) + "]";
     }
 
     if (auto *actor = RE::TESForm::LookupByID<RE::Actor>(a_actorFormID);
         actor != nullptr) {
-      const auto displayName = armor::GetDisplayName(actor);
-      if (!displayName.empty()) {
-        return displayName + " [" + armor::FormatFormID(a_actorFormID) + "]";
+      std::string label;
+      if (const auto *displayName = actor->GetDisplayFullName();
+          displayName != nullptr && displayName[0] != '\0') {
+        label = displayName;
+      } else if (const auto *name = actor->GetName();
+                 name != nullptr && name[0] != '\0') {
+        label = name;
+      } else if (const auto *actorBase = actor->GetActorBase()) {
+        label = armor::GetDisplayName(actorBase);
+      }
+
+      if (!label.empty()) {
+        return label + " [" + armor::FormatFormID(a_actorFormID) + "]";
       }
     }
 
@@ -82,8 +93,8 @@ void Menu::BuildWorkbenchFilterOptions(
           if (playerFormID != 0 && a_right.actorFormID == playerFormID) {
             return false;
           }
-          return ui::condition_editor::CompareTextInsensitive(
-                     a_left.label, a_right.label) < 0;
+          return strings::CompareTextInsensitive(a_left.label, a_right.label) <
+                 0;
         });
 
     for (auto &option : actorOptions) {
@@ -173,21 +184,23 @@ std::vector<int> Menu::BuildVisibleWorkbenchRowIndices() {
 
 std::optional<std::string>
 Menu::ResolveFirstConditionForActorFilter(const RE::FormID a_actorFormID) {
-  for (auto &condition : ConditionDefinitions()) {
-    const auto materialized =
-        conditions::MaterializeConditionById(condition.id, ConditionDefinitions());
-    if (!materialized.has_value()) {
-      continue;
-    }
+  return workbench::FindFirstConditionForActorFilter(a_actorFormID,
+                                                     ConditionDefinitions());
+}
 
-    if (std::ranges::find(materialized->refreshTargets.actorFormIDs,
-                          a_actorFormID) !=
-        materialized->refreshTargets.actorFormIDs.end()) {
-      return condition.id;
-    }
+void Menu::ApplyInitialWorkbenchFilterSelection() {
+  EnsureDefaultConditions();
+
+  auto selection = workbench::BuildInitialFilterSelection(ConditionDefinitions(),
+                                                          NextConditionId());
+  if (selection.createdCondition.has_value()) {
+    ConditionDefinitions().push_back(std::move(*selection.createdCondition));
+    ++NextConditionId();
+    conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
+    conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
   }
 
-  return std::nullopt;
+  workbenchFilter_ = std::move(selection.filter);
 }
 
 std::optional<std::string> Menu::ResolveNewWorkbenchRowConditionId() {

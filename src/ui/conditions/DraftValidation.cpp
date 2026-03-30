@@ -1,89 +1,23 @@
 #include "ui/conditions/DraftValidation.h"
 
-#include "conditions/Defaults.h"
 #include "conditions/Validation.h"
 #include "ui/conditions/FunctionRegistry.h"
 #include "ui/conditions/ValueEditors.h"
 
-#include <imgui.h>
-
 #include <algorithm>
-#include <array>
-#include <cfloat>
 
 namespace {
 using Clause = sosr::conditions::Clause;
 using Comparator = sosr::conditions::Comparator;
-using ConditionColor = sosr::conditions::Color;
 using Definition = sosr::conditions::Definition;
 using FunctionInfo = sosr::ui::condition_editor::FunctionInfo;
 using ValueEditorKind = sosr::ui::condition_editor::ValueEditorKind;
-
-float ComputeColorDistanceSq(const ConditionColor &a_left,
-                             const ConditionColor &a_right) {
-  const auto dr = a_left.x - a_right.x;
-  const auto dg = a_left.y - a_right.y;
-  const auto db = a_left.z - a_right.z;
-  return (dr * dr) + (dg * dg) + (db * db);
-}
 } // namespace
 
 namespace sosr::ui::condition_editor {
 bool IsBooleanComparator(const Comparator a_comparator) {
   return a_comparator == Comparator::Equal ||
          a_comparator == Comparator::NotEqual;
-}
-
-ConditionColor
-PickDistinctConditionColor(std::span<const ConditionColor> a_existingColors) {
-  static const std::array<ConditionColor, 10> kPalette{
-      ConditionColor{0.86f, 0.25f, 0.28f, 1.0f},
-      ConditionColor{0.17f, 0.62f, 0.32f, 1.0f},
-      ConditionColor{0.19f, 0.48f, 0.85f, 1.0f},
-      ConditionColor{0.86f, 0.58f, 0.16f, 1.0f},
-      ConditionColor{0.55f, 0.30f, 0.86f, 1.0f},
-      ConditionColor{0.10f, 0.67f, 0.67f, 1.0f},
-      ConditionColor{0.84f, 0.35f, 0.63f, 1.0f},
-      ConditionColor{0.61f, 0.50f, 0.18f, 1.0f},
-      ConditionColor{0.24f, 0.71f, 0.86f, 1.0f},
-      ConditionColor{0.93f, 0.40f, 0.13f, 1.0f}};
-
-  const auto scoreColor = [&](const ConditionColor &a_candidate) {
-    float minDistanceSq = FLT_MAX;
-    bool hasExisting = false;
-    for (const auto &existing : a_existingColors) {
-      minDistanceSq =
-          (std::min)(minDistanceSq,
-                     ComputeColorDistanceSq(a_candidate, existing));
-      hasExisting = true;
-    }
-    return hasExisting ? minDistanceSq : FLT_MAX;
-  };
-
-  ConditionColor bestColor = kPalette.front();
-  float bestScore = -1.0f;
-  for (const auto &candidate : kPalette) {
-    const float score = scoreColor(candidate);
-    if (score > bestScore) {
-      bestScore = score;
-      bestColor = candidate;
-    }
-  }
-
-  for (int index = 0; index < 24; ++index) {
-    float r = 0.0f;
-    float g = 0.0f;
-    float b = 0.0f;
-    ImGui::ColorConvertHSVtoRGB(index / 24.0f, 0.70f, 0.88f, r, g, b);
-    const ConditionColor candidate{r, g, b, 1.0f};
-    const float score = scoreColor(candidate);
-    if (score > bestScore) {
-      bestScore = score;
-      bestColor = candidate;
-    }
-  }
-
-  return bestColor;
 }
 
 std::string BuildSuggestedConditionName(
@@ -105,15 +39,6 @@ std::string BuildSuggestedConditionName(
       return candidate;
     }
   }
-}
-
-Definition BuildNewConditionTemplate(const std::string &a_name,
-                                     const ConditionColor &a_color) {
-  Definition definition;
-  definition.name = a_name;
-  definition.color = a_color;
-  definition.clauses.push_back(sosr::conditions::BuildDefaultPlayerClause());
-  return definition;
 }
 
 std::string ValidateConditionDraft(const Definition &a_definition,

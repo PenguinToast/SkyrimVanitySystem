@@ -208,6 +208,7 @@ private:
   [[nodiscard]] std::vector<int> BuildVisibleWorkbenchRowIndices();
   [[nodiscard]] bool
   MatchesWorkbenchFilter(const workbench::VariantWorkbenchRow &a_row);
+  void ApplyInitialWorkbenchFilterSelection();
   void
   BuildWorkbenchFilterOptions(std::vector<WorkbenchFilterOption> &a_options,
                               std::vector<std::string> &a_labels);

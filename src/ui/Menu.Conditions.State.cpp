@@ -1,6 +1,7 @@
 #include "Menu.h"
 
 #include "ConditionMaterializer.h"
+#include "conditions/Creation.h"
 #include "conditions/Defaults.h"
 #include "ui/conditions/EditorSupport.h"
 
@@ -10,13 +11,11 @@ namespace sosr {
 using ConditionDefinition = ui::conditions::Definition;
 using ConditionFunctionInfo = ui::condition_editor::FunctionInfo;
 using ConditionValueEditorKind = ui::condition_editor::ValueEditorKind;
-using ui::condition_editor::BuildNewConditionTemplate;
 using ui::condition_editor::BuildSuggestedConditionName;
 using ui::condition_editor::CompareTextInsensitive;
 using ui::condition_editor::FindConditionFunctionInfo;
 using ui::condition_editor::GetEditorKindForParamType;
 using ui::condition_editor::IsBooleanComparator;
-using ui::condition_editor::PickDistinctConditionColor;
 using ui::condition_editor::ResolveConditionFunctionInfo;
 using ui::condition_editor::ResolveEditorParamType;
 using ui::condition_editor::TrimText;
@@ -69,8 +68,8 @@ void Menu::OpenNewConditionDialog() {
 
   ConditionEditorState editor;
   editor.windowSlot = AllocateConditionEditorWindowSlot();
-  editor.draft = BuildNewConditionTemplate(
-      suggestedName, PickDistinctConditionColor(existingColors));
+  editor.draft = conditions::BuildNewConditionTemplate(
+      suggestedName, conditions::PickDistinctConditionColor(existingColors));
   editor.isNew = true;
   editor.focusOnNextDraw = true;
   ConditionEditors().push_back(std::move(editor));

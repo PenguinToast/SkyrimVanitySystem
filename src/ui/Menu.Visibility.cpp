@@ -120,6 +120,7 @@ void Menu::OnMenuShow() {
   pendingSmoothWheelDelta_ = 0.0f;
   smoothScrollWindowId_ = 0;
   smoothScrollTargetY_ = 0.0f;
+  ApplyInitialWorkbenchFilterSelection();
   SyncWorkbenchRowsForCurrentFilter();
   enabled_ = true;
 }

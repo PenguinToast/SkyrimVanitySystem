@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <charconv>
 #include <cctype>
 #include <cstdint>
 #include <optional>
@@ -164,9 +165,28 @@ RE::TESObjectREFR *LookupReferenceByToken(const std::string &a_token) {
     return RE::PlayerCharacter::GetSingleton();
   }
 
+  if (auto *ref = sosr::armor::LookupByIdentifier<RE::TESObjectREFR>(a_token)) {
+    return ref;
+  }
+
   if (auto *form = RE::TESForm::LookupByEditorID(a_token)) {
     if (auto *ref = form->As<RE::TESObjectREFR>()) {
       return ref;
+    }
+  }
+
+  const auto trimmed = sosr::strings::TrimText(a_token);
+  if (!trimmed.empty() &&
+      std::ranges::all_of(trimmed, [](const unsigned char a_char) {
+        return std::isxdigit(a_char) != 0;
+      })) {
+    RE::FormID formID = 0;
+    const auto *begin = trimmed.data();
+    const auto *end = begin + trimmed.size();
+    if (const auto [ptr, ec] =
+            std::from_chars(begin, end, formID, 16);
+        ec == std::errc{} && ptr == end) {
+      return RE::TESForm::LookupByID<RE::TESObjectREFR>(formID);
     }
   }
 
