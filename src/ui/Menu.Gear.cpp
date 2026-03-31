@@ -8,14 +8,14 @@ enum class GearColumn : ImGuiID { Name = 1, Plugin };
 
 namespace sosr {
 bool Menu::DrawGearTab() {
-  auto rows = BuildFilteredGear();
+  const auto &rows = GetFilteredGearRows();
   ImGui::Text("Results: %zu", rows.size());
   ImGui::SameLine();
   ImGui::Text("| Equipped rows: %zu", workbench_.GetRowCount());
-  return DrawGearCatalogTable(rows);
+  return DrawGearCatalogTable();
 }
 
-bool Menu::DrawGearCatalogTable(const std::vector<const GearEntry *> &a_rows) {
+bool Menu::DrawGearCatalogTable() {
   const auto &browser = CatalogBrowserState();
   bool rowClicked = false;
   if (ImGui::BeginTable("##gear-table", 2,
@@ -30,8 +30,7 @@ bool Menu::DrawGearCatalogTable(const std::vector<const GearEntry *> &a_rows) {
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
 
-    auto rows = a_rows;
-    SortGearRows(rows, ImGui::TableGetSortSpecs());
+    const auto &rows = GetSortedGearRows(ImGui::TableGetSortSpecs());
 
     ImGuiListClipper clipper;
     clipper.Begin(static_cast<int>(rows.size()));

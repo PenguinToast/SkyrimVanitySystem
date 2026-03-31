@@ -61,6 +61,7 @@ void Menu::SetFavorite(const ui::catalog::BrowserTab a_tab,
       ClearCatalogSelection();
     }
   }
+  ++catalogDerived_.favoritesRevision;
   SaveFavorites();
 }
 
@@ -82,6 +83,7 @@ void Menu::QueueCatalogRefresh(const ui::catalog::RefreshMode a_mode) {
     browser.pendingSelectionAfterRefresh.clear();
     ClearCatalogSelection();
   }
+  InvalidateCatalogDerivedState();
 }
 
 void Menu::UpdateCatalogRefresh() {

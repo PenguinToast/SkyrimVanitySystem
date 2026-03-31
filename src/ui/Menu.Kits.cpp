@@ -35,7 +35,7 @@ std::string NormalizeKitCollection(std::string_view a_collection) {
 namespace sosr {
 bool Menu::DrawKitTab() {
   const auto &browser = CatalogBrowserState();
-  auto rows = BuildFilteredKits();
+  const auto &rows = GetFilteredKitRows();
   ImGui::Text("Results: %zu", rows.size());
   bool rowClicked = false;
 
@@ -55,14 +55,14 @@ bool Menu::DrawKitTab() {
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
 
-    SortKitRows(rows, ImGui::TableGetSortSpecs());
+    const auto &sortedRows = GetSortedKitRows(ImGui::TableGetSortSpecs());
 
     ImGuiListClipper clipper;
-    clipper.Begin(static_cast<int>(rows.size()));
+    clipper.Begin(static_cast<int>(sortedRows.size()));
     while (clipper.Step()) {
       for (int rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd;
            ++rowIndex) {
-        const auto &kit = *rows[static_cast<std::size_t>(rowIndex)];
+        const auto &kit = *sortedRows[static_cast<std::size_t>(rowIndex)];
         const auto favorite =
             IsFavorite(ui::catalog::BrowserTab::Kits, kit.id);
 

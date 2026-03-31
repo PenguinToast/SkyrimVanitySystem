@@ -38,6 +38,10 @@ std::uint64_t GetCatalogSlotFilterMask(const std::string_view a_label) {
       numberText.data(), numberText.data() + numberText.size(), slotNumber);
   return error == std::errc{} ? armor::GetArmorSlotMask(slotNumber) : 0;
 }
+
+std::string ReadFilterInputText(const ImGuiTextFilter &a_filter) {
+  return a_filter.InputBuf;
+}
 } // namespace
 
 bool Menu::MatchesGearFilters(const GearEntry &a_entry) const {
@@ -214,6 +218,161 @@ std::vector<const KitEntry *> Menu::BuildFilteredKits() const {
     }
   }
   return rows;
+}
+
+void Menu::InvalidateCatalogDerivedState() {
+  catalogDerived_.nextFilteredRevision = 1;
+  catalogDerived_.gear = {};
+  catalogDerived_.outfits = {};
+  catalogDerived_.kits = {};
+}
+
+const std::vector<const GearEntry *> &Menu::GetFilteredGearRows() {
+  const auto &browser = CatalogBrowserState();
+  ui::catalog::GearFilterState currentState{
+      .catalogRevision = std::string(EquipmentCatalog::Get().GetRevision()),
+      .favoritesRevision = catalogDerived_.favoritesRevision,
+      .favoritesOnly = browser.favoritesOnly,
+      .inventoryOnly = browser.inventoryOnly,
+      .pluginIndex = browser.gearPluginIndex,
+      .selectedSlotFilters = browser.selectedSlotFilters,
+      .searchText = ReadFilterInputText(browser.gearSearch),
+  };
+
+  auto &cache = catalogDerived_.gear;
+  if (!cache.filterInitialized || !(cache.filterState == currentState)) {
+    cache.filteredRows = BuildFilteredGear();
+    cache.filterState = std::move(currentState);
+    cache.filterInitialized = true;
+    cache.filteredRevision = catalogDerived_.nextFilteredRevision++;
+    cache.sortInitialized = false;
+  }
+
+  return cache.filteredRows;
+}
+
+const std::vector<const OutfitEntry *> &Menu::GetFilteredOutfitRows() {
+  const auto &browser = CatalogBrowserState();
+  ui::catalog::OutfitFilterState currentState{
+      .catalogRevision = std::string(EquipmentCatalog::Get().GetRevision()),
+      .favoritesRevision = catalogDerived_.favoritesRevision,
+      .favoritesOnly = browser.favoritesOnly,
+      .pluginIndex = browser.outfitPluginIndex,
+      .selectedSlotFilters = browser.selectedSlotFilters,
+      .searchText = ReadFilterInputText(browser.outfitSearch),
+  };
+
+  auto &cache = catalogDerived_.outfits;
+  if (!cache.filterInitialized || !(cache.filterState == currentState)) {
+    cache.filteredRows = BuildFilteredOutfits();
+    cache.filterState = std::move(currentState);
+    cache.filterInitialized = true;
+    cache.filteredRevision = catalogDerived_.nextFilteredRevision++;
+    cache.sortInitialized = false;
+  }
+
+  return cache.filteredRows;
+}
+
+const std::vector<const KitEntry *> &Menu::GetFilteredKitRows() {
+  const auto &browser = CatalogBrowserState();
+  ui::catalog::KitFilterState currentState{
+      .catalogRevision = std::string(EquipmentCatalog::Get().GetRevision()),
+      .favoritesRevision = catalogDerived_.favoritesRevision,
+      .favoritesOnly = browser.favoritesOnly,
+      .collectionIndex = browser.kitCollectionIndex,
+      .selectedSlotFilters = browser.selectedSlotFilters,
+      .searchText = ReadFilterInputText(browser.kitSearch),
+  };
+
+  auto &cache = catalogDerived_.kits;
+  if (!cache.filterInitialized || !(cache.filterState == currentState)) {
+    cache.filteredRows = BuildFilteredKits();
+    cache.filterState = std::move(currentState);
+    cache.filterInitialized = true;
+    cache.filteredRevision = catalogDerived_.nextFilteredRevision++;
+    cache.sortInitialized = false;
+  }
+
+  return cache.filteredRows;
+}
+
+const std::vector<const GearEntry *> &
+Menu::GetSortedGearRows(ImGuiTableSortSpecs *a_sortSpecs) {
+  const auto &filteredRows = GetFilteredGearRows();
+  auto &cache = catalogDerived_.gear;
+  const ui::catalog::SortState currentSort{
+      .columnUserId = (a_sortSpecs && a_sortSpecs->SpecsCount > 0)
+                          ? a_sortSpecs->Specs[0].ColumnUserID
+                          : 0,
+      .direction = (a_sortSpecs && a_sortSpecs->SpecsCount > 0)
+                       ? a_sortSpecs->Specs[0].SortDirection
+                       : ImGuiSortDirection_None,
+  };
+
+  if (!cache.sortInitialized || !(cache.sortState == currentSort) ||
+      cache.sortedFilteredRevision != cache.filteredRevision ||
+      (a_sortSpecs && a_sortSpecs->SpecsDirty)) {
+    cache.sortedRows = filteredRows;
+    SortGearRows(cache.sortedRows, a_sortSpecs);
+    cache.sortState = currentSort;
+    cache.sortInitialized = true;
+    cache.sortedFilteredRevision = cache.filteredRevision;
+  }
+
+  return cache.sortedRows;
+}
+
+const std::vector<const OutfitEntry *> &
+Menu::GetSortedOutfitRows(ImGuiTableSortSpecs *a_sortSpecs) {
+  const auto &filteredRows = GetFilteredOutfitRows();
+  auto &cache = catalogDerived_.outfits;
+  const ui::catalog::SortState currentSort{
+      .columnUserId = (a_sortSpecs && a_sortSpecs->SpecsCount > 0)
+                          ? a_sortSpecs->Specs[0].ColumnUserID
+                          : 0,
+      .direction = (a_sortSpecs && a_sortSpecs->SpecsCount > 0)
+                       ? a_sortSpecs->Specs[0].SortDirection
+                       : ImGuiSortDirection_None,
+  };
+
+  if (!cache.sortInitialized || !(cache.sortState == currentSort) ||
+      cache.sortedFilteredRevision != cache.filteredRevision ||
+      (a_sortSpecs && a_sortSpecs->SpecsDirty)) {
+    cache.sortedRows = filteredRows;
+    SortOutfitRows(cache.sortedRows, a_sortSpecs);
+    cache.sortState = currentSort;
+    cache.sortInitialized = true;
+    cache.sortedFilteredRevision = cache.filteredRevision;
+  }
+
+  return cache.sortedRows;
+}
+
+const std::vector<const KitEntry *> &
+Menu::GetSortedKitRows(ImGuiTableSortSpecs *a_sortSpecs) {
+  const auto &filteredRows = GetFilteredKitRows();
+  auto &cache = catalogDerived_.kits;
+  const ui::catalog::SortState currentSort{
+      .columnUserId = (a_sortSpecs && a_sortSpecs->SpecsCount > 0)
+                          ? a_sortSpecs->Specs[0].ColumnUserID
+                          : 0,
+      .direction = (a_sortSpecs && a_sortSpecs->SpecsCount > 0)
+                       ? a_sortSpecs->Specs[0].SortDirection
+                       : ImGuiSortDirection_None,
+  };
+
+  if (!cache.sortInitialized || !(cache.sortState == currentSort) ||
+      cache.sortedFilteredRevision != cache.filteredRevision ||
+      (a_sortSpecs && a_sortSpecs->SpecsDirty)) {
+    cache.sortedRows = filteredRows;
+    SortKitRows(cache.sortedRows, a_sortSpecs);
+    cache.sortState = currentSort;
+    cache.sortInitialized = true;
+    cache.sortedFilteredRevision = cache.filteredRevision;
+  }
+
+  return cache.sortedRows;
 }
 
 void Menu::SortGearRows(std::vector<const GearEntry *> &a_rows,

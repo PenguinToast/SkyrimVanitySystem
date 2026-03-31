@@ -50,6 +50,7 @@ void AllowTextInput([[maybe_unused]] RE::ControlMap *a_controlMap,
 } // namespace
 
 namespace sosr {
+
 void Menu::Open() {
   if (!initialized_ || enabled_ || !gameDataLoaded_) {
     return;
@@ -103,6 +104,10 @@ void Menu::NotifyWindowShutdown() {
 void Menu::OnMenuShow() {
   if (!initialized_ || enabled_) {
     return;
+  }
+
+  if (CatalogBrowserState().inventoryOnly) {
+    catalogDerived_.gear = {};
   }
 
   if (auto *controlMap = RE::ControlMap::GetSingleton();

@@ -11,7 +11,7 @@ enum class OutfitColumn : ImGuiID { Name = 1, Plugin, Pieces };
 namespace sosr {
 bool Menu::DrawOutfitTab() {
   const auto &browser = CatalogBrowserState();
-  auto rows = BuildFilteredOutfits();
+  const auto &rows = GetFilteredOutfitRows();
   ImGui::Text("Results: %zu", rows.size());
   bool rowClicked = false;
 
@@ -31,14 +31,14 @@ bool Menu::DrawOutfitTab() {
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
 
-    SortOutfitRows(rows, ImGui::TableGetSortSpecs());
+    const auto &sortedRows = GetSortedOutfitRows(ImGui::TableGetSortSpecs());
 
     ImGuiListClipper clipper;
-    clipper.Begin(static_cast<int>(rows.size()));
+    clipper.Begin(static_cast<int>(sortedRows.size()));
     while (clipper.Step()) {
       for (int rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd;
            ++rowIndex) {
-        const auto &outfit = *rows[static_cast<std::size_t>(rowIndex)];
+        const auto &outfit = *sortedRows[static_cast<std::size_t>(rowIndex)];
         const auto favorite =
             IsFavorite(ui::catalog::BrowserTab::Outfits, outfit.id);
 

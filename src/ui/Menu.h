@@ -10,6 +10,7 @@
 #include "imgui.h"
 #include "ui/ConditionData.h"
 #include "ui/components/EditableCombo.h"
+#include "ui/catalog/DerivedState.h"
 #include "ui/catalog/PaneState.h"
 #include "ui/conditions/EditorState.h"
 #include "ui/conditions/PaneState.h"
@@ -152,8 +153,7 @@ private:
   DrawCatalogDragWidget(const workbench::EquipmentWidgetItem &a_item,
                         DragSourceKind a_sourceKind);
   [[nodiscard]] bool DrawGearTab();
-  [[nodiscard]] bool
-  DrawGearCatalogTable(const std::vector<const GearEntry *> &a_rows);
+  [[nodiscard]] bool DrawGearCatalogTable();
   void DrawVariantWorkbenchPane();
   void DrawWorkbenchFilterBar();
   void DrawWorkbenchToolbar();
@@ -252,6 +252,16 @@ private:
                       ImGuiTableSortSpecs *a_sortSpecs) const;
   void SortKitRows(std::vector<const KitEntry *> &a_rows,
                    ImGuiTableSortSpecs *a_sortSpecs) const;
+  [[nodiscard]] const std::vector<const GearEntry *> &GetFilteredGearRows();
+  [[nodiscard]] const std::vector<const GearEntry *> &
+  GetSortedGearRows(ImGuiTableSortSpecs *a_sortSpecs);
+  [[nodiscard]] const std::vector<const OutfitEntry *> &GetFilteredOutfitRows();
+  [[nodiscard]] const std::vector<const OutfitEntry *> &
+  GetSortedOutfitRows(ImGuiTableSortSpecs *a_sortSpecs);
+  [[nodiscard]] const std::vector<const KitEntry *> &GetFilteredKitRows();
+  [[nodiscard]] const std::vector<const KitEntry *> &
+  GetSortedKitRows(ImGuiTableSortSpecs *a_sortSpecs);
+  void InvalidateCatalogDerivedState();
   [[nodiscard]] ui::catalog::BrowserState &CatalogBrowserState() {
     return catalogPane_.browser;
   }
@@ -342,5 +352,6 @@ private:
     ui::workbench_conflicts::ConflictState conflictState;
   };
   WorkbenchDerivedState workbenchDerived_;
+  ui::catalog::DerivedState catalogDerived_;
 };
 } // namespace sosr
