@@ -8,6 +8,10 @@
 
 namespace sosr {
 namespace {
+[[nodiscard]] bool IsTextInputCharacter(const std::uint32_t a_codePoint) {
+  return a_codePoint >= 0x20U && a_codePoint != 0x7FU;
+}
+
 auto NormalizeScanCodeForWindows(const std::uint32_t a_scanCode)
     -> std::uint32_t {
   return (a_scanCode & 0x100U) != 0U ? (((a_scanCode & 0xFFU) << 8U) | 0xE000U)
@@ -169,6 +173,7 @@ void InputManager::OnFocusChange(bool a_focus) {
   shiftDown_ = false;
   ctrlDown_ = false;
   altDown_ = false;
+  imguiKeyDown_.fill(false);
 }
 
 void InputManager::Flush() {
@@ -192,7 +197,7 @@ void InputManager::Flush() {
   shiftDown_ = false;
   ctrlDown_ = false;
   altDown_ = false;
-
+  imguiKeyDown_.fill(false);
   if (ImGui::GetCurrentContext() == nullptr) {
     return;
   }
@@ -238,7 +243,9 @@ void InputManager::ProcessInputEvents() {
     case RE::INPUT_EVENT_TYPE::kChar:
       if (wantsTextInput) {
         const auto *charEvent = static_cast<const RE::CharEvent *>(event);
-        io.AddInputCharacter(charEvent->keyCode);
+        if (IsTextInputCharacter(charEvent->keyCode)) {
+          io.AddInputCharacter(charEvent->keyCode);
+        }
       }
       break;
     case RE::INPUT_EVENT_TYPE::kButton: {
@@ -246,7 +253,7 @@ void InputManager::ProcessInputEvents() {
       const auto scanCode = buttonEvent->GetIDCode();
       const auto imguiKey = MapScanCodeToImGuiKey(scanCode);
       const bool keyWentDown = buttonEvent->IsDown();
-      const bool keyWentUp = buttonEvent->IsUp();
+      const bool keyWentUp = !buttonEvent->IsPressed();
 
       if (imguiKey == ImGuiKey_LeftShift || imguiKey == ImGuiKey_RightShift) {
         if (keyWentDown) {
@@ -281,10 +288,12 @@ void InputManager::ProcessInputEvents() {
         break;
       case RE::INPUT_DEVICE::kKeyboard:
         if (wantsTextInput) {
-          if (imguiKey != ImGuiKey_None && keyWentDown) {
-            io.AddKeyEvent(imguiKey, true);
-          } else if (imguiKey != ImGuiKey_None && keyWentUp) {
-            io.AddKeyEvent(imguiKey, false);
+          if (imguiKey != ImGuiKey_None) {
+            const bool keyIsDown = buttonEvent->IsPressed();
+            if (imguiKeyDown_[imguiKey] != keyIsDown) {
+              imguiKeyDown_[imguiKey] = keyIsDown;
+              io.AddKeyEvent(imguiKey, keyIsDown);
+            }
           }
           break;
         }

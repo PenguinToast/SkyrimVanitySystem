@@ -127,7 +127,7 @@ RE::BSEventNotifyControl KeyHandler::ProcessEvent(
 
     if (buttonEvent->IsDown()) {
       eventType = KeyEventType::KEY_DOWN;
-    } else if (buttonEvent->IsUp()) {
+    } else if (!buttonEvent->IsPressed()) {
       eventType = KeyEventType::KEY_UP;
     } else {
       continue;

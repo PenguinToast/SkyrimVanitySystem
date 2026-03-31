@@ -21,6 +21,10 @@ static_assert(sizeof(GFxCharEvent) == 0x0C);
 } // namespace RE
 
 namespace {
+[[nodiscard]] bool IsTextInputCharacter(const std::uint32_t a_codePoint) {
+  return a_codePoint >= 0x20U && a_codePoint != 0x7FU;
+}
+
 struct GFxToImGuiKey {
   RE::GFxKey::Code gfxCode;
   ImGuiKey imguiKey;
@@ -109,7 +113,9 @@ void OnKeyEvent(const RE::GFxEvent *a_event, bool a_down) {
 
 void OnCharEvent(const RE::GFxEvent *a_event) {
   const auto *charEvent = reinterpret_cast<const RE::GFxCharEvent *>(a_event);
-  ImGui::GetIO().AddInputCharacter(charEvent->wcharCode);
+  if (IsTextInputCharacter(charEvent->wcharCode)) {
+    ImGui::GetIO().AddInputCharacter(charEvent->wcharCode);
+  }
 }
 
 void ProcessScaleformEvent(const RE::BSUIScaleformData *a_data) {
@@ -117,6 +123,7 @@ void ProcessScaleformEvent(const RE::BSUIScaleformData *a_data) {
     return;
   }
 
+  const bool wantsTextInput = sosr::Menu::GetSingleton()->WantsTextInput();
   switch (const auto *event = a_data->scaleformEvent; event->type.get()) {
   case RE::GFxEvent::EventType::kMouseDown:
     OnMouseEvent(event, true);
@@ -128,10 +135,14 @@ void ProcessScaleformEvent(const RE::BSUIScaleformData *a_data) {
     OnMouseWheelEvent(event);
     break;
   case RE::GFxEvent::EventType::kKeyDown:
-    OnKeyEvent(event, true);
+    if (!wantsTextInput) {
+      OnKeyEvent(event, true);
+    }
     break;
   case RE::GFxEvent::EventType::kKeyUp:
-    OnKeyEvent(event, false);
+    if (!wantsTextInput) {
+      OnKeyEvent(event, false);
+    }
     break;
   case RE::GFxEvent::EventType::kCharEvent:
     OnCharEvent(event);
