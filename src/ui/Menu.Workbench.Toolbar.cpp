@@ -254,6 +254,13 @@ void Menu::DrawWorkbenchToolbar() {
           action.callback();
           ImGui::CloseCurrentPopup();
         }
+        if (action.tooltip) {
+          ui::workbench::DrawSimplePinnableTooltip(
+              "workbench:toolbar:overflow:" + std::to_string(index),
+              ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort |
+                                   ImGuiHoveredFlags_AllowWhenDisabled),
+              action.tooltip);
+        }
       }
       ImGui::EndPopup();
     }
