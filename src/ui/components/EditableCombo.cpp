@@ -299,6 +299,13 @@ bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
           ImGui::TextDisabled("%.*s",
                               static_cast<int>(GetSectionLabel(option).size()),
                               GetSectionLabel(option).data());
+          if ((ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary) ||
+               ImGui::IsItemHovered()) &&
+              a_drawItemTooltip) {
+            ImGui::BeginTooltip();
+            (*a_drawItemTooltip)(static_cast<int>(optionIndex));
+            ImGui::EndTooltip();
+          }
           continue;
         }
         if (!needle.empty() &&

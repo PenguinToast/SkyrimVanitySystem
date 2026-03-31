@@ -207,7 +207,9 @@ private:
                                  bool a_replaceExisting = true);
   void AddKitEntryToWorkbench(const KitEntry &a_entry,
                               bool a_replaceExisting = true);
-  void OpenCreateKitDialog(KitCreationSource a_source);
+  void OpenCreateKitDialog(
+      KitCreationSource a_source,
+      const std::vector<int> *a_candidateRowIndices = nullptr);
   void OpenDeleteKitDialog(const KitEntry &a_entry);
   [[nodiscard]] bool SavePendingKit();
   [[nodiscard]] bool DeletePendingKit();

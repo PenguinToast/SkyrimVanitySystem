@@ -78,11 +78,14 @@ public:
   std::size_t DeleteRowsByConditionId(std::string_view a_conditionId,
                                       bool a_onlyIfEmpty);
   bool SetHideEquipped(int a_rowIndex, bool a_hideEquipped);
-  bool ResetEquippedRows();
-  void ResetAllRows();
-  [[nodiscard]] std::vector<RE::FormID> CollectEquippedArmorFormIDs() const;
+  bool ResetEquippedRows(const std::vector<int> *a_candidateRowIndices = nullptr);
+  bool ResetAllRows(const std::vector<int> *a_candidateRowIndices = nullptr);
   [[nodiscard]] std::vector<RE::FormID>
-  CollectOverrideArmorFormIDsFromEquippedRows() const;
+  CollectEquippedArmorFormIDs(
+      const std::vector<int> *a_candidateRowIndices = nullptr) const;
+  [[nodiscard]] std::vector<RE::FormID>
+  CollectOverrideArmorFormIDsFromEquippedRows(
+      const std::vector<int> *a_candidateRowIndices = nullptr) const;
   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   bool InsertCatalogRow(RE::FormID a_formID, int a_targetRowIndex,
                         bool a_insertAfter,

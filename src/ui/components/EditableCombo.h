@@ -52,7 +52,8 @@ bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
                             std::span<const EditableDropdownItem<TValue>> a_items,
                             float a_width, int *a_selectedIndex = nullptr,
                             std::optional<TValue> *a_selectedValue = nullptr,
-                            std::function<void(const TValue &)> a_drawItemTooltip = {}) {
+                            std::function<void(const EditableDropdownItem<TValue> &)>
+                                a_drawItemTooltip = {}) {
   std::vector<EditableDropdownOptionView> optionViews;
   optionViews.reserve(a_items.size());
   for (const auto &item : a_items) {
@@ -69,9 +70,7 @@ bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
         return;
       }
       const auto &item = a_items[static_cast<std::size_t>(a_index)];
-      if (item.value.has_value()) {
-        a_drawItemTooltip(*item.value);
-      }
+      a_drawItemTooltip(item);
     };
   }
   const bool changed = detail::DrawEditableDropdownIndexed(

@@ -62,11 +62,18 @@ void Menu::DrawWorkbenchFilterBar() {
   }
 
   std::optional<WorkbenchFilterOption> selectedFilterOption;
-  const std::function<void(const WorkbenchFilterOption &)>
-      drawFilterTooltip = [&](const WorkbenchFilterOption &a_option) {
-        ui::workbench::DrawWorkbenchFilterOptionTooltip(a_option,
-                                                        ConditionDefinitions());
-      };
+  const std::function<void(
+      const ui::components::EditableDropdownItem<WorkbenchFilterOption> &)>
+      drawFilterTooltip =
+          [&](const ui::components::EditableDropdownItem<WorkbenchFilterOption>
+                  &a_item) {
+            if (a_item.value.has_value()) {
+              ui::workbench::DrawWorkbenchFilterOptionTooltip(
+                  *a_item.value, ConditionDefinitions());
+            } else {
+              ui::workbench::DrawWorkbenchFilterSectionTooltip(a_item.label);
+            }
+          };
   if (ui::components::DrawSearchableDropdown(
           "##workbench-filter", "Filter workbench...", selectedFilterLabel,
           std::span<const ui::components::EditableDropdownItem<
@@ -84,9 +91,12 @@ void Menu::DrawWorkbenchFilterBar() {
 }
 
 void Menu::DrawWorkbenchToolbar() {
-  const auto equippedKitFormIDs = workbench_.CollectEquippedArmorFormIDs();
+  const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto equippedKitFormIDs =
+      workbench_.CollectEquippedArmorFormIDs(&visibleRowIndices);
   const auto overrideKitFormIDs =
-      workbench_.CollectOverrideArmorFormIDsFromEquippedRows();
+      workbench_.CollectOverrideArmorFormIDsFromEquippedRows(
+          &visibleRowIndices);
   const bool canCreateEquippedKit = !equippedKitFormIDs.empty();
   const bool canCreateOverrideKit = !overrideKitFormIDs.empty();
 
@@ -96,9 +106,14 @@ void Menu::DrawWorkbenchToolbar() {
           .callback =
               [&]() {
                 workbench_.ClearPreview();
-                if (workbench_.ResetEquippedRows()) {
+                if (workbench_.ResetEquippedRows(&visibleRowIndices)) {
                   workbench_.SyncDynamicArmorVariantsExtended(ConditionDefinitions());
                 }
+              },
+          .tooltip =
+              []() {
+                ImGui::TextUnformatted(
+                    "Reset equipped rows visible in the current filter.");
               },
       },
       WorkbenchToolbarAction{
@@ -106,31 +121,46 @@ void Menu::DrawWorkbenchToolbar() {
           .callback =
               [&]() {
                 workbench_.ClearPreview();
-                workbench_.ResetAllRows();
-                SyncWorkbenchRowsForCurrentFilter();
-                workbench_.SyncDynamicArmorVariantsExtended(ConditionDefinitions());
+                if (workbench_.ResetAllRows(&visibleRowIndices)) {
+                  SyncWorkbenchRowsForCurrentFilter();
+                  workbench_.SyncDynamicArmorVariantsExtended(
+                      ConditionDefinitions());
+                }
+              },
+          .tooltip =
+              []() {
+                ImGui::TextUnformatted(
+                    "Reset all visible rows in the current filter.");
               },
       },
       WorkbenchToolbarAction{
           .label = "Kit from Equipped",
           .enabled = canCreateEquippedKit,
           .callback =
-              [&]() { OpenCreateKitDialog(KitCreationSource::Equipped); },
+              [&]() {
+                OpenCreateKitDialog(KitCreationSource::Equipped,
+                                    &visibleRowIndices);
+              },
           .tooltip =
               []() {
-                ImGui::TextUnformatted("Create a Modex kit from the player's "
-                                       "currently equipped armor.");
+                ImGui::TextUnformatted(
+                    "Create a Modex kit from equipped rows visible in the "
+                    "current filter.");
               },
       },
       WorkbenchToolbarAction{
           .label = "Kit from Overrides",
           .enabled = canCreateOverrideKit,
           .callback =
-              [&]() { OpenCreateKitDialog(KitCreationSource::Overrides); },
+              [&]() {
+                OpenCreateKitDialog(KitCreationSource::Overrides,
+                                    &visibleRowIndices);
+              },
           .tooltip =
               []() {
-                ImGui::TextUnformatted("Create a Modex kit from overrides on "
-                                       "currently equipped armor only.");
+                ImGui::TextUnformatted(
+                    "Create a Modex kit from overrides on visible equipped "
+                    "rows only.");
               },
       },
   };

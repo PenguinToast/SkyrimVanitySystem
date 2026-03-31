@@ -730,13 +730,58 @@ bool VariantWorkbench::SetHideEquipped(int a_rowIndex, bool a_hideEquipped) {
   return true;
 }
 
-bool VariantWorkbench::ResetEquippedRows() {
+bool VariantWorkbench::ResetEquippedRows(
+    const std::vector<int> *a_candidateRowIndices) {
   bool changed = false;
-  for (auto &row : rows_) {
-    if (!row.isEquipped) {
+
+  const auto resetRow = [&](VariantWorkbenchRow &a_row) {
+    if (!a_row.isEquipped) {
+      return;
+    }
+
+    if (!a_row.overrides.empty()) {
+      a_row.overrides.clear();
+      changed = true;
+    }
+    if (a_row.hideEquipped) {
+      a_row.hideEquipped = false;
+      changed = true;
+    }
+  };
+
+  if (a_candidateRowIndices != nullptr) {
+    for (const auto rowIndex : *a_candidateRowIndices) {
+      if (rowIndex < 0 || rowIndex >= static_cast<int>(rows_.size())) {
+        continue;
+      }
+      resetRow(rows_[static_cast<std::size_t>(rowIndex)]);
+    }
+  } else {
+    for (auto &row : rows_) {
+      resetRow(row);
+    }
+  }
+
+  if (changed) {
+    MarkChanged();
+  }
+
+  return changed;
+}
+
+bool VariantWorkbench::ResetAllRows(const std::vector<int> *a_candidateRowIndices) {
+  if (a_candidateRowIndices == nullptr) {
+    Revert();
+    return true;
+  }
+
+  bool changed = false;
+  for (const auto rowIndex : *a_candidateRowIndices) {
+    if (rowIndex < 0 || rowIndex >= static_cast<int>(rows_.size())) {
       continue;
     }
 
+    auto &row = rows_[static_cast<std::size_t>(rowIndex)];
     if (!row.overrides.empty()) {
       row.overrides.clear();
       changed = true;
@@ -754,19 +799,32 @@ bool VariantWorkbench::ResetEquippedRows() {
   return changed;
 }
 
-void VariantWorkbench::ResetAllRows() { Revert(); }
-
-std::vector<RE::FormID> VariantWorkbench::CollectEquippedArmorFormIDs() const {
+std::vector<RE::FormID> VariantWorkbench::CollectEquippedArmorFormIDs(
+    const std::vector<int> *a_candidateRowIndices) const {
   std::vector<RE::FormID> formIDs;
   std::unordered_set<RE::FormID> seen;
-  formIDs.reserve(rows_.size());
 
-  for (const auto &row : rows_) {
-    if (!row.isEquipped || row.equipped.formID == 0) {
-      continue;
+  const auto collectRow = [&](const VariantWorkbenchRow &a_row) {
+    if (!a_row.isEquipped || a_row.equipped.formID == 0) {
+      return;
     }
-    if (seen.insert(row.equipped.formID).second) {
-      formIDs.push_back(row.equipped.formID);
+    if (seen.insert(a_row.equipped.formID).second) {
+      formIDs.push_back(a_row.equipped.formID);
+    }
+  };
+
+  formIDs.reserve(a_candidateRowIndices != nullptr ? a_candidateRowIndices->size()
+                                                   : rows_.size());
+  if (a_candidateRowIndices != nullptr) {
+    for (const auto rowIndex : *a_candidateRowIndices) {
+      if (rowIndex < 0 || rowIndex >= static_cast<int>(rows_.size())) {
+        continue;
+      }
+      collectRow(rows_[static_cast<std::size_t>(rowIndex)]);
+    }
+  } else {
+    for (const auto &row : rows_) {
+      collectRow(row);
     }
   }
 
@@ -774,22 +832,36 @@ std::vector<RE::FormID> VariantWorkbench::CollectEquippedArmorFormIDs() const {
 }
 
 std::vector<RE::FormID>
-VariantWorkbench::CollectOverrideArmorFormIDsFromEquippedRows() const {
+VariantWorkbench::CollectOverrideArmorFormIDsFromEquippedRows(
+    const std::vector<int> *a_candidateRowIndices) const {
   std::vector<RE::FormID> formIDs;
   std::unordered_set<RE::FormID> seen;
 
-  for (const auto &row : rows_) {
-    if (!row.isEquipped) {
-      continue;
+  const auto collectRow = [&](const VariantWorkbenchRow &a_row) {
+    if (!a_row.isEquipped) {
+      return;
     }
 
-    for (const auto &item : row.overrides) {
+    for (const auto &item : a_row.overrides) {
       if (item.formID == 0) {
         continue;
       }
       if (seen.insert(item.formID).second) {
         formIDs.push_back(item.formID);
       }
+    }
+  };
+
+  if (a_candidateRowIndices != nullptr) {
+    for (const auto rowIndex : *a_candidateRowIndices) {
+      if (rowIndex < 0 || rowIndex >= static_cast<int>(rows_.size())) {
+        continue;
+      }
+      collectRow(rows_[static_cast<std::size_t>(rowIndex)]);
+    }
+  } else {
+    for (const auto &row : rows_) {
+      collectRow(row);
     }
   }
 

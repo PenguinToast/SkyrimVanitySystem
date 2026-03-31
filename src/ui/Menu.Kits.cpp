@@ -183,14 +183,17 @@ void Menu::AddKitEntryToWorkbench(const KitEntry &a_entry,
   }
 }
 
-void Menu::OpenCreateKitDialog(const KitCreationSource a_source) {
+void Menu::OpenCreateKitDialog(const KitCreationSource a_source,
+                               const std::vector<int> *a_candidateRowIndices) {
   auto &createDialog = CreateKitDialogState();
   createDialog.pendingFormIDs.clear();
   if (a_source == KitCreationSource::Equipped) {
-    createDialog.pendingFormIDs = workbench_.CollectEquippedArmorFormIDs();
+    createDialog.pendingFormIDs =
+        workbench_.CollectEquippedArmorFormIDs(a_candidateRowIndices);
   } else {
     createDialog.pendingFormIDs =
-        workbench_.CollectOverrideArmorFormIDsFromEquippedRows();
+        workbench_.CollectOverrideArmorFormIDsFromEquippedRows(
+            a_candidateRowIndices);
   }
 
   if (createDialog.pendingFormIDs.empty()) {

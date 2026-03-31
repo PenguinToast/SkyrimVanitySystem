@@ -114,9 +114,32 @@ void DrawSimplePinnableTooltip(const std::string_view a_id,
   ui::components::DrawPinnableTooltip(a_id, a_hoveredSource, a_drawBody);
 }
 
+void DrawWorkbenchFilterSectionTooltip(const std::string_view a_sectionLabel) {
+  if (a_sectionLabel == "Actor Ref Filter") {
+    ImGui::PushTextWrapPos(360.0f);
+    ImGui::TextUnformatted(
+        "Filters the workbench to rows whose condition targets a specific "
+        "actor reference.");
+    ImGui::PopTextWrapPos();
+    return;
+  }
+
+  if (a_sectionLabel == "Condition Filter") {
+    ImGui::PushTextWrapPos(360.0f);
+    ImGui::TextUnformatted(
+        "Filters the workbench to rows assigned to a specific condition.");
+    ImGui::PopTextWrapPos();
+  }
+}
+
 void DrawWorkbenchFilterOptionTooltip(
     const ui::workbench::FilterOption &a_option,
     const std::vector<ui::conditions::Definition> &a_conditions) {
+  if (a_option.isSection) {
+    DrawWorkbenchFilterSectionTooltip(a_option.label);
+    return;
+  }
+
   switch (a_option.kind) {
   case ui::workbench::FilterKind::All:
     ImGui::TextDisabled("Show every workbench row.");

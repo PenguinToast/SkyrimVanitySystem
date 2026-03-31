@@ -37,6 +37,7 @@ void DrawConflictTooltipSection(
 void DrawSimplePinnableTooltip(const std::string_view a_id,
                                bool a_hoveredSource,
                                const std::function<void()> &a_drawBody);
+void DrawWorkbenchFilterSectionTooltip(std::string_view a_sectionLabel);
 void DrawWorkbenchFilterOptionTooltip(
     const ui::workbench::FilterOption &a_option,
     const std::vector<ui::conditions::Definition> &a_conditions);
