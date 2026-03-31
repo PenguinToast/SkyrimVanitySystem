@@ -2,6 +2,7 @@
 
 #include "ArmorUtils.h"
 #include "StringUtils.h"
+#include "catalog/KitLayoutMetadata.h"
 #include "imgui_internal.h"
 #include "ui/catalog/Widgets.h"
 #include "ui/components/EditableCombo.h"
@@ -174,6 +175,13 @@ bool Menu::DrawKitTab() {
 void Menu::AddKitEntryToWorkbench(const KitEntry &a_entry,
                                   const bool a_replaceExisting) {
   const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  if (const auto *layout = a_entry.GetLayout(); layout != nullptr) {
+    workbench_.ApplyKitLayout(*layout, a_replaceExisting,
+                              ResolveNewWorkbenchRowConditionId(),
+                              &visibleRowIndices);
+    return;
+  }
+
   if (a_replaceExisting) {
     workbench_.ReplaceCatalogSelectionInWorkbench(a_entry.GetArmorFormIDs(),
                                                   &visibleRowIndices);
@@ -187,6 +195,7 @@ void Menu::OpenCreateKitDialog(const KitCreationSource a_source,
                                const std::vector<int> *a_candidateRowIndices) {
   auto &createDialog = CreateKitDialogState();
   createDialog.pendingFormIDs.clear();
+  createDialog.pendingLayout.reset();
   if (a_source == KitCreationSource::Equipped) {
     createDialog.pendingFormIDs =
         workbench_.CollectEquippedArmorFormIDs(a_candidateRowIndices);
@@ -194,9 +203,11 @@ void Menu::OpenCreateKitDialog(const KitCreationSource a_source,
     createDialog.pendingFormIDs =
         workbench_.CollectOverrideArmorFormIDsFromEquippedRows(
             a_candidateRowIndices);
+    createDialog.pendingLayout =
+        workbench_.CaptureKitLayout(a_candidateRowIndices);
   }
 
-  if (createDialog.pendingFormIDs.empty()) {
+  if (createDialog.pendingFormIDs.empty() && !createDialog.pendingLayout) {
     return;
   }
 
@@ -259,7 +270,7 @@ bool Menu::SavePendingKit() {
                        {"Equipped", true}};
   }
 
-  if (items.empty()) {
+  if (items.empty() && !createDialog.pendingLayout) {
     createDialog.error = "No valid armor items were available to save.";
     return false;
   }
@@ -294,6 +305,10 @@ bool Menu::SavePendingKit() {
   data[name]["Collection"] = collection;
   data[name]["Description"] = "Created by Skyrim Vanity System.";
   data[name]["Items"] = std::move(items);
+  if (createDialog.pendingLayout.has_value()) {
+    data[name][std::string(catalog::kSvsKitMetadataKey)] =
+        catalog::SerializeKitLayout(*createDialog.pendingLayout);
+  }
 
   std::ofstream file(fullPath, std::ios::trunc);
   if (!file.is_open()) {
@@ -311,6 +326,7 @@ bool Menu::SavePendingKit() {
   CatalogBrowserState().activeTab = ui::catalog::BrowserTab::Kits;
   createDialog.openRequested = false;
   createDialog.pendingFormIDs.clear();
+  createDialog.pendingLayout.reset();
   createDialog.error.clear();
   return true;
 }
@@ -354,6 +370,13 @@ bool Menu::DeletePendingKit() {
 
 void Menu::PreviewKitEntry(const KitEntry &a_entry) {
   const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  if (const auto *layout = a_entry.GetLayout(); layout != nullptr) {
+    workbench_.PreviewKitLayout(a_entry.id, *layout,
+                                ResolveWorkbenchPreviewActor(),
+                                &visibleRowIndices);
+    return;
+  }
+
   workbench_.ApplyCatalogPreview(a_entry.id, a_entry.GetArmorFormIDs(),
                                  ResolveWorkbenchPreviewActor(),
                                  &visibleRowIndices);
@@ -458,6 +481,7 @@ void Menu::DrawCreateKitDialog() {
     if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f)) || requestClose) {
       createDialog.error.clear();
       createDialog.pendingFormIDs.clear();
+      createDialog.pendingLayout.reset();
       createDialog.pendingName.fill('\0');
       createDialog.pendingCollection.fill('\0');
       createDialog.open = false;

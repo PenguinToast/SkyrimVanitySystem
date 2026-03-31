@@ -124,6 +124,10 @@ int ScoreFallbackTargetRow(const std::uint64_t a_itemMask,
 
   return bestScore;
 }
+
+bool IsValidRowIndex(const int a_rowIndex, const std::size_t a_rowCount) {
+  return a_rowIndex >= 0 && a_rowIndex < static_cast<int>(a_rowCount);
+}
 } // namespace
 
 std::uint64_t VariantWorkbenchRow::GetSelectionConflictSlotMask() const {
@@ -185,28 +189,58 @@ void VariantWorkbench::RebuildRowOrder() {
 
 void VariantWorkbench::MarkChanged() { ++revision_; }
 
+std::vector<int> VariantWorkbench::BuildCandidateRowIndices(
+    const std::vector<int> *a_candidateRowIndices, const std::size_t a_rowCount) {
+  if (a_candidateRowIndices != nullptr) {
+    return *a_candidateRowIndices;
+  }
+
+  std::vector<int> indices;
+  indices.reserve(a_rowCount);
+  for (int rowIndex = 0; rowIndex < static_cast<int>(a_rowCount); ++rowIndex) {
+    indices.push_back(rowIndex);
+  }
+  return indices;
+}
+
 int VariantWorkbench::FindBestCatalogTargetRowIndex(
     const EquipmentWidgetItem &a_item, bool a_requireAcceptable,
     const std::vector<PlannedCatalogAssignment> *a_pendingAssignments,
     const std::vector<int> *a_candidateRowIndices) const {
+  return FindBestItemTargetRowIndexBySlotMask(
+      a_item.slotMask, a_requireAcceptable, &a_item, a_pendingAssignments,
+      a_candidateRowIndices);
+}
+
+int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
+    const std::uint64_t a_targetSlotMask, const bool a_requireAcceptable,
+    const EquipmentWidgetItem *a_item,
+    const std::vector<PlannedCatalogAssignment> *a_pendingAssignments,
+    const std::vector<int> *a_candidateRowIndices) const {
+  if (a_targetSlotMask == 0) {
+    return -1;
+  }
+
   int fallbackRowIndex = -1;
   int bestPrecedenceRowIndex = -1;
   int bestPrecedenceScore = -1;
+
   const auto visitRow = [&](const int rowIndex) -> bool {
     const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
-    if (!row.isEquipped) {
+    if (!row.isEquipped || row.IsSlotRow()) {
       return false;
     }
 
-    if (a_requireAcceptable &&
-        ((a_pendingAssignments &&
-          !CanAcceptOverrideWithPendingAssignments(rowIndex, a_item,
+    if (a_requireAcceptable && a_item != nullptr &&
+        ((a_pendingAssignments != nullptr &&
+          !CanAcceptOverrideWithPendingAssignments(rowIndex, *a_item,
                                                    *a_pendingAssignments)) ||
-         (!a_pendingAssignments && !CanAcceptOverride(rowIndex, a_item)))) {
+         (a_pendingAssignments == nullptr &&
+          !CanAcceptOverride(rowIndex, *a_item)))) {
       return false;
     }
 
-    if ((row.equipped.slotMask & a_item.slotMask) != 0) {
+    if ((row.equipped.slotMask & a_targetSlotMask) != 0) {
       fallbackRowIndex = rowIndex;
       bestPrecedenceRowIndex = rowIndex;
       bestPrecedenceScore = (std::numeric_limits<int>::max)();
@@ -218,7 +252,7 @@ int VariantWorkbench::FindBestCatalogTargetRowIndex(
     }
 
     const auto precedenceScore =
-        ScoreFallbackTargetRow(a_item.slotMask, row.equipped.slotMask);
+        ScoreFallbackTargetRow(a_targetSlotMask, row.equipped.slotMask);
     if (precedenceScore > bestPrecedenceScore) {
       bestPrecedenceScore = precedenceScore;
       bestPrecedenceRowIndex = rowIndex;
@@ -866,6 +900,123 @@ VariantWorkbench::CollectOverrideArmorFormIDsFromEquippedRows(
   }
 
   return formIDs;
+}
+
+std::optional<KitEntry::Layout>
+VariantWorkbench::CaptureKitLayout(
+    const std::vector<int> *a_candidateRowIndices) const {
+  KitEntry::Layout layout;
+  const auto candidateRowIndices =
+      BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
+  layout.rows.reserve(candidateRowIndices.size());
+
+  for (const auto rowIndex : candidateRowIndices) {
+    if (!IsValidRowIndex(rowIndex, rows_.size())) {
+      continue;
+    }
+
+    const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
+    if (!row.isEquipped) {
+      continue;
+    }
+    if (!row.hideEquipped && row.overrides.empty()) {
+      continue;
+    }
+
+    KitEntry::LayoutRow layoutRow;
+    layoutRow.targetKind = row.IsSlotRow() ? KitEntry::LayoutTargetKind::Slot
+                                           : KitEntry::LayoutTargetKind::Item;
+    layoutRow.targetSlotMask =
+        row.IsSlotRow() ? row.equipped.slotMask : row.GetSelectionConflictSlotMask();
+    layoutRow.hideEquipped = row.hideEquipped;
+
+    for (const auto &overrideItem : row.overrides) {
+      if (!overrideItem.HasForm()) {
+        continue;
+      }
+      if (const auto *overrideArmor =
+              RE::TESForm::LookupByID<RE::TESObjectARMO>(overrideItem.formID);
+          overrideArmor != nullptr) {
+        const auto identifier = armor::GetFormIdentifier(overrideArmor);
+        if (!identifier.empty()) {
+          layoutRow.overrideIdentifiers.push_back(identifier);
+        }
+      }
+    }
+
+    if (layoutRow.targetSlotMask == 0 ||
+        (!layoutRow.hideEquipped && layoutRow.overrideIdentifiers.empty())) {
+      continue;
+    }
+
+    layout.rows.push_back(std::move(layoutRow));
+  }
+
+  if (layout.rows.empty()) {
+    return std::nullopt;
+  }
+
+  return layout;
+}
+
+bool VariantWorkbench::ApplyKitLayout(
+    const KitEntry::Layout &a_layout, const bool a_replaceExisting,
+    std::optional<std::string> a_newSlotRowConditionId,
+    const std::vector<int> *a_candidateRowIndices) {
+  auto candidateRowIndices =
+      BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
+
+  if (a_replaceExisting) {
+    ResetAllRows(&candidateRowIndices);
+  }
+
+  bool changed = false;
+  for (const auto &layoutRow : a_layout.rows) {
+    int targetRowIndex = -1;
+    if (layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot) {
+      for (const auto rowIndex : candidateRowIndices) {
+        if (!IsValidRowIndex(rowIndex, rows_.size())) {
+          continue;
+        }
+
+        const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
+        if (row.IsSlotRow() && row.equipped.slotMask == layoutRow.targetSlotMask) {
+          targetRowIndex = rowIndex;
+          break;
+        }
+      }
+    } else {
+      targetRowIndex = FindBestItemTargetRowIndexBySlotMask(
+          layoutRow.targetSlotMask, false, nullptr, nullptr,
+          &candidateRowIndices);
+    }
+
+    if (targetRowIndex < 0 &&
+        layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot &&
+        a_newSlotRowConditionId.has_value()) {
+      if (AddSlotRow(layoutRow.targetSlotMask, a_newSlotRowConditionId)) {
+        targetRowIndex = static_cast<int>(rows_.size()) - 1;
+        candidateRowIndices.push_back(targetRowIndex);
+        changed = true;
+      }
+    }
+
+    if (!IsValidRowIndex(targetRowIndex, rows_.size())) {
+      continue;
+    }
+
+    for (const auto &identifier : layoutRow.overrideIdentifiers) {
+      if (const auto *overrideArmor =
+              armor::LookupByIdentifier<RE::TESObjectARMO>(identifier);
+          overrideArmor != nullptr) {
+        changed |= AddCatalogOverride(targetRowIndex, overrideArmor->GetFormID());
+      }
+    }
+
+    changed |= SetHideEquipped(targetRowIndex, layoutRow.hideEquipped);
+  }
+
+  return changed;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

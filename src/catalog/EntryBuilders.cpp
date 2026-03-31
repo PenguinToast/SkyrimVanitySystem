@@ -1,4 +1,5 @@
 #include "catalog/EntryBuilders.h"
+#include "catalog/KitLayoutMetadata.h"
 
 #include "ArmorUtils.h"
 
@@ -618,7 +619,19 @@ std::optional<KitEntry> BuildKitEntry(
   const auto description =
       DescribeKitItems(kitData.value("Items", nlohmann::json::object()),
                        a_armorMetadataCache);
-  if (description.hasMissingItems || description.armorFormIDs.empty()) {
+  std::shared_ptr<const KitEntry::Layout> layout;
+  if (const auto svsMetadataIt =
+          kitData.find(std::string(sosr::catalog::kSvsKitMetadataKey));
+      svsMetadataIt != kitData.end()) {
+    if (auto parsedLayout = ParseKitLayout(*svsMetadataIt);
+        parsedLayout.has_value()) {
+      layout = std::make_shared<const KitEntry::Layout>(
+          std::move(*parsedLayout));
+    }
+  }
+
+  if (description.hasMissingItems ||
+      (description.armorFormIDs.empty() && !layout)) {
     return std::nullopt;
   }
 
@@ -638,6 +651,7 @@ std::optional<KitEntry> BuildKitEntry(
                                         std::move(description.itemTree),
                                         std::move(description.pieces),
                                         a_armorMetadataCache);
+  entry.layout = std::move(layout);
   entry.searchText = BuildKitSearchText(entry);
   return entry;
 }

@@ -323,6 +323,133 @@ bool VariantWorkbench::ApplyCatalogPreview(
   return true;
 }
 
+bool VariantWorkbench::PreviewKitLayout(
+    std::string_view a_selectionKey, const KitEntry::Layout &a_layout,
+    RE::Actor *a_actor, const std::vector<int> *a_candidateRowIndices) {
+  if (!a_actor) {
+    a_actor = RE::PlayerCharacter::GetSingleton();
+  }
+  if (!a_actor) {
+    ClearPreview();
+    return false;
+  }
+
+  std::unordered_map<std::string, std::string> desiredPreviewVariants;
+  const auto candidateRowIndices =
+      BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
+  const auto priorityCount = rows_.size() + a_layout.rows.size();
+
+  for (std::size_t layoutIndex = 0; layoutIndex < a_layout.rows.size();
+       ++layoutIndex) {
+    const auto &layoutRow = a_layout.rows[layoutIndex];
+    std::vector<const RE::TESObjectARMO *> overrideArmors;
+    overrideArmors.reserve(layoutRow.overrideIdentifiers.size());
+    for (const auto &identifier : layoutRow.overrideIdentifiers) {
+      if (const auto *overrideArmor =
+              armor::LookupByIdentifier<RE::TESObjectARMO>(identifier);
+          overrideArmor != nullptr) {
+        overrideArmors.push_back(overrideArmor);
+      }
+    }
+
+    const auto priority = BuildDavVariantPriority(layoutIndex, priorityCount);
+    if (layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot) {
+      const auto variantJson = BuildDavSlotVariantJson(
+          layoutRow.targetSlotMask, overrideArmors, layoutRow.hideEquipped,
+          priority);
+      if (variantJson.empty()) {
+        continue;
+      }
+
+      desiredPreviewVariants.emplace(
+          BuildPreviewVariantName("kit-slot:" +
+                                  std::to_string(layoutRow.targetSlotMask) +
+                                  ":" + std::to_string(layoutIndex)),
+          variantJson);
+      continue;
+    }
+
+    const auto targetRowIndex = FindBestItemTargetRowIndexBySlotMask(
+        layoutRow.targetSlotMask, false, nullptr, nullptr,
+        &candidateRowIndices);
+    if (targetRowIndex < 0) {
+      continue;
+    }
+
+    const auto &targetRow = rows_[static_cast<std::size_t>(targetRowIndex)];
+    const auto *sourceArmor =
+        RE::TESForm::LookupByID<RE::TESObjectARMO>(targetRow.equipped.formID);
+    if (!sourceArmor) {
+      continue;
+    }
+
+    const auto variantJson = BuildDavVariantJson(sourceArmor, overrideArmors,
+                                                 layoutRow.hideEquipped,
+                                                 priority);
+    if (variantJson.empty()) {
+      continue;
+    }
+
+    desiredPreviewVariants.emplace(
+        BuildPreviewVariantName(targetRow.key + "|kit:" +
+                                std::to_string(layoutIndex)),
+        variantJson);
+  }
+
+  if (desiredPreviewVariants.empty()) {
+    ClearPreview();
+    return false;
+  }
+
+  auto *dav = GetDynamicArmorVariantsExtendedClient();
+  if (!(dav = sosr::integrations::DynamicArmorVariantsExtendedClient::
+            GetReady())) {
+    ClearPreview();
+    return false;
+  }
+
+  if (previewSelectionKey_ == a_selectionKey &&
+      previewActorFormID_ == a_actor->GetFormID() &&
+      previewDavVariants_ == desiredPreviewVariants) {
+    return true;
+  }
+
+  ClearPreview();
+
+  std::unordered_map<std::string, std::string> appliedPreviewVariants;
+  appliedPreviewVariants.reserve(desiredPreviewVariants.size());
+  for (const auto &[variantName, variantJson] : desiredPreviewVariants) {
+    if (!dav->RegisterVariantJson(variantName.c_str(), variantJson.c_str())) {
+      logger::warn("Failed to register SOSR preview variant {}", variantName);
+      for (const auto &[appliedVariantName, _] : appliedPreviewVariants) {
+        dav->RemoveVariantOverride(a_actor, appliedVariantName.c_str());
+        dav->DeleteVariant(appliedVariantName.c_str());
+      }
+      ClearPreview();
+      return false;
+    }
+
+    if (!dav->ApplyVariantOverride(a_actor, variantName.c_str(), true)) {
+      logger::warn("Failed to apply SOSR preview variant override {}",
+                   variantName);
+      dav->DeleteVariant(variantName.c_str());
+      for (const auto &[appliedVariantName, _] : appliedPreviewVariants) {
+        dav->RemoveVariantOverride(a_actor, appliedVariantName.c_str());
+        dav->DeleteVariant(appliedVariantName.c_str());
+      }
+      ClearPreview();
+      return false;
+    }
+
+    appliedPreviewVariants.emplace(variantName, variantJson);
+  }
+
+  previewSelectionKey_ = a_selectionKey;
+  previewActorFormID_ = a_actor->GetFormID();
+  previewDavVariants_ = std::move(desiredPreviewVariants);
+  return true;
+}
+
 void VariantWorkbench::ClearPreview() {
   if (previewSelectionKey_.empty() && previewDavVariants_.empty()) {
     return;

@@ -79,6 +79,17 @@ struct OutfitEntry {
 };
 
 struct KitEntry {
+  enum class LayoutTargetKind : std::uint8_t { Item, Slot };
+  struct LayoutRow {
+    LayoutTargetKind targetKind{LayoutTargetKind::Item};
+    std::uint64_t targetSlotMask{0};
+    std::vector<std::string> overrideIdentifiers;
+    bool hideEquipped{false};
+  };
+  struct Layout {
+    std::vector<LayoutRow> rows;
+  };
+
   std::string id;
   std::string key;
   std::string name;
@@ -86,6 +97,7 @@ struct KitEntry {
   std::string filepath;
   std::string summary;
   std::shared_ptr<const CatalogResolvedData> resolved;
+  std::shared_ptr<const Layout> layout;
   std::string searchText;
 
   [[nodiscard]] const std::vector<RE::FormID> &GetArmorFormIDs() const;
@@ -93,6 +105,7 @@ struct KitEntry {
   [[nodiscard]] const std::vector<std::string> &GetPieces() const;
   [[nodiscard]] std::uint64_t GetSlotMask() const;
   [[nodiscard]] std::string_view GetPiecesText() const;
+  [[nodiscard]] const Layout *GetLayout() const { return layout.get(); }
 };
 
 class EquipmentCatalog {
