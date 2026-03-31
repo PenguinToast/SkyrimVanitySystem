@@ -19,8 +19,9 @@ bool IsWorkbenchSelectable(const Definition &a_definition) {
   return a_definition.IsCatalog();
 }
 
-DefinitionStatus EvaluateDefinitionStatus(const Definition &a_definition,
-                                          const std::vector<Definition> &a_conditions) {
+DefinitionStatus
+EvaluateDefinitionStatus(const Definition &a_definition,
+                         const std::vector<Definition> &a_conditions) {
   auto &cache = GetConditionStatusMap();
   if (!a_definition.id.empty()) {
     if (const auto it = cache.find(a_definition.id); it != cache.end()) {
@@ -55,9 +56,7 @@ void PruneConditionStatusCache(const std::vector<Definition> &a_conditions) {
   }
 }
 
-void ClearConditionStatusCache() {
-  GetConditionStatusMap().clear();
-}
+void ClearConditionStatusCache() { GetConditionStatusMap().clear(); }
 
 void EraseConditionStatusCache(const std::string_view a_conditionId) {
   GetConditionStatusMap().erase(std::string(a_conditionId));

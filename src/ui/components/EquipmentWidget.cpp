@@ -11,13 +11,14 @@
 #include <string>
 
 namespace {
-constexpr char kIconEditorId[] = "\xee\x84\x8b";   // ICON_LC_LIST
-constexpr char kIconPlugin[] = "\xee\x84\xac";     // ICON_LC_PACKAGE
-constexpr char kIconFormId[] = "\xee\x83\xb2";     // ICON_LC_HASH
-constexpr char kIconIdentifier[] = "\xee\x84\x87"; // ICON_LC_LINK
-constexpr char kIconSlot[] = "\xee\x87\x89";       // ICON_LC_SHIRT
-constexpr char kIconTrash[] = "\xee\x86\x8c";      // ICON_LC_TRASH
+constexpr std::string_view kIconEditorId = "\xee\x84\x8b";   // ICON_LC_LIST
+constexpr std::string_view kIconPlugin = "\xee\x84\xac";     // ICON_LC_PACKAGE
+constexpr std::string_view kIconFormId = "\xee\x83\xb2";     // ICON_LC_HASH
+constexpr std::string_view kIconIdentifier = "\xee\x84\x87"; // ICON_LC_LINK
+constexpr std::string_view kIconSlot = "\xee\x87\x89";       // ICON_LC_SHIRT
+constexpr std::string_view kIconTrash = "\xee\x86\x8c";      // ICON_LC_TRASH
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void DrawTooltipInfoRow(const char *a_icon, const char *a_label,
                         const std::string &a_value) {
   if (a_value.empty()) {
@@ -49,6 +50,7 @@ void DrawTooltipInfoRow(const char *a_icon, const char *a_label,
   }
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 float ComputeEquipmentTooltipWidth(
     const std::string &a_displayName, const std::string &a_editorID,
     const std::string &a_plugin, const std::string &a_formID,
@@ -105,6 +107,7 @@ void DrawEquipmentTooltipHeader(const std::string &a_displayName) {
   ImGui::Spacing();
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void DrawEquipmentInfoTooltipBody(
     const sosr::workbench::EquipmentWidgetItem &a_item,
     const std::string &a_displayName, const std::string &a_editorID,
@@ -126,16 +129,16 @@ void DrawEquipmentInfoTooltipBody(
                             138.0f);
     ImGui::TableSetupColumn("##value", ImGuiTableColumnFlags_WidthStretch);
 
-    DrawTooltipInfoRow(kIconEditorId, "Editor ID", a_editorID);
-    DrawTooltipInfoRow(kIconPlugin, "Plugin", a_plugin);
-    DrawTooltipInfoRow(kIconFormId, "Form ID", a_formID);
-    DrawTooltipInfoRow(kIconIdentifier, "Identifier", a_identifier);
+    DrawTooltipInfoRow(kIconEditorId.data(), "Editor ID", a_editorID);
+    DrawTooltipInfoRow(kIconPlugin.data(), "Plugin", a_plugin);
+    DrawTooltipInfoRow(kIconFormId.data(), "Form ID", a_formID);
+    DrawTooltipInfoRow(kIconIdentifier.data(), "Identifier", a_identifier);
     for (std::size_t index = 0; index < a_slotLabels.size(); ++index) {
-      DrawTooltipInfoRow(index == 0 ? kIconSlot : "", index == 0 ? "Slots" : "",
-                         a_slotLabels[index]);
+      DrawTooltipInfoRow(index == 0 ? kIconSlot.data() : "",
+                         index == 0 ? "Slots" : "", a_slotLabels[index]);
     }
     for (std::size_t index = 0; index < a_addonSlotLabels.size(); ++index) {
-      DrawTooltipInfoRow(index == 0 ? kIconSlot : "",
+      DrawTooltipInfoRow(index == 0 ? kIconSlot.data() : "",
                          index == 0 ? "Addon Slots" : "",
                          a_addonSlotLabels[index]);
     }
@@ -331,8 +334,7 @@ DrawEquipmentWidget(const char *a_id,
   drawList->PopClipRect();
 
   if (a_options.showDeleteButton) {
-    const auto deleteFill = deleteHeld
-                                ? theme->GetColorU32("DECLINE")
+    const auto deleteFill = deleteHeld ? theme->GetColorU32("DECLINE")
                             : result.deleteHovered
                                 ? theme->GetColorU32("DECLINE", 0.95f)
                                 : theme->GetColorU32("DECLINE", 0.78f);
@@ -342,7 +344,7 @@ DrawEquipmentWidget(const char *a_id,
                       ImVec2(buttonMin.x, rectMax.y - 1.0f),
                       theme->GetColorU32("BORDER"), 1.0f);
 
-    const char *deleteLabel = kIconTrash;
+    const char *deleteLabel = kIconTrash.data();
     const auto labelSize = ImGui::CalcTextSize(deleteLabel);
     drawList->AddText(
         ImVec2(buttonMin.x + ((deletePaneWidth - labelSize.x) * 0.5f),

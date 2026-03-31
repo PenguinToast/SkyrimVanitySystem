@@ -110,8 +110,6 @@ struct WndProcHook {
       }
       break;
     case WM_DESTROY:
-      g_windowShutdownObserved.store(true, std::memory_order_relaxed);
-      break;
     case WM_NCDESTROY:
       g_windowShutdownObserved.store(true, std::memory_order_relaxed);
       break;
@@ -210,11 +208,17 @@ void Install() {
                                hk_PollInputDevices);
 
   logger::info("Hooking RegisterClassA");
+  const auto registerClassTarget = trampoline.write_call<6>(
+      g_registerClass.address() +
+          REL::VariantOffset(0x8E, 0x15C, 0x99).offset(),
+      RegisterClassAHook::thunk);
+  if (registerClassTarget == 0) {
+    logger::critical("Failed to hook RegisterClassA");
+    return;
+  }
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   RegisterClassAHook::func =
-      *reinterpret_cast<uintptr_t *>(trampoline.write_call<6>(
-          g_registerClass.address() +
-              REL::VariantOffset(0x8E, 0x15C, 0x99).offset(),
-          RegisterClassAHook::thunk));
+      *reinterpret_cast<const uintptr_t *>(registerClassTarget);
 
   logger::info("Hooking BSGraphics::Renderer::InitD3D");
   D3DInitHook::func = trampoline.write_call<5>(

@@ -18,6 +18,7 @@ float ComputeColorDistanceSq(const ConditionColor &a_left,
   return (dr * dr) + (dg * dg) + (db * db);
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 ConditionColor HsvToRgb(const float a_hue, const float a_saturation,
                         const float a_value) {
   if (a_saturation <= 0.0f) {
@@ -67,8 +68,8 @@ Color PickDistinctConditionColor(std::span<const Color> a_existingColors) {
     float minDistanceSq = FLT_MAX;
     bool hasExisting = false;
     for (const auto &existing : a_existingColors) {
-      minDistanceSq = (std::min)(
-          minDistanceSq, ComputeColorDistanceSq(a_candidate, existing));
+      minDistanceSq = (std::min)(minDistanceSq,
+                                 ComputeColorDistanceSq(a_candidate, existing));
       hasExisting = true;
     }
     return hasExisting ? minDistanceSq : FLT_MAX;
@@ -85,7 +86,8 @@ Color PickDistinctConditionColor(std::span<const Color> a_existingColors) {
   }
 
   for (int index = 0; index < 24; ++index) {
-    const auto candidate = HsvToRgb(index / 24.0f, 0.70f, 0.88f);
+    const auto candidate =
+        HsvToRgb(static_cast<float>(index) / 24.0f, 0.70f, 0.88f);
     const float score = scoreColor(candidate);
     if (score > bestScore) {
       bestScore = score;

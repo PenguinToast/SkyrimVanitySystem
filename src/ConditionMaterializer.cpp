@@ -1,15 +1,16 @@
 #include "ConditionMaterializer.h"
 
-#include "conditions/Status.h"
 #include "conditions/GraphMetadata.h"
 #include "conditions/Lowering.h"
 #include "conditions/MaterializationState.h"
+#include "conditions/Status.h"
 
 #include <unordered_set>
 #include <utility>
 
 namespace {
-using ConditionGraphMap = std::unordered_map<std::string, sosr::conditions::GraphMetadata>;
+using ConditionGraphMap =
+    std::unordered_map<std::string, sosr::conditions::GraphMetadata>;
 using ConditionRuntimeMap =
     std::unordered_map<std::string, sosr::conditions::MaterializationState>;
 
@@ -77,7 +78,8 @@ void InvalidateConditionMaterializationCaches(
 }
 
 void InvalidateConditionMaterializationCachesFrom(
-    std::vector<Definition> &a_conditions, const std::string_view a_conditionId) {
+    std::vector<Definition> &a_conditions,
+    const std::string_view a_conditionId) {
   (void)a_conditions;
   std::vector<std::string> stack;
   std::unordered_set<std::string> visited;

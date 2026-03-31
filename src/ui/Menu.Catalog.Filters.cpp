@@ -9,8 +9,8 @@
 #include "ui/conditions/EditorSupport.h"
 
 #include <algorithm>
-#include <charconv>
 #include <cfloat>
+#include <charconv>
 #include <unordered_set>
 
 namespace sosr {
@@ -428,7 +428,8 @@ void Menu::SortOutfitRows(std::vector<const OutfitEntry *> &a_rows,
       compare = CompareCatalogText(a_left->plugin, a_right->plugin);
       break;
     case OutfitColumn::Pieces:
-      compare = CompareCatalogText(a_left->GetPiecesText(), a_right->GetPiecesText());
+      compare =
+          CompareCatalogText(a_left->GetPiecesText(), a_right->GetPiecesText());
       break;
     case OutfitColumn::Name:
     default:
@@ -465,7 +466,8 @@ void Menu::SortKitRows(std::vector<const KitEntry *> &a_rows,
       compare = CompareCatalogText(a_left->collection, a_right->collection);
       break;
     case KitColumn::Pieces:
-      compare = CompareCatalogText(a_left->GetPiecesText(), a_right->GetPiecesText());
+      compare =
+          CompareCatalogText(a_left->GetPiecesText(), a_right->GetPiecesText());
       break;
     case KitColumn::Name:
     default:

@@ -119,13 +119,13 @@ const FunctionInfo *FindConditionFunctionInfo(std::string_view a_name) {
   return it != infos.end() ? std::addressof(*it) : nullptr;
 }
 
-const FunctionInfo *ResolveConditionFunctionInfo(
-    const Clause &a_clause, const std::vector<Definition> &a_conditions,
-    std::optional<FunctionInfo> &a_customInfo) {
+const FunctionInfo *
+ResolveConditionFunctionInfo(const Clause &a_clause,
+                             const std::vector<Definition> &a_conditions,
+                             std::optional<FunctionInfo> &a_customInfo) {
   if (!a_clause.customConditionId.empty()) {
-    if (const auto *condition =
-            sosr::conditions::FindDefinitionById(a_conditions,
-                                                 a_clause.customConditionId);
+    if (const auto *condition = sosr::conditions::FindDefinitionById(
+            a_conditions, a_clause.customConditionId);
         condition != nullptr) {
       a_customInfo = FunctionInfo{};
       a_customInfo->name = condition->name;
@@ -142,9 +142,8 @@ std::string
 ResolveClauseDisplayName(const Clause &a_clause,
                          const std::vector<Definition> &a_conditions) {
   if (!a_clause.customConditionId.empty()) {
-    if (const auto *condition =
-            sosr::conditions::FindDefinitionById(a_conditions,
-                                                 a_clause.customConditionId);
+    if (const auto *condition = sosr::conditions::FindDefinitionById(
+            a_conditions, a_clause.customConditionId);
         condition != nullptr) {
       return condition->name;
     }

@@ -57,8 +57,7 @@ std::string BuildUniqueConditionName(
                                                a_excludedId) != nullptr) {
       return true;
     }
-    return a_reservedOrExtraConflict &&
-           a_reservedOrExtraConflict(a_candidate);
+    return a_reservedOrExtraConflict && a_reservedOrExtraConflict(a_candidate);
   };
 
   if (!conflicts(baseName)) {
@@ -73,8 +72,9 @@ std::string BuildUniqueConditionName(
   }
 }
 
-std::string ValidateConditionDraft(const Definition &a_definition,
-                                   const std::vector<Definition> &a_conditions) {
+std::string
+ValidateConditionDraft(const Definition &a_definition,
+                       const std::vector<Definition> &a_conditions) {
   if (const auto baseValidation =
           sosr::conditions::ValidateDefinitionNameAndGraph(
               a_definition, a_conditions,
@@ -110,8 +110,9 @@ std::string ValidateConditionDraft(const Definition &a_definition,
                " is required in clause " + std::to_string(index + 1) + ".";
       }
 
-      const auto editorKind = GetEditorKindForParamType(ResolveEditorParamType(
-          functionInfo->name, paramIndex, functionInfo->parameterTypes[paramIndex]));
+      const auto editorKind = GetEditorKindForParamType(
+          ResolveEditorParamType(functionInfo->name, paramIndex,
+                                 functionInfo->parameterTypes[paramIndex]));
       if (editorKind == ValueEditorKind::Unsupported) {
         return functionInfo->parameterLabels[paramIndex] +
                " uses an unsupported parameter type in clause " +

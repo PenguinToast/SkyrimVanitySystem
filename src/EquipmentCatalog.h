@@ -20,7 +20,9 @@ struct CatalogCollectionItemNode {
     return children ? *children : kEmptyChildren;
   }
 
-  [[nodiscard]] bool HasChildren() const { return children && !children->empty(); }
+  [[nodiscard]] bool HasChildren() const {
+    return children && !children->empty();
+  }
 };
 
 struct CatalogResolvedData {
@@ -72,7 +74,8 @@ struct OutfitEntry {
   std::string searchText;
 
   [[nodiscard]] const std::vector<RE::FormID> &GetArmorFormIDs() const;
-  [[nodiscard]] const std::vector<CatalogCollectionItemNode> &GetItemTree() const;
+  [[nodiscard]] const std::vector<CatalogCollectionItemNode> &
+  GetItemTree() const;
   [[nodiscard]] const std::vector<std::string> &GetPieces() const;
   [[nodiscard]] std::uint64_t GetSlotMask() const;
   [[nodiscard]] std::string_view GetPiecesText() const;
@@ -101,7 +104,8 @@ struct KitEntry {
   std::string searchText;
 
   [[nodiscard]] const std::vector<RE::FormID> &GetArmorFormIDs() const;
-  [[nodiscard]] const std::vector<CatalogCollectionItemNode> &GetItemTree() const;
+  [[nodiscard]] const std::vector<CatalogCollectionItemNode> &
+  GetItemTree() const;
   [[nodiscard]] const std::vector<std::string> &GetPieces() const;
   [[nodiscard]] std::uint64_t GetSlotMask() const;
   [[nodiscard]] std::string_view GetPiecesText() const;

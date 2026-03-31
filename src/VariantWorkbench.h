@@ -79,16 +79,16 @@ public:
   std::size_t DeleteRowsByConditionId(std::string_view a_conditionId,
                                       bool a_onlyIfEmpty);
   bool SetHideEquipped(int a_rowIndex, bool a_hideEquipped);
-  bool ResetEquippedRows(const std::vector<int> *a_candidateRowIndices = nullptr);
+  bool
+  ResetEquippedRows(const std::vector<int> *a_candidateRowIndices = nullptr);
   bool ResetAllRows(const std::vector<int> *a_candidateRowIndices = nullptr);
-  [[nodiscard]] std::vector<RE::FormID>
-  CollectEquippedArmorFormIDs(
+  [[nodiscard]] std::vector<RE::FormID> CollectEquippedArmorFormIDs(
       const std::vector<int> *a_candidateRowIndices = nullptr) const;
   [[nodiscard]] std::vector<RE::FormID>
   CollectOverrideArmorFormIDsFromEquippedRows(
       const std::vector<int> *a_candidateRowIndices = nullptr) const;
-  [[nodiscard]] std::optional<KitEntry::Layout>
-  CaptureKitLayout(const std::vector<int> *a_candidateRowIndices = nullptr) const;
+  [[nodiscard]] std::optional<KitEntry::Layout> CaptureKitLayout(
+      const std::vector<int> *a_candidateRowIndices = nullptr) const;
   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   bool InsertCatalogRow(RE::FormID a_formID, int a_targetRowIndex,
                         bool a_insertAfter,
@@ -102,10 +102,11 @@ public:
   bool ApplyKitLayout(const KitEntry::Layout &a_layout, bool a_replaceExisting,
                       std::optional<std::string> a_newSlotRowConditionId,
                       const std::vector<int> *a_candidateRowIndices = nullptr);
-  bool PreviewKitLayout(
-      std::string_view a_selectionKey, const KitEntry::Layout &a_layout,
-      RE::Actor *a_actor = nullptr,
-      const std::vector<int> *a_candidateRowIndices = nullptr);
+  bool
+  PreviewKitLayout(std::string_view a_selectionKey,
+                   const KitEntry::Layout &a_layout,
+                   RE::Actor *a_actor = nullptr,
+                   const std::vector<int> *a_candidateRowIndices = nullptr);
   void SyncDynamicArmorVariantsExtended(
       std::vector<conditions::Definition> &a_conditions);
   void Serialize(SKSE::SerializationInterface *a_skse) const;

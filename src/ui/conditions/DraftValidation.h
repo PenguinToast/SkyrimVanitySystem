@@ -17,7 +17,8 @@ IsBooleanComparator(sosr::conditions::Comparator a_comparator);
     std::string_view a_baseName,
     const std::vector<sosr::conditions::Definition> &a_conditions,
     std::string_view a_excludedId = {},
-    const std::function<bool(std::string_view)> &a_reservedOrExtraConflict = {});
+    const std::function<bool(std::string_view)> &a_reservedOrExtraConflict =
+        {});
 [[nodiscard]] std::string ValidateConditionDraft(
     const sosr::conditions::Definition &a_definition,
     const std::vector<sosr::conditions::Definition> &a_conditions);

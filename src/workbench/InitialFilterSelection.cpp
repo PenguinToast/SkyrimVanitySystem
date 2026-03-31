@@ -149,18 +149,21 @@ std::optional<std::string> FindFirstConditionForActorFilter(
   return std::nullopt;
 }
 
-InitialFilterSelection BuildInitialFilterSelection(
-    std::vector<conditions::Definition> &a_conditions,
-    const int a_nextConditionId) {
+InitialFilterSelection
+BuildInitialFilterSelection(std::vector<conditions::Definition> &a_conditions,
+                            const int a_nextConditionId) {
   if (auto *actor = ResolveInitialWorkbenchFilterActor(); actor != nullptr) {
     const auto actorFormID = actor->GetFormID();
     const auto *player = RE::PlayerCharacter::GetSingleton();
     if (player && actorFormID == player->GetFormID()) {
-      return {.filter = BuildActorFilterState(actorFormID), .createdCondition = {}};
+      return {.filter = BuildActorFilterState(actorFormID),
+              .createdCondition = {}};
     }
 
-    if (FindFirstConditionForActorFilter(actorFormID, a_conditions).has_value()) {
-      return {.filter = BuildActorFilterState(actorFormID), .createdCondition = {}};
+    if (FindFirstConditionForActorFilter(actorFormID, a_conditions)
+            .has_value()) {
+      return {.filter = BuildActorFilterState(actorFormID),
+              .createdCondition = {}};
     }
 
     std::vector<conditions::Color> existingColors;

@@ -13,7 +13,7 @@ constexpr auto kConditionLibraryDirectory =
     "Data/SKSE/Plugins/SkyrimVanitySystem/ConditionLibrary";
 
 std::filesystem::path BuildLibraryDirectory() {
-  return std::filesystem::path(kConditionLibraryDirectory);
+  return {kConditionLibraryDirectory};
 }
 
 std::filesystem::path BuildLibraryPath(std::string_view a_name) {
@@ -68,8 +68,8 @@ sosr::conditions::Connective ParseConnective(std::string_view a_value) {
                          : sosr::conditions::Connective::And;
 }
 
-nlohmann::json SerializeDefinition(
-    const sosr::conditions::Definition &a_definition) {
+nlohmann::json
+SerializeDefinition(const sosr::conditions::Definition &a_definition) {
   nlohmann::json root{{"description", a_definition.description},
                       {"clauses", nlohmann::json::array()}};
   for (const auto &clause : a_definition.clauses) {
@@ -98,8 +98,9 @@ bool WriteLibraryJson(const std::filesystem::path &a_path,
   return true;
 }
 
-bool PersistLibraryDefinitions(std::vector<sosr::conditions::Definition> &a_definitions,
-                               std::string &a_error) {
+bool PersistLibraryDefinitions(
+    std::vector<sosr::conditions::Definition> &a_definitions,
+    std::string &a_error) {
   a_error.clear();
   const auto directory = BuildLibraryDirectory();
   std::error_code error;
@@ -114,7 +115,8 @@ bool PersistLibraryDefinitions(std::vector<sosr::conditions::Definition> &a_defi
   error.clear();
   std::filesystem::create_directories(tempDirectory, error);
   if (error) {
-    a_error = "Failed to create temporary library directory: " + error.message();
+    a_error =
+        "Failed to create temporary library directory: " + error.message();
     return false;
   }
 
@@ -135,7 +137,8 @@ bool PersistLibraryDefinitions(std::vector<sosr::conditions::Definition> &a_defi
   }
 
   std::vector<std::filesystem::path> stalePaths;
-  for (const auto &entry : std::filesystem::directory_iterator(directory, error)) {
+  for (const auto &entry :
+       std::filesystem::directory_iterator(directory, error)) {
     if (error) {
       a_error = "Failed to enumerate library directory: " + error.message();
       std::filesystem::remove_all(tempDirectory, error);
@@ -153,9 +156,9 @@ bool PersistLibraryDefinitions(std::vector<sosr::conditions::Definition> &a_defi
   for (const auto &fileName : desiredFileNames) {
     const auto stagedPath = tempDirectory / fileName;
     const auto finalPath = directory / fileName;
-    std::filesystem::copy_file(stagedPath, finalPath,
-                               std::filesystem::copy_options::overwrite_existing,
-                               error);
+    std::filesystem::copy_file(
+        stagedPath, finalPath,
+        std::filesystem::copy_options::overwrite_existing, error);
     if (error) {
       a_error = "Failed to commit library file: " + error.message();
       std::filesystem::remove_all(tempDirectory, error);
@@ -188,8 +191,10 @@ std::vector<Definition> LoadConditionLibrary() {
     return definitions;
   }
 
-  for (const auto &entry : std::filesystem::directory_iterator(directory, error)) {
-    if (error || !entry.is_regular_file() || entry.path().extension() != ".json") {
+  for (const auto &entry :
+       std::filesystem::directory_iterator(directory, error)) {
+    if (error || !entry.is_regular_file() ||
+        entry.path().extension() != ".json") {
       continue;
     }
 
@@ -222,8 +227,8 @@ std::vector<Definition> LoadConditionLibrary() {
         clause.functionName = clauseJson.value("function", std::string{});
         clause.arguments[0] = clauseJson.value("arg1", std::string{});
         clause.arguments[1] = clauseJson.value("arg2", std::string{});
-        clause.comparator = ParseComparator(
-            clauseJson.value("comparator", std::string{"=="}));
+        clause.comparator =
+            ParseComparator(clauseJson.value("comparator", std::string{"=="}));
         clause.comparand = clauseJson.value("value", std::string{"1"});
         clause.connectiveToNext =
             ParseConnective(clauseJson.value("join", std::string{"AND"}));
@@ -252,8 +257,8 @@ bool CommitLibraryConditionEdit(const std::vector<Definition> &a_definitions,
   updatedDraft.EnsureLibrary();
   updatedDraft.id = updatedDraft.name;
 
-  const auto existingIt = std::ranges::find(updatedDefinitions, a_sourceConditionId,
-                                            &Definition::id);
+  const auto existingIt = std::ranges::find(
+      updatedDefinitions, a_sourceConditionId, &Definition::id);
   if (a_sourceConditionId.empty()) {
     updatedDefinitions.push_back(updatedDraft);
   } else {
@@ -264,7 +269,8 @@ bool CommitLibraryConditionEdit(const std::vector<Definition> &a_definitions,
     const auto previousId = existingIt->id;
     *existingIt = updatedDraft;
     if (previousId != updatedDraft.id) {
-      RenameConditionReferences(updatedDefinitions, previousId, updatedDraft.id);
+      RenameConditionReferences(updatedDefinitions, previousId,
+                                updatedDraft.id);
       a_result.renamedIds.emplace_back(previousId, updatedDraft.id);
     }
   }

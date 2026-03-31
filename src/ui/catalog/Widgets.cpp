@@ -9,12 +9,13 @@
 #include "ui/components/PinnableTooltip.h"
 
 namespace {
-constexpr char kIconEditorId[] = "\xee\x84\x8b";   // ICON_LC_LIST
-constexpr char kIconPlugin[] = "\xee\x84\xac";     // ICON_LC_PACKAGE
-constexpr char kIconFormId[] = "\xee\x83\xb2";     // ICON_LC_HASH
-constexpr char kIconIdentifier[] = "\xee\x84\x87"; // ICON_LC_LINK
-constexpr char kIconCollection[] = "\xee\x97\xbf"; // ICON_LC_FOLDER_CODE
-constexpr char kIconFile[] = "\xee\x83\x87";       // ICON_LC_FILE_CODE
+constexpr std::string_view kIconEditorId = "\xee\x84\x8b";   // ICON_LC_LIST
+constexpr std::string_view kIconPlugin = "\xee\x84\xac";     // ICON_LC_PACKAGE
+constexpr std::string_view kIconFormId = "\xee\x83\xb2";     // ICON_LC_HASH
+constexpr std::string_view kIconIdentifier = "\xee\x84\x87"; // ICON_LC_LINK
+constexpr std::string_view kIconCollection =
+    "\xee\x97\xbf";                                    // ICON_LC_FOLDER_CODE
+constexpr std::string_view kIconFile = "\xee\x83\x87"; // ICON_LC_FILE_CODE
 } // namespace
 
 namespace sosr::ui::catalog {
@@ -57,17 +58,17 @@ void DrawOutfitTooltip(const OutfitEntry &a_outfit,
                        const bool a_hoveredSource) {
   std::vector<components::CatalogTooltipMetaRow> metaRows;
   if (!a_outfit.editorID.empty()) {
-    metaRows.push_back({kIconEditorId, "Editor ID", a_outfit.editorID});
+    metaRows.push_back({kIconEditorId.data(), "Editor ID", a_outfit.editorID});
   }
   if (!a_outfit.plugin.empty()) {
-    metaRows.push_back({kIconPlugin, "Plugin", a_outfit.plugin});
+    metaRows.push_back({kIconPlugin.data(), "Plugin", a_outfit.plugin});
   }
   metaRows.push_back(
-      {kIconFormId, "Form ID", armor::FormatFormID(a_outfit.formID)});
+      {kIconFormId.data(), "Form ID", armor::FormatFormID(a_outfit.formID)});
   if (const auto *form = RE::TESForm::LookupByID(a_outfit.formID)) {
     if (const auto identifier = armor::GetFormIdentifier(form);
         !identifier.empty()) {
-      metaRows.push_back({kIconIdentifier, "Identifier", identifier});
+      metaRows.push_back({kIconIdentifier.data(), "Identifier", identifier});
     }
   }
 
@@ -78,16 +79,16 @@ void DrawOutfitTooltip(const OutfitEntry &a_outfit,
 
 void DrawKitTooltip(const KitEntry &a_kit, const bool a_hoveredSource) {
   std::vector<components::CatalogTooltipMetaRow> metaRows;
-  metaRows.push_back({kIconCollection, "Collection",
+  metaRows.push_back({kIconCollection.data(), "Collection",
                       a_kit.collection.empty() ? "Root" : a_kit.collection});
   if (!a_kit.filepath.empty()) {
-    metaRows.push_back({kIconFile, "File", a_kit.filepath});
+    metaRows.push_back({kIconFile.data(), "File", a_kit.filepath});
   }
-  metaRows.push_back({kIconIdentifier, "Identifier", a_kit.id});
+  metaRows.push_back({kIconIdentifier.data(), "Identifier", a_kit.id});
 
-  components::DrawCatalogCollectionTooltip(
-      "kit:" + a_kit.id, a_hoveredSource, a_kit.name, metaRows,
-      a_kit.GetItemTree());
+  components::DrawCatalogCollectionTooltip("kit:" + a_kit.id, a_hoveredSource,
+                                           a_kit.name, metaRows,
+                                           a_kit.GetItemTree());
 }
 
 void DrawSimplePinnableTooltip(const std::string_view a_id,

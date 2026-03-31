@@ -36,7 +36,8 @@ bool BuildCatalogItem(const RE::FormID a_formID, EquipmentWidgetItem &a_item) {
   return false;
 }
 
-bool BuildSlotItem(const std::uint64_t a_slotMask, EquipmentWidgetItem &a_item) {
+bool BuildSlotItem(const std::uint64_t a_slotMask,
+                   EquipmentWidgetItem &a_item) {
   const auto slotNumber = armor::GetArmorSlotNumber(a_slotMask);
   if (slotNumber == 0) {
     return false;

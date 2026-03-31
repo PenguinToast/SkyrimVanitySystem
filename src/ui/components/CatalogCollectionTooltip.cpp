@@ -286,6 +286,7 @@ void DrawDuplicateItemsTooltip(const std::string_view a_tooltipId,
       });
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void DrawItemTreeRows(const std::vector<GroupedTooltipItemNode> &a_items,
                       int a_depth, const std::string_view a_tooltipIdPrefix,
                       const std::string_view a_pathPrefix = {}) {

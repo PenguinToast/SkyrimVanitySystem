@@ -56,14 +56,12 @@ void KeyHandler::Unregister(KeyHandlerEvent handle) {
   }
 
   CallbackInfo info;
-  bool foundHandle = false;
 
   std::unique_lock lock(_mutex);
 
   auto handleIt = _handleMap.find(handle);
   if (handleIt != _handleMap.end()) {
     info = handleIt->second;
-    foundHandle = true;
     _handleMap.erase(handleIt);
   } else {
     logger::warn("Attempted to unregister handle {}, but it was not found. It "

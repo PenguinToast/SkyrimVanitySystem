@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 
+#include <array>
 #include <format>
 
 namespace sosr::keycode {
@@ -20,15 +21,16 @@ std::string GetKeyName(const std::uint32_t a_scanCode) {
     return "None";
   }
 
-  LONG lParam = static_cast<LONG>((a_scanCode & 0xFFU) << 16U);
+  LONG lParam = (static_cast<LONG>(a_scanCode & 0xFFU) << 16U);
   if ((a_scanCode & 0x100U) != 0U) {
-    lParam |= 1 << 24;
+    lParam |= (1L << 24);
   }
 
-  char keyName[128]{};
-  const auto length = GetKeyNameTextA(lParam, keyName, sizeof(keyName));
+  std::array<char, 128> keyName{};
+  const auto length =
+      GetKeyNameTextA(lParam, keyName.data(), static_cast<int>(keyName.size()));
   if (length > 0) {
-    return {keyName, static_cast<std::size_t>(length)};
+    return {keyName.data(), static_cast<std::size_t>(length)};
   }
 
   return std::format("Scan {:X}", a_scanCode);

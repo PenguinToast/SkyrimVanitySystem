@@ -74,9 +74,8 @@ void DrawWrappedColoredTextRuns(
   ImGui::Dummy(ImVec2(wrapWidth, y + lineHeight));
 }
 
-void DrawConflictEntry(
-    const ui::workbench_conflicts::ConflictEntry &a_desc,
-    const ThemeConfig *a_theme) {
+void DrawConflictEntry(const ui::workbench_conflicts::ConflictEntry &a_desc,
+                       const ThemeConfig *a_theme) {
   ImGui::Bullet();
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
   ImGui::BeginGroup();
@@ -153,9 +152,8 @@ void DrawWorkbenchFilterOptionTooltip(
     }
     return;
   case ui::workbench::FilterKind::Condition:
-    if (const auto *condition =
-            ::sosr::conditions::FindDefinitionById(a_conditions,
-                                                   a_option.conditionId);
+    if (const auto *condition = ::sosr::conditions::FindDefinitionById(
+            a_conditions, a_option.conditionId);
         condition != nullptr && condition->GetCatalog() != nullptr) {
       const auto color =
           ui::conditions::ToImGuiColor(condition->GetCatalog()->color);
@@ -192,9 +190,8 @@ RowConditionVisualState ResolveRowConditionVisualState(
     return state;
   }
 
-  if (const auto *condition =
-          ::sosr::conditions::FindDefinitionById(a_conditions,
-                                                 *a_row.conditionId);
+  if (const auto *condition = ::sosr::conditions::FindDefinitionById(
+          a_conditions, *a_row.conditionId);
       condition != nullptr) {
     if (const auto *catalog = condition->GetCatalog(); catalog != nullptr) {
       state.color = ui::conditions::ToImGuiColor(catalog->color);

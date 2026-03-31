@@ -26,9 +26,8 @@ struct RowConditionVisualState {
 void DrawWrappedColoredTextRuns(
     std::initializer_list<std::pair<std::string_view, ImU32>> a_runs);
 
-void DrawConflictEntry(
-    const ui::workbench_conflicts::ConflictEntry &a_desc,
-    const ThemeConfig *a_theme);
+void DrawConflictEntry(const ui::workbench_conflicts::ConflictEntry &a_desc,
+                       const ThemeConfig *a_theme);
 
 void DrawConflictTooltipSection(
     const char *a_title,

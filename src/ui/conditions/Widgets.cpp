@@ -61,8 +61,8 @@ void DrawConditionColorSwatch(const char *a_id,
 
 void DrawConditionPlaceholderSwatch(const char *a_id,
                                     const std::string_view a_tooltip) {
-  const auto size = ImVec2(ImGui::GetFrameHeight() - 2.0f,
-                           ImGui::GetFrameHeight() - 2.0f);
+  const auto size =
+      ImVec2(ImGui::GetFrameHeight() - 2.0f, ImGui::GetFrameHeight() - 2.0f);
   const auto min = ImGui::GetCursorScreenPos();
   const auto max = ImVec2(min.x + size.x, min.y + size.y);
   ImGui::InvisibleButton(a_id, size);

@@ -354,17 +354,17 @@ bool VariantWorkbench::PreviewKitLayout(
 
     const auto priority = BuildDavVariantPriority(layoutIndex, priorityCount);
     if (layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot) {
-      const auto variantJson = BuildDavSlotVariantJson(
-          layoutRow.targetSlotMask, overrideArmors, layoutRow.hideEquipped,
-          priority);
+      const auto variantJson =
+          BuildDavSlotVariantJson(layoutRow.targetSlotMask, overrideArmors,
+                                  layoutRow.hideEquipped, priority);
       if (variantJson.empty()) {
         continue;
       }
 
       desiredPreviewVariants.emplace(
-          BuildPreviewVariantName("kit-slot:" +
-                                  std::to_string(layoutRow.targetSlotMask) +
-                                  ":" + std::to_string(layoutIndex)),
+          BuildPreviewVariantName(
+              "kit-slot:" + std::to_string(layoutRow.targetSlotMask) + ":" +
+              std::to_string(layoutIndex)),
           variantJson);
       continue;
     }
@@ -383,16 +383,15 @@ bool VariantWorkbench::PreviewKitLayout(
       continue;
     }
 
-    const auto variantJson = BuildDavVariantJson(sourceArmor, overrideArmors,
-                                                 layoutRow.hideEquipped,
-                                                 priority);
+    const auto variantJson = BuildDavVariantJson(
+        sourceArmor, overrideArmors, layoutRow.hideEquipped, priority);
     if (variantJson.empty()) {
       continue;
     }
 
     desiredPreviewVariants.emplace(
-        BuildPreviewVariantName(targetRow.key + "|kit:" +
-                                std::to_string(layoutIndex)),
+        BuildPreviewVariantName(targetRow.key +
+                                "|kit:" + std::to_string(layoutIndex)),
         variantJson);
   }
 

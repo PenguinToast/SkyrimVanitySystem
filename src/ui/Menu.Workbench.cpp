@@ -5,8 +5,8 @@
 #include <cstring>
 namespace sosr {
 void Menu::AcceptOverridePayload(int a_targetRowIndex) {
-  const auto *payload = ImGui::AcceptDragDropPayload(
-      ui::workbench::kVariantItemPayloadType);
+  const auto *payload =
+      ImGui::AcceptDragDropPayload(ui::workbench::kVariantItemPayloadType);
   if (!payload || payload->DataSize != sizeof(DraggedEquipmentPayload)) {
     return;
   }

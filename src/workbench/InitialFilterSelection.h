@@ -18,7 +18,7 @@ struct InitialFilterSelection {
     RE::FormID a_actorFormID,
     std::vector<conditions::Definition> &a_conditions);
 
-[[nodiscard]] InitialFilterSelection BuildInitialFilterSelection(
-    std::vector<conditions::Definition> &a_conditions,
-    int a_nextConditionId);
+[[nodiscard]] InitialFilterSelection
+BuildInitialFilterSelection(std::vector<conditions::Definition> &a_conditions,
+                            int a_nextConditionId);
 } // namespace sosr::workbench

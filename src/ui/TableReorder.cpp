@@ -19,9 +19,8 @@ ComputeLinearReorderPreview(std::span<const ImRect> a_rowRects,
   insertionLineYs.reserve(a_rowRects.size() + 1);
   insertionLineYs.push_back(a_rowRects.front().Min.y);
   for (std::size_t index = 0; index + 1 < a_rowRects.size(); ++index) {
-    insertionLineYs.push_back((a_rowRects[index].Max.y +
-                               a_rowRects[index + 1].Min.y) *
-                              0.5f);
+    insertionLineYs.push_back(
+        (a_rowRects[index].Max.y + a_rowRects[index + 1].Min.y) * 0.5f);
   }
   insertionLineYs.push_back(a_rowRects.back().Max.y);
 
@@ -35,7 +34,8 @@ ComputeLinearReorderPreview(std::span<const ImRect> a_rowRects,
         slotIndex + 1 == insertionLineYs.size()
             ? (lineY + a_edgeBandHalfHeight)
             : ((lineY + insertionLineYs[slotIndex + 1]) * 0.5f);
-    const ImRect slotRect(ImVec2(a_lineX1, bandMinY), ImVec2(a_lineX2, bandMaxY));
+    const ImRect slotRect(ImVec2(a_lineX1, bandMinY),
+                          ImVec2(a_lineX2, bandMaxY));
     if (!ImGui::IsMouseHoveringRect(slotRect.Min, slotRect.Max, false)) {
       continue;
     }

@@ -52,7 +52,8 @@ const std::vector<RE::FormID> &OutfitEntry::GetArmorFormIDs() const {
 }
 
 const std::vector<CatalogCollectionItemNode> &OutfitEntry::GetItemTree() const {
-  return (resolved && resolved->itemTree) ? *resolved->itemTree : kEmptyItemTree;
+  return (resolved && resolved->itemTree) ? *resolved->itemTree
+                                          : kEmptyItemTree;
 }
 
 const std::vector<std::string> &OutfitEntry::GetPieces() const {
@@ -73,7 +74,8 @@ const std::vector<RE::FormID> &KitEntry::GetArmorFormIDs() const {
 }
 
 const std::vector<CatalogCollectionItemNode> &KitEntry::GetItemTree() const {
-  return (resolved && resolved->itemTree) ? *resolved->itemTree : kEmptyItemTree;
+  return (resolved && resolved->itemTree) ? *resolved->itemTree
+                                          : kEmptyItemTree;
 }
 
 const std::vector<std::string> &KitEntry::GetPieces() const {
@@ -192,26 +194,25 @@ void EquipmentCatalog::StartRefreshFromGame(const RefreshMode a_mode) {
 
   std::vector<IncrementalLoader::Phase> phases;
   if (a_mode == RefreshMode::Full) {
-    phases.push_back(
-        {"Building gear catalog...", state.armors.size(),
-         [this, &state](const std::size_t a_index) {
-           if (auto entry = sosr::catalog::BuildGearEntry(
-                   state.armors[a_index], armorMetadataCache_)) {
-             gearIndexByFormID_.emplace(entry->formID, gear_.size());
-             gear_.push_back(std::move(*entry));
-           }
-         }});
-    phases.push_back({"Building outfit catalog...", state.outfits.size(),
+    phases.push_back({"Building gear catalog...", state.armors.size(),
                       [this, &state](const std::size_t a_index) {
-                        auto entry = sosr::catalog::BuildOutfitEntry(
-                            state.outfits[a_index], leveledListCache_,
-                            armorMetadataCache_);
-                        if (entry) {
-                          outfitIndexByFormID_.emplace(entry->formID,
-                                                       outfits_.size());
-                          outfits_.push_back(std::move(*entry));
+                        if (auto entry = sosr::catalog::BuildGearEntry(
+                                state.armors[a_index], armorMetadataCache_)) {
+                          gearIndexByFormID_.emplace(entry->formID,
+                                                     gear_.size());
+                          gear_.push_back(std::move(*entry));
                         }
                       }});
+    phases.push_back(
+        {"Building outfit catalog...", state.outfits.size(),
+         [this, &state](const std::size_t a_index) {
+           auto entry = sosr::catalog::BuildOutfitEntry(
+               state.outfits[a_index], leveledListCache_, armorMetadataCache_);
+           if (entry) {
+             outfitIndexByFormID_.emplace(entry->formID, outfits_.size());
+             outfits_.push_back(std::move(*entry));
+           }
+         }});
   }
 
   phases.push_back({"Building kit catalog...", state.kitPaths.size(),

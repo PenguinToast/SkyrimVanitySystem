@@ -77,8 +77,7 @@ void MoveConditionClauseToSlot(std::vector<ConditionClause> &a_clauses,
   if (a_sourceIndex < a_slotIndex) {
     --a_slotIndex;
   }
-  a_clauses.insert(a_clauses.begin() +
-                       static_cast<std::ptrdiff_t>(a_slotIndex),
+  a_clauses.insert(a_clauses.begin() + static_cast<std::ptrdiff_t>(a_slotIndex),
                    std::move(clause));
 }
 
@@ -114,17 +113,15 @@ void DrawOrGroupIndicator(const std::string &a_id, const ImRect &a_groupRect) {
 
   const auto indicatorMin = ImVec2(a_groupRect.Min.x + kOrGroupIndicatorInsetX,
                                    a_groupRect.Min.y + kOrGroupBoundaryGap);
-  const auto indicatorMax =
-      ImVec2(indicatorMin.x + kOrGroupIndicatorWidth,
-             a_groupRect.Max.y - kOrGroupBoundaryGap);
+  const auto indicatorMax = ImVec2(indicatorMin.x + kOrGroupIndicatorWidth,
+                                   a_groupRect.Max.y - kOrGroupBoundaryGap);
 
   const auto *theme = ThemeConfig::GetSingleton();
   const bool hovered =
       ImGui::IsMouseHoveringRect(indicatorMin, indicatorMax, false);
-  const auto color =
-      theme->GetColorU32("PRIMARY", hovered ? 0.95f : 0.78f);
-  ImGui::GetWindowDrawList()->AddRectFilled(indicatorMin, indicatorMax, color,
-                                            kOrGroupIndicatorRounding, drawFlags);
+  const auto color = theme->GetColorU32("PRIMARY", hovered ? 0.95f : 0.78f);
+  ImGui::GetWindowDrawList()->AddRectFilled(
+      indicatorMin, indicatorMax, color, kOrGroupIndicatorRounding, drawFlags);
 
   ui::components::DrawPinnableTooltip(a_id, hovered, [&]() {
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + kOrGroupTooltipWrapWidth);
@@ -201,7 +198,8 @@ bool Menu::DrawConditionEditorClauseTable(
       activePayload->DataSize == sizeof(int);
   std::optional<std::size_t> acceptedSourceClauseIndex;
   std::optional<std::size_t> acceptedSlotIndex;
-  std::vector<std::optional<ImRect>> joinCellRects(a_editor.draft.clauses.size());
+  std::vector<std::optional<ImRect>> joinCellRects(
+      a_editor.draft.clauses.size());
   std::vector<ImRect> clauseRowRects;
   clauseRowRects.reserve(a_editor.draft.clauses.size());
   std::vector<OrGroupSpan> orGroupSpans;
@@ -228,13 +226,14 @@ bool Menu::DrawConditionEditorClauseTable(
     ImGui::PushID(static_cast<int>(index));
     auto &clause = a_editor.draft.clauses[index];
     const bool previousClauseOr =
-        index > 0 &&
-        a_editor.draft.clauses[index - 1].connectiveToNext == ConditionConnective::Or;
-    const bool nextClauseOr = clause.connectiveToNext == ConditionConnective::Or;
+        index > 0 && a_editor.draft.clauses[index - 1].connectiveToNext ==
+                         ConditionConnective::Or;
+    const bool nextClauseOr =
+        clause.connectiveToNext == ConditionConnective::Or;
     const bool inOrGroup = previousClauseOr || nextClauseOr;
     std::optional<ConditionFunctionInfo> customFunctionInfo;
-    const auto *functionInfo =
-        ResolveConditionFunctionInfo(clause, ConditionDefinitions(), customFunctionInfo);
+    const auto *functionInfo = ResolveConditionFunctionInfo(
+        clause, ConditionDefinitions(), customFunctionInfo);
     auto selectedFunctionName =
         functionInfo ? functionInfo->name : clause.functionName;
 
@@ -270,9 +269,9 @@ bool Menu::DrawConditionEditorClauseTable(
       const float swatchSize = ImGui::GetFrameHeight() - 2.0f;
       const float spacing = ImGui::GetStyle().ItemSpacing.x;
       if (customCondition->IsLibrary()) {
-        DrawConditionPlaceholderSwatch(
-            "##custom-condition-color",
-            "Referenced library condition: " + customCondition->name);
+        DrawConditionPlaceholderSwatch("##custom-condition-color",
+                                       "Referenced library condition: " +
+                                           customCondition->name);
       } else {
         DrawConditionColorSwatch(
             "##custom-condition-color", customCondition->GetCatalog()->color,
@@ -303,8 +302,8 @@ bool Menu::DrawConditionEditorClauseTable(
         clause.functionName = selectedFunctionName;
       }
       customFunctionInfo.reset();
-      functionInfo =
-          ResolveConditionFunctionInfo(clause, ConditionDefinitions(), customFunctionInfo);
+      functionInfo = ResolveConditionFunctionInfo(
+          clause, ConditionDefinitions(), customFunctionInfo);
       if (functionInfo && functionInfo->returnsBooleanResult &&
           !IsBooleanComparator(clause.comparator)) {
         clause.comparator = ConditionComparator::Equal;
@@ -518,10 +517,10 @@ bool Menu::DrawConditionEditorClauseTable(
 
     const auto &startRect = *joinCellRects[group.startIndex];
     const auto &endRect = *joinCellRects[group.endIndex];
-    DrawOrGroupIndicator(
-        "conditions:editor:or-group:" + std::to_string(group.startIndex),
-        ImRect(ImVec2(startRect.Min.x, startRect.Min.y),
-               ImVec2(startRect.Max.x, endRect.Max.y)));
+    DrawOrGroupIndicator("conditions:editor:or-group:" +
+                             std::to_string(group.startIndex),
+                         ImRect(ImVec2(startRect.Min.x, startRect.Min.y),
+                                ImVec2(startRect.Max.x, endRect.Max.y)));
   }
 
   bool addClauseRequested = false;
@@ -556,8 +555,8 @@ bool Menu::DrawConditionEditorClauseTable(
     ImGui::EndDragDropTarget();
   }
   if (acceptedSourceClauseIndex && acceptedSlotIndex) {
-    MoveConditionClauseToSlot(a_editor.draft.clauses, *acceptedSourceClauseIndex,
-                              *acceptedSlotIndex);
+    MoveConditionClauseToSlot(a_editor.draft.clauses,
+                              *acceptedSourceClauseIndex, *acceptedSlotIndex);
   }
   return addClauseRequested;
 }

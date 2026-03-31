@@ -3,10 +3,10 @@
 #include "ui/ThemeConfig.h"
 
 namespace sosr::ui::input_widgets {
-RectClickTargetState EvaluateRectClickTarget(const ImGuiID a_id,
-                                             const ImVec2 &a_min,
-                                             const ImVec2 &a_max,
-                                             const ImGuiMouseButton a_mouseButton) {
+RectClickTargetState
+EvaluateRectClickTarget(const ImGuiID a_id, const ImVec2 &a_min,
+                        const ImVec2 &a_max,
+                        const ImGuiMouseButton a_mouseButton) {
   RectClickTargetState state{};
   state.hovered = ImGui::IsMouseHoveringRect(a_min, a_max, false);
 

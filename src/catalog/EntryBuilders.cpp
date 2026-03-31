@@ -68,14 +68,13 @@ std::string GetArmorCategory(const RE::TESObjectARMO *a_armor) {
 }
 
 std::vector<std::string> GetArmorSlots(const RE::TESObjectARMO *a_armor) {
-  return sosr::armor::GetArmorSlotLabels(a_armor ? a_armor->GetSlotMask().underlying()
-                                                 : 0);
+  return sosr::armor::GetArmorSlotLabels(
+      a_armor ? a_armor->GetSlotMask().underlying() : 0);
 }
 
-const sosr::ArmorMetadata &
-GetOrBuildArmorMetadata(const RE::TESObjectARMO *a_armor,
-                        std::unordered_map<RE::FormID, sosr::ArmorMetadata>
-                            &a_cache) {
+const sosr::ArmorMetadata &GetOrBuildArmorMetadata(
+    const RE::TESObjectARMO *a_armor,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_cache) {
   static const sosr::ArmorMetadata kEmptyMetadata{};
   if (!a_armor) {
     return kEmptyMetadata;
@@ -261,8 +260,9 @@ auto GetOrBuildLeveledListCache(
       const auto &metadata =
           GetOrBuildArmorMetadata(armor, a_armorMetadataCache);
       if (seenDirectArmorChildren.insert(armor->GetFormID()).second) {
-        builtItemTree.push_back(
-            {.formID = armor->GetFormID(), .level = entry.level});
+        auto &child = builtItemTree.emplace_back();
+        child.formID = armor->GetFormID();
+        child.level = entry.level;
       }
       built.pieces.push_back(metadata.displayName);
 
@@ -303,18 +303,16 @@ auto GetOrBuildLeveledListCache(
   return a_cache.emplace(a_formID, std::move(built)).first->second;
 }
 
-void AccumulateArmorDescription(const RE::TESObjectARMO *a_armor,
-                                OutfitDescription &a_description,
-                                std::unordered_set<RE::FormID> &a_seenArmor,
-                                std::unordered_map<RE::FormID, sosr::ArmorMetadata>
-                                    &a_armorMetadataCache) {
+void AccumulateArmorDescription(
+    const RE::TESObjectARMO *a_armor, OutfitDescription &a_description,
+    std::unordered_set<RE::FormID> &a_seenArmor,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   if (!a_armor) {
     return;
   }
 
   a_description.pieces.push_back(
-      GetOrBuildArmorMetadata(a_armor, a_armorMetadataCache)
-          .displayName);
+      GetOrBuildArmorMetadata(a_armor, a_armorMetadataCache).displayName);
 
   if (!a_seenArmor.insert(a_armor->GetFormID()).second) {
     return;
@@ -324,14 +322,15 @@ void AccumulateArmorDescription(const RE::TESObjectARMO *a_armor,
   ++a_description.armorCount;
 }
 
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
 auto BuildOutfitItemNode(
     const RE::TESForm *a_item, OutfitDescription &a_description,
     std::unordered_set<RE::FormID> &a_seenArmor,
     std::unordered_set<RE::FormID> &a_activeLeveledLists,
     std::unordered_map<RE::FormID, sosr::ResolvedReferenceCollection>
         &a_leveledListCache,
-    std::unordered_map<RE::FormID, sosr::ArmorMetadata>
-        &a_armorMetadataCache) -> std::optional<sosr::CatalogCollectionItemNode> {
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache)
+    -> std::optional<sosr::CatalogCollectionItemNode> {
   if (!a_item || a_item->IsDeleted() || a_item->IsIgnored()) {
     return std::nullopt;
   }
@@ -358,13 +357,13 @@ auto BuildOutfitItemNode(
   a_description.pieces.push_back(sosr::armor::GetDisplayName(a_item));
   return BuildCachedCollectionNode(a_item, -1);
 }
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
-OutfitDescription
-DescribeOutfit(const RE::BGSOutfit *a_outfit,
-               std::unordered_map<RE::FormID, sosr::ResolvedReferenceCollection>
-                   &a_leveledListCache,
-               std::unordered_map<RE::FormID, sosr::ArmorMetadata>
-                   &a_armorMetadataCache) {
+OutfitDescription DescribeOutfit(
+    const RE::BGSOutfit *a_outfit,
+    std::unordered_map<RE::FormID, sosr::ResolvedReferenceCollection>
+        &a_leveledListCache,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   OutfitDescription description;
   if (!a_outfit) {
     return description;
@@ -374,10 +373,9 @@ DescribeOutfit(const RE::BGSOutfit *a_outfit,
   std::unordered_set<RE::FormID> activeLeveledLists;
 
   a_outfit->ForEachItem([&](RE::TESForm *a_item) {
-    if (const auto node =
-            BuildOutfitItemNode(a_item, description, seenArmorForms,
-                                activeLeveledLists, a_leveledListCache,
-                                a_armorMetadataCache)) {
+    if (const auto node = BuildOutfitItemNode(
+            a_item, description, seenArmorForms, activeLeveledLists,
+            a_leveledListCache, a_armorMetadataCache)) {
       description.itemTree.push_back(*node);
     }
 
@@ -388,12 +386,11 @@ DescribeOutfit(const RE::BGSOutfit *a_outfit,
   return description;
 }
 
-std::shared_ptr<const sosr::CatalogResolvedData>
-FinalizeResolvedData(std::vector<RE::FormID> a_armorFormIDs,
-                     std::vector<sosr::CatalogCollectionItemNode> a_itemTree,
-                     std::vector<std::string> a_pieces,
-                     std::unordered_map<RE::FormID, sosr::ArmorMetadata>
-                         &a_armorMetadataCache) {
+std::shared_ptr<const sosr::CatalogResolvedData> FinalizeResolvedData(
+    std::vector<RE::FormID> a_armorFormIDs,
+    std::vector<sosr::CatalogCollectionItemNode> a_itemTree,
+    std::vector<std::string> a_pieces,
+    std::unordered_map<RE::FormID, sosr::ArmorMetadata> &a_armorMetadataCache) {
   auto resolved = std::make_shared<sosr::CatalogResolvedData>();
   resolved->armorFormIDs = std::move(a_armorFormIDs);
   resolved->itemTree = MakeSharedChildren(std::move(a_itemTree));
@@ -488,7 +485,8 @@ KitDescription DescribeKitItems(
     description.armorFormIDs.push_back(armor->GetFormID());
     const auto &metadata = GetOrBuildArmorMetadata(armor, a_armorMetadataCache);
     description.pieces.push_back(metadata.displayName);
-    description.itemTree.push_back({.formID = armor->GetFormID()});
+    auto &itemNode = description.itemTree.emplace_back();
+    itemNode.formID = armor->GetFormID();
   }
 
   SortUniqueStrings(description.pieces);
@@ -584,10 +582,9 @@ std::optional<OutfitEntry> BuildOutfitEntry(
   entry.editorID = std::move(editorID);
   entry.plugin = sosr::armor::GetPluginName(a_outfit);
   entry.summary = BuildOutfitSummary(description);
-  entry.resolved = FinalizeResolvedData(std::move(description.armorFormIDs),
-                                        std::move(description.itemTree),
-                                        std::move(description.pieces),
-                                        a_armorMetadataCache);
+  entry.resolved = FinalizeResolvedData(
+      std::move(description.armorFormIDs), std::move(description.itemTree),
+      std::move(description.pieces), a_armorMetadataCache);
   entry.searchText = BuildOutfitSearchText(entry);
   return entry;
 }
@@ -616,17 +613,16 @@ std::optional<KitEntry> BuildKitEntry(
     return std::nullopt;
   }
 
-  const auto description =
-      DescribeKitItems(kitData.value("Items", nlohmann::json::object()),
-                       a_armorMetadataCache);
+  auto description = DescribeKitItems(
+      kitData.value("Items", nlohmann::json::object()), a_armorMetadataCache);
   std::shared_ptr<const KitEntry::Layout> layout;
   if (const auto svsMetadataIt =
           kitData.find(std::string(sosr::catalog::kSvsKitMetadataKey));
       svsMetadataIt != kitData.end()) {
     if (auto parsedLayout = ParseKitLayout(*svsMetadataIt);
         parsedLayout.has_value()) {
-      layout = std::make_shared<const KitEntry::Layout>(
-          std::move(*parsedLayout));
+      layout =
+          std::make_shared<const KitEntry::Layout>(std::move(*parsedLayout));
     }
   }
 
@@ -647,10 +643,9 @@ std::optional<KitEntry> BuildKitEntry(
   entry.collection = relativePath.parent_path().generic_string();
   entry.filepath = a_path.string();
   entry.summary = BuildKitSummary(description);
-  entry.resolved = FinalizeResolvedData(std::move(description.armorFormIDs),
-                                        std::move(description.itemTree),
-                                        std::move(description.pieces),
-                                        a_armorMetadataCache);
+  entry.resolved = FinalizeResolvedData(
+      std::move(description.armorFormIDs), std::move(description.itemTree),
+      std::move(description.pieces), a_armorMetadataCache);
   entry.layout = std::move(layout);
   entry.searchText = BuildKitSearchText(entry);
   return entry;

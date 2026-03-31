@@ -64,8 +64,7 @@ bool Menu::DrawKitTab() {
       for (int rowIndex = clipper.DisplayStart; rowIndex < clipper.DisplayEnd;
            ++rowIndex) {
         const auto &kit = *sortedRows[static_cast<std::size_t>(rowIndex)];
-        const auto favorite =
-            IsFavorite(ui::catalog::BrowserTab::Kits, kit.id);
+        const auto favorite = IsFavorite(ui::catalog::BrowserTab::Kits, kit.id);
 
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -74,10 +73,9 @@ bool Menu::DrawKitTab() {
         ImGui::PushStyleColor(ImGuiCol_Header, IM_COL32(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, IM_COL32(0, 0, 0, 0));
-        const bool selected =
-            browser.selectedKey == kit.id &&
-            (!browser.previewSelected ||
-             workbench_.IsPreviewingSelection(kit.id));
+        const bool selected = browser.selectedKey == kit.id &&
+                              (!browser.previewSelected ||
+                               workbench_.IsPreviewingSelection(kit.id));
         const bool clicked = ImGui::Selectable(
             ("##kit-row-hit-" + std::to_string(rowIndex)).c_str(), selected,
             ImGuiSelectableFlags_SpanAllColumns |
@@ -160,8 +158,8 @@ bool Menu::DrawKitTab() {
 
         ImGui::TableSetColumnIndex(2);
         const auto availableWidth = ImGui::GetContentRegionAvail().x;
-        const auto displayText =
-            ui::catalog::TruncateTextToWidth(kit.GetPiecesText(), availableWidth);
+        const auto displayText = ui::catalog::TruncateTextToWidth(
+            kit.GetPiecesText(), availableWidth);
         ImGui::TextUnformatted(displayText.c_str());
       }
     }
@@ -243,7 +241,8 @@ bool Menu::SavePendingKit() {
     return false;
   }
 
-  auto collection = NormalizeKitCollection(createDialog.pendingCollection.data());
+  auto collection =
+      NormalizeKitCollection(createDialog.pendingCollection.data());
   if (collection.find_first_of("\"'") != std::string::npos) {
     createDialog.error = "Collection cannot contain quotes.";
     return false;
@@ -350,9 +349,8 @@ bool Menu::DeletePendingKit() {
     return false;
   }
 
-  CatalogBrowserState().favoriteKeys.erase(
-      BuildFavoriteKey(ui::catalog::BrowserTab::Kits,
-                       deleteDialog.pendingKitId));
+  CatalogBrowserState().favoriteKeys.erase(BuildFavoriteKey(
+      ui::catalog::BrowserTab::Kits, deleteDialog.pendingKitId));
   SaveFavorites();
 
   if (CatalogBrowserState().selectedKey == deleteDialog.pendingKitId) {
@@ -399,13 +397,15 @@ void Menu::DrawCreateKitDialog() {
   }
   std::ranges::sort(existingNames);
 
-  std::vector<ui::components::EditableDropdownItem<std::string>> existingNameItems;
+  std::vector<ui::components::EditableDropdownItem<std::string>>
+      existingNameItems;
   existingNameItems.reserve(existingNames.size());
   for (const auto &name : existingNames) {
     existingNameItems.push_back({.label = name, .value = name});
   }
 
-  std::vector<ui::components::EditableDropdownItem<std::string>> collectionItems;
+  std::vector<ui::components::EditableDropdownItem<std::string>>
+      collectionItems;
   collectionItems.reserve(catalog.GetKitCollections().size());
   for (const auto &collection : catalog.GetKitCollections()) {
     collectionItems.push_back({.label = collection, .value = collection});

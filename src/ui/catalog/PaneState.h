@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ui/catalog/KitsState.h"
 #include "ui/catalog/BrowserState.h"
+#include "ui/catalog/KitsState.h"
 
 namespace sosr::ui::catalog {
 enum class HostMode : std::uint8_t { Docked, Popout };

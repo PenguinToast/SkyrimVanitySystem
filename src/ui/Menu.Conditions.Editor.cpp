@@ -37,9 +37,9 @@ void Menu::DrawConditionEditorDialog() {
 
     const bool isLibraryEditor = editor.draft.IsLibrary();
     std::string title =
-        editor.isNew ? (isLibraryEditor ? "New Library Condition"
-                                        : "New Condition")
-                     : editor.draft.name;
+        editor.isNew
+            ? (isLibraryEditor ? "New Library Condition" : "New Condition")
+            : editor.draft.name;
     if (title.empty()) {
       title = "Untitled";
     }
@@ -106,10 +106,9 @@ void Menu::DrawConditionEditorDialog() {
           "Optional description shown on the condition widget.");
 
       if (!isLibraryEditor) {
-        auto color =
-            editor.draft.GetCatalog() != nullptr
-                ? editor.draft.GetCatalog()->color
-                : ui::conditions::Color{};
+        auto color = editor.draft.GetCatalog() != nullptr
+                         ? editor.draft.GetCatalog()->color
+                         : ui::conditions::Color{};
         ImGui::SetNextItemWidth(
             (std::min)(260.0f, ImGui::GetContentRegionAvail().x));
         if (ImGui::ColorEdit3("##color", &color.x,
@@ -133,9 +132,8 @@ void Menu::DrawConditionEditorDialog() {
       ImGui::TextUnformatted("Clauses");
       ImGui::Separator();
 
-      const auto conditionFunctionItems =
-          BuildConditionFunctionItems(ConditionDefinitions(),
-                                      editor.sourceConditionId);
+      const auto conditionFunctionItems = BuildConditionFunctionItems(
+          ConditionDefinitions(), editor.sourceConditionId);
       const auto clausePaneHeight =
           (std::max)(220.0f, ImGui::GetContentRegionAvail().y);
       const auto editButtonWidth =
@@ -151,7 +149,8 @@ void Menu::DrawConditionEditorDialog() {
         if (DrawConditionEditorClauseTable(editor, conditionFunctionItems,
                                            editButtonWidth, deleteButtonWidth,
                                            actionsColumnWidth)) {
-          editor.draft.clauses.push_back(conditions::BuildDefaultPlayerClause());
+          editor.draft.clauses.push_back(
+              conditions::BuildDefaultPlayerClause());
         }
       }
       ImGui::EndChild();

@@ -46,9 +46,9 @@ void MoveConditionDefinitionToSlot(
                       std::move(condition));
 }
 
-std::vector<std::size_t>
-BuildConditionIndicesByKind(const std::vector<ConditionDefinition> &a_conditions,
-                            const conditions::DefinitionKind a_kind) {
+std::vector<std::size_t> BuildConditionIndicesByKind(
+    const std::vector<ConditionDefinition> &a_conditions,
+    const conditions::DefinitionKind a_kind) {
   std::vector<std::size_t> indices;
   indices.reserve(a_conditions.size());
   for (std::size_t index = 0; index < a_conditions.size(); ++index) {
@@ -62,11 +62,11 @@ BuildConditionIndicesByKind(const std::vector<ConditionDefinition> &a_conditions
 void SortConditionIndicesByName(
     const std::vector<ConditionDefinition> &a_conditions,
     std::vector<std::size_t> &a_indices) {
-  std::ranges::sort(a_indices, [&](const std::size_t a_left,
-                                   const std::size_t a_right) {
-    return strings::CompareTextInsensitive(a_conditions[a_left].name,
-                                           a_conditions[a_right].name) < 0;
-  });
+  std::ranges::sort(
+      a_indices, [&](const std::size_t a_left, const std::size_t a_right) {
+        return strings::CompareTextInsensitive(a_conditions[a_left].name,
+                                               a_conditions[a_right].name) < 0;
+      });
 }
 
 void MoveFilteredConditionDefinitionToSlot(
@@ -113,9 +113,7 @@ struct ConditionDeleteUsage {
 struct ConditionMoveToLibraryUsage {
   std::size_t appliedRowCount{0};
 
-  [[nodiscard]] bool CanMove() const {
-    return appliedRowCount == 0;
-  }
+  [[nodiscard]] bool CanMove() const { return appliedRowCount == 0; }
 
   [[nodiscard]] std::string BuildTooltip() const {
     if (CanMove()) {
@@ -125,10 +123,20 @@ struct ConditionMoveToLibraryUsage {
   }
 };
 
-constexpr char kIconTrash[] = "\xee\x86\x8c"; // ICON_LC_TRASH
+constexpr char kIconTrash[] = "\xee\x86\x8c";      // ICON_LC_TRASH
 constexpr char kIconCircleHelp[] = "\xee\x82\x82"; // ICON_LC_CIRCLE_HELP
-[[nodiscard]] float ComputeCatalogConditionRowHeight(
-    const ConditionDefinition &a_condition) {
+constexpr float kTooltipOrGroupIndicatorWidth = 6.0f;
+constexpr float kTooltipOrGroupIndicatorInsetX = 4.0f;
+constexpr float kTooltipOrGroupBoundaryGap = 4.0f;
+constexpr float kTooltipOrGroupIndicatorRounding = 4.0f;
+
+struct TooltipOrGroupVisual {
+  ImRect operatorColumnRect;
+  bool initialized{false};
+};
+
+[[nodiscard]] float
+ComputeCatalogConditionRowHeight(const ConditionDefinition &a_condition) {
   const auto &style = ImGui::GetStyle();
   const auto lineHeight = ImGui::GetTextLineHeight();
   auto height = style.FramePadding.y * 2.0f + lineHeight;
@@ -210,8 +218,9 @@ void DrawConditionTooltipHeader(
   auto *drawList = ImGui::GetWindowDrawList();
   drawList->AddRectFilled(headerMin, headerMax, theme->GetColorU32("BG"), 8.0f);
   const auto accentColor =
-      a_color.has_value() ? ImGui::GetColorU32(ui::conditions::ToImGuiColor(*a_color))
-                          : theme->GetColorU32("PRIMARY", 0.65f);
+      a_color.has_value()
+          ? ImGui::GetColorU32(ui::conditions::ToImGuiColor(*a_color))
+          : theme->GetColorU32("PRIMARY", 0.65f);
   drawList->AddRect(headerMin, headerMax, accentColor, 8.0f);
   if (a_color.has_value()) {
     drawList->AddRectFilledMultiColor(
@@ -228,8 +237,8 @@ void DrawConditionTooltipHeader(
       ImGui::GetFont(), titleFontSize,
       ImVec2(headerMin.x + (headerWidth - titleSize.x) * 0.5f,
              headerMin.y + (headerHeight - titleFontSize) * 0.5f - 1.0f),
-      theme->GetColorU32("TEXT"),
-      a_title.data(), a_title.data() + a_title.size());
+      theme->GetColorU32("TEXT"), a_title.data(),
+      a_title.data() + a_title.size());
   ImGui::Dummy(ImVec2(headerWidth, headerHeight));
 
   ImGui::Spacing();
@@ -271,9 +280,9 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
       ImGuiCond_Always);
   ui::components::DrawPinnableTooltip(tooltipId, a_hoveredSource, [&]() {
     DrawConditionTooltipHeader(
-        a_condition.name,
-        [&]() -> std::optional<ui::conditions::Color> {
-          if (const auto *catalog = a_condition.GetCatalog(); catalog != nullptr) {
+        a_condition.name, [&]() -> std::optional<ui::conditions::Color> {
+          if (const auto *catalog = a_condition.GetCatalog();
+              catalog != nullptr) {
             return catalog->color;
           }
           return std::nullopt;
@@ -301,7 +310,8 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
       if (!materialized.has_value()) {
         DrawConditionTooltipBulletLine("Condition could not be materialized.");
       } else if (!materialized->refreshTargets.actorFormIDs.empty()) {
-        for (const auto actorFormID : materialized->refreshTargets.actorFormIDs) {
+        for (const auto actorFormID :
+             materialized->refreshTargets.actorFormIDs) {
           const auto label = BuildActorTargetLabel(actorFormID);
           DrawConditionTooltipBulletLine(label);
         }
@@ -327,20 +337,17 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
       ImGui::TableSetupColumn("Expression", ImGuiTableColumnFlags_WidthStretch);
       ImGui::TableSetupColumn("##operator", ImGuiTableColumnFlags_WidthFixed,
                               44.0f);
+      std::vector<TooltipOrGroupVisual> orGroupVisuals;
+      orGroupVisuals.reserve(materialized->displayCnf.size());
 
-      for (std::size_t groupIndex = 0; groupIndex < materialized->displayCnf.size();
-           ++groupIndex) {
+      for (std::size_t groupIndex = 0;
+           groupIndex < materialized->displayCnf.size(); ++groupIndex) {
         const auto &group = materialized->displayCnf[groupIndex];
         const bool isOrGroup = group.size() > 1;
+        TooltipOrGroupVisual groupVisual;
         for (std::size_t literalIndex = 0; literalIndex < group.size();
              ++literalIndex) {
           ImGui::TableNextRow();
-          if (isOrGroup && a_condition.GetCatalog() != nullptr) {
-            const auto &color = a_condition.GetCatalog()->color;
-            ImGui::TableSetBgColor(
-                ImGuiTableBgTarget_RowBg0,
-                ImGui::GetColorU32(ImVec4(color.x, color.y, color.z, 0.10f)));
-          }
 
           ImGui::TableSetColumnIndex(0);
           ImGui::PushTextWrapPos(0.0f);
@@ -357,8 +364,40 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
           if (op[0] != '\0') {
             ImGui::TextDisabled("%s", op);
           }
+
+          if (isOrGroup) {
+            const auto rowRect =
+                ImGui::TableGetCellBgRect(ImGui::GetCurrentTable(), 1);
+            if (!groupVisual.initialized) {
+              groupVisual.operatorColumnRect = rowRect;
+              groupVisual.initialized = true;
+            } else {
+              groupVisual.operatorColumnRect.Add(rowRect.Min);
+              groupVisual.operatorColumnRect.Add(rowRect.Max);
+            }
+          }
+        }
+
+        if (groupVisual.initialized) {
+          orGroupVisuals.push_back(groupVisual);
         }
       }
+
+      const auto *theme = ThemeConfig::GetSingleton();
+      auto *drawList = ImGui::GetWindowDrawList();
+      for (const auto &groupVisual : orGroupVisuals) {
+        const auto indicatorMin = ImVec2(groupVisual.operatorColumnRect.Min.x +
+                                             kTooltipOrGroupIndicatorInsetX,
+                                         groupVisual.operatorColumnRect.Min.y +
+                                             kTooltipOrGroupBoundaryGap);
+        const auto indicatorMax = ImVec2(
+            indicatorMin.x + kTooltipOrGroupIndicatorWidth,
+            groupVisual.operatorColumnRect.Max.y - kTooltipOrGroupBoundaryGap);
+        drawList->AddRectFilled(indicatorMin, indicatorMax,
+                                theme->GetColorU32("PRIMARY", 0.85f),
+                                kTooltipOrGroupIndicatorRounding);
+      }
+
       ImGui::EndTable();
     }
   });
@@ -376,16 +415,17 @@ bool Menu::DrawConditionTab() {
   const float totalAvailableHeight = ImGui::GetContentRegionAvail().y;
   paneState.libraryPaneHeight =
       std::clamp(paneState.libraryPaneHeight, kMinLibraryPaneHeight,
-                 (std::max)(kMinLibraryPaneHeight,
-                            totalAvailableHeight - kMinCatalogPaneHeight -
-                                kSplitterThickness));
+                 (std::max)(kMinLibraryPaneHeight, totalAvailableHeight -
+                                                       kMinCatalogPaneHeight -
+                                                       kSplitterThickness));
   float catalogPaneHeight =
       totalAvailableHeight - paneState.libraryPaneHeight - kSplitterThickness;
   catalogPaneHeight = (std::max)(catalogPaneHeight, kMinCatalogPaneHeight);
 
   bool rowClicked = false;
   if (ImGui::BeginChild("##conditions-catalog-pane",
-                        ImVec2(0.0f, catalogPaneHeight), ImGuiChildFlags_None)) {
+                        ImVec2(0.0f, catalogPaneHeight),
+                        ImGuiChildFlags_None)) {
     rowClicked = DrawConditionCatalogTable();
   }
   ImGui::EndChild();
@@ -396,11 +436,11 @@ bool Menu::DrawConditionTab() {
   const bool splitterActive = ImGui::IsItemActive();
   if (splitterActive) {
     paneState.libraryPaneHeight -= ImGui::GetIO().MouseDelta.y;
-    paneState.libraryPaneHeight = std::clamp(
-        paneState.libraryPaneHeight, kMinLibraryPaneHeight,
-        (std::max)(kMinLibraryPaneHeight,
-                   totalAvailableHeight - kMinCatalogPaneHeight -
-                       kSplitterThickness));
+    paneState.libraryPaneHeight =
+        std::clamp(paneState.libraryPaneHeight, kMinLibraryPaneHeight,
+                   (std::max)(kMinLibraryPaneHeight, totalAvailableHeight -
+                                                         kMinCatalogPaneHeight -
+                                                         kSplitterThickness));
   }
   if (splitterHovered || splitterActive) {
     ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
@@ -408,18 +448,18 @@ bool Menu::DrawConditionTab() {
   const auto splitterMin = ImGui::GetItemRectMin();
   const auto splitterMax = ImGui::GetItemRectMax();
   const auto splitterColor =
-      splitterActive
-          ? ImGui::GetColorU32(ThemeConfig::GetSingleton()->GetActive("PRIMARY"))
+      splitterActive ? ImGui::GetColorU32(
+                           ThemeConfig::GetSingleton()->GetActive("PRIMARY"))
       : splitterHovered
           ? ImGui::GetColorU32(ThemeConfig::GetSingleton()->GetColor("PRIMARY"))
           : ImGui::GetColorU32(ImGuiCol_Border);
   if (splitterHovered || splitterActive) {
     ImGui::GetWindowDrawList()->AddRectFilled(
         splitterMin, splitterMax,
-        ImGui::GetColorU32(ImVec4(
-            ImGui::ColorConvertU32ToFloat4(splitterColor).x,
-            ImGui::ColorConvertU32ToFloat4(splitterColor).y,
-            ImGui::ColorConvertU32ToFloat4(splitterColor).z, 0.12f)));
+        ImGui::GetColorU32(
+            ImVec4(ImGui::ColorConvertU32ToFloat4(splitterColor).x,
+                   ImGui::ColorConvertU32ToFloat4(splitterColor).y,
+                   ImGui::ColorConvertU32ToFloat4(splitterColor).z, 0.12f)));
   }
   ImGui::GetWindowDrawList()->AddLine(
       ImVec2(splitterMin.x, (splitterMin.y + splitterMax.y) * 0.5f),
@@ -452,15 +492,13 @@ bool Menu::DrawConditionTab() {
 
 bool Menu::DrawConditionCatalogTable() {
   EnsureDefaultConditions();
-  const auto catalogIndices =
-      BuildConditionIndicesByKind(ConditionDefinitions(),
-                                  conditions::DefinitionKind::Catalog);
+  const auto catalogIndices = BuildConditionIndicesByKind(
+      ConditionDefinitions(), conditions::DefinitionKind::Catalog);
 
   if (!ImGui::BeginTable("##conditions-table", 2,
                          ImGuiTableFlags_SizingStretchProp |
                              ImGuiTableFlags_Resizable |
-                             ImGuiTableFlags_PadOuterX |
-                             ImGuiTableFlags_RowBg |
+                             ImGuiTableFlags_PadOuterX | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_BordersInnerV,
                          ImVec2(0.0f, 0.0f))) {
     return false;
@@ -529,7 +567,7 @@ bool Menu::DrawConditionCatalogTable() {
                  rowCellRect.Min.y + cellPadding.y + cellContentOffsetY));
       const auto width =
           (std::max)(0.0f, (rowCellRect.Max.x - rowCellRect.Min.x) -
-                                (cellPadding.x * 2.0f));
+                               (cellPadding.x * 2.0f));
       ImGui::InvisibleButton("##condition-row", ImVec2(width, rowHeight));
     } else {
       const auto rowHeight = ComputeCatalogConditionRowHeight(condition);
@@ -554,7 +592,8 @@ bool Menu::DrawConditionCatalogTable() {
     const bool rowBodyHovered =
         hovered && !deleteHovered &&
         ImGui::IsMouseHoveringRect(min, ImVec2(deleteMin.x, max.y), false);
-    DrawConditionTooltip(condition, rowBodyHovered, ConditionDefinitions(), true);
+    DrawConditionTooltip(condition, rowBodyHovered, ConditionDefinitions(),
+                         true);
     rowClicked |= rowBodyHovered && ImGui::IsItemClicked(ImGuiMouseButton_Left);
     if (rowBodyHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
       OpenConditionEditorDialog(index);
@@ -570,34 +609,33 @@ bool Menu::DrawConditionCatalogTable() {
     const auto &conditionColor = catalog->color;
     const bool enabled = conditionStatus.IsActive();
     const auto bodyColor =
-        broken ? (hovered ? IM_COL32(56, 42, 28, 235) : IM_COL32(44, 34, 24, 220))
-               : (enabled ? (hovered ? IM_COL32(42, 42, 44, 240)
-                                     : IM_COL32(34, 34, 36, 225))
-                          : (hovered ? IM_COL32(35, 35, 38, 225)
-                                     : IM_COL32(28, 28, 30, 210)));
+        broken
+            ? (hovered ? IM_COL32(56, 42, 28, 235) : IM_COL32(44, 34, 24, 220))
+            : (enabled ? (hovered ? IM_COL32(42, 42, 44, 240)
+                                  : IM_COL32(34, 34, 36, 225))
+                       : (hovered ? IM_COL32(35, 35, 38, 225)
+                                  : IM_COL32(28, 28, 30, 210)));
     drawList->AddRectFilled(min, max, bodyColor, rounding);
     drawList->AddRect(
         min, max,
-        broken
-            ? theme->GetColorU32("WARN", hovered ? 0.95f : 0.78f)
-            : ImGui::GetColorU32(
-                  ImVec4(conditionColor.x, conditionColor.y, conditionColor.z,
-                         enabled ? 0.75f : 0.42f)),
+        broken ? theme->GetColorU32("WARN", hovered ? 0.95f : 0.78f)
+               : ImGui::GetColorU32(ImVec4(conditionColor.x, conditionColor.y,
+                                           conditionColor.z,
+                                           enabled ? 0.75f : 0.42f)),
         rounding);
     drawList->AddRectFilled(
         min, ImVec2(min.x + stripeWidth, max.y),
-        broken
-            ? theme->GetColorU32("WARN", 0.95f)
-            : ImGui::GetColorU32(
-                  ImVec4(conditionColor.x, conditionColor.y, conditionColor.z,
-                         enabled ? 1.0f : 0.55f)),
+        broken ? theme->GetColorU32("WARN", 0.95f)
+               : ImGui::GetColorU32(ImVec4(conditionColor.x, conditionColor.y,
+                                           conditionColor.z,
+                                           enabled ? 1.0f : 0.55f)),
         rounding,
         ImDrawFlags_RoundCornersTopLeft | ImDrawFlags_RoundCornersBottomLeft);
     const ImU32 deleteFillColor =
         deleteEnabled
-            ? (deleteHeld ? theme->GetColorU32("DECLINE")
-                          : deleteHovered ? theme->GetColorU32("DECLINE", 0.95f)
-                             : theme->GetColorU32("DECLINE", 0.78f))
+            ? (deleteHeld      ? theme->GetColorU32("DECLINE")
+               : deleteHovered ? theme->GetColorU32("DECLINE", 0.95f)
+                               : theme->GetColorU32("DECLINE", 0.78f))
             : theme->GetColorU32("DECLINE", deleteHovered ? 0.35f : 0.24f);
     drawList->AddRectFilled(deleteMin, deleteMax, deleteFillColor, rounding,
                             ImDrawFlags_RoundCornersTopRight |
@@ -620,28 +658,26 @@ bool Menu::DrawConditionCatalogTable() {
         ImVec4(conditionColor.x, conditionColor.y, conditionColor.z, 1.0f));
     const auto clipRect =
         ImVec4(contentMin.x, min.y, deleteMin.x - 2.0f, max.y);
-    const auto titleColor = broken
-                                ? theme->GetColorU32("WARN")
-                                : enabled
-                                ? textColor
-                                : ImGui::GetColorU32(
-                                      ImVec4(conditionColor.x, conditionColor.y,
-                                             conditionColor.z, 0.68f));
+    const auto titleColor =
+        broken ? theme->GetColorU32("WARN")
+        : enabled
+            ? textColor
+            : ImGui::GetColorU32(ImVec4(conditionColor.x, conditionColor.y,
+                                        conditionColor.z, 0.68f));
     drawList->PushClipRect(ImVec2(clipRect.x, clipRect.y),
                            ImVec2(clipRect.z, clipRect.w), true);
     drawList->AddText(contentMin, titleColor, condition.name.c_str());
     if (!condition.description.empty()) {
       const auto descriptionMin =
           ImVec2(contentMin.x, contentMin.y + ImGui::GetTextLineHeight() +
-                                  ImGui::GetStyle().ItemSpacing.y);
-      const auto descriptionMax =
-          ImVec2(deleteMin.x - 3.0f, descriptionMin.y + ImGui::GetTextLineHeight());
+                                   ImGui::GetStyle().ItemSpacing.y);
+      const auto descriptionMax = ImVec2(
+          deleteMin.x - 3.0f, descriptionMin.y + ImGui::GetTextLineHeight());
       const auto descriptionSize =
           ImGui::CalcTextSize(condition.description.c_str());
       ImGui::RenderTextEllipsis(drawList, descriptionMin, descriptionMax,
-                                descriptionMax.x,
-                                condition.description.c_str(), nullptr,
-                                &descriptionSize);
+                                descriptionMax.x, condition.description.c_str(),
+                                nullptr, &descriptionSize);
     }
     drawList->PopClipRect();
 
@@ -657,7 +693,8 @@ bool Menu::DrawConditionCatalogTable() {
       }
     }
 
-    if (!deleteHovered && ImGui::BeginPopupContextItem("##condition-row-context")) {
+    if (!deleteHovered &&
+        ImGui::BeginPopupContextItem("##condition-row-context")) {
       if (ImGui::MenuItem("Edit")) {
         OpenConditionEditorDialog(index);
       }
@@ -710,13 +747,15 @@ bool Menu::DrawConditionCatalogTable() {
       const auto checkboxCellRect = ImGui::TableGetCellBgRect(checkboxTable, 1);
       const auto checkboxSize =
           ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight());
-      ImGui::SetCursorScreenPos(ImVec2(
-          checkboxCellRect.Min.x +
-              ((checkboxCellRect.Max.x - checkboxCellRect.Min.x) - checkboxSize.x) *
-                  0.5f,
-          checkboxCellRect.Min.y +
-              ((checkboxCellRect.Max.y - checkboxCellRect.Min.y) - checkboxSize.y) *
-                  0.5f));
+      ImGui::SetCursorScreenPos(
+          ImVec2(checkboxCellRect.Min.x +
+                     ((checkboxCellRect.Max.x - checkboxCellRect.Min.x) -
+                      checkboxSize.x) *
+                         0.5f,
+                 checkboxCellRect.Min.y +
+                     ((checkboxCellRect.Max.y - checkboxCellRect.Min.y) -
+                      checkboxSize.y) *
+                         0.5f));
     }
     bool disabled = !enabled;
     ImGui::BeginDisabled(broken);
@@ -740,7 +779,8 @@ bool Menu::DrawConditionCatalogTable() {
 
   ImGui::TableNextRow();
   ImGui::TableSetColumnIndex(0);
-  if (ImGui::Button("Add New", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+  if (ImGui::Button("Add New",
+                    ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
     OpenNewConditionDialog();
   }
   ImGui::TableSetColumnIndex(1);
@@ -776,11 +816,12 @@ bool Menu::DrawConditionCatalogTable() {
       DraggedConditionPayload dragPayload{};
       std::memcpy(&dragPayload, payload->Data, sizeof(dragPayload));
       if (const auto it = std::ranges::find(
-              ConditionDefinitions(), std::string_view(dragPayload.conditionId.data()),
+              ConditionDefinitions(),
+              std::string_view(dragPayload.conditionId.data()),
               &ConditionDefinition::id);
           it != ConditionDefinitions().end()) {
-        const auto sourceIndex =
-            static_cast<std::size_t>(std::distance(ConditionDefinitions().begin(), it));
+        const auto sourceIndex = static_cast<std::size_t>(
+            std::distance(ConditionDefinitions().begin(), it));
         if (const auto filteredSourceIt =
                 std::ranges::find(catalogIndices, sourceIndex);
             filteredSourceIt != catalogIndices.end()) {
@@ -799,11 +840,11 @@ bool Menu::DrawConditionCatalogTable() {
   const auto buildExtraNameConflict = [&]() {
     return [&](std::string_view a_candidate) {
       return std::ranges::any_of(
-          ConditionEditors(), [&](const ui::conditions::editor::State &a_editor) {
-            return a_editor.isNew &&
-                   strings::CompareTextInsensitive(
-                       strings::TrimText(a_editor.draft.name),
-                       a_candidate) == 0;
+          ConditionEditors(),
+          [&](const ui::conditions::editor::State &a_editor) {
+            return a_editor.isNew && strings::CompareTextInsensitive(
+                                         strings::TrimText(a_editor.draft.name),
+                                         a_candidate) == 0;
           });
     };
   };
@@ -813,7 +854,8 @@ bool Menu::DrawConditionCatalogTable() {
     auto copy = source;
     copy.id = conditions::BuildConditionId(NextConditionId()++);
     copy.name = ui::condition_editor::BuildUniqueConditionName(
-        source.name, ConditionDefinitions(), source.id, buildExtraNameConflict());
+        source.name, ConditionDefinitions(), source.id,
+        buildExtraNameConflict());
     if (auto *catalog = copy.GetCatalog(); catalog != nullptr) {
       const auto existingColors = CollectCatalogColorsForNewCondition(
           ConditionDefinitions(), ConditionEditors());
@@ -822,7 +864,8 @@ bool Menu::DrawConditionCatalogTable() {
     ConditionDefinitions().push_back(std::move(copy));
     BumpConditionStoreRevision();
     conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-    conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+    conditions::InvalidateConditionMaterializationCaches(
+        ConditionDefinitions());
   }
 
   if (pendingCopyToLibraryIndex &&
@@ -831,13 +874,14 @@ bool Menu::DrawConditionCatalogTable() {
     auto libraryCopy = source;
     libraryCopy.EnsureLibrary();
     libraryCopy.name = ui::condition_editor::BuildUniqueConditionName(
-        source.name, ConditionDefinitions(), source.id, buildExtraNameConflict());
+        source.name, ConditionDefinitions(), source.id,
+        buildExtraNameConflict());
     libraryCopy.id = libraryCopy.name;
 
     conditions::LibraryChangeResult saveResult;
     std::string error;
-    if (!conditions::CommitLibraryConditionEdit(ConditionDefinitions(), {},
-                                                libraryCopy, saveResult, error)) {
+    if (!conditions::CommitLibraryConditionEdit(
+            ConditionDefinitions(), {}, libraryCopy, saveResult, error)) {
       logger::error("Failed to copy SVS condition {} to library: {}", source.id,
                     error);
     } else {
@@ -854,8 +898,9 @@ bool Menu::DrawConditionCatalogTable() {
 
     conditions::LibraryChangeResult saveResult;
     std::string error;
-    if (!conditions::CommitLibraryConditionEdit(
-            ConditionDefinitions(), source.id, libraryVersion, saveResult, error)) {
+    if (!conditions::CommitLibraryConditionEdit(ConditionDefinitions(),
+                                                source.id, libraryVersion,
+                                                saveResult, error)) {
       logger::error("Failed to move SVS condition {} to library: {}", source.id,
                     error);
     } else {
@@ -863,14 +908,19 @@ bool Menu::DrawConditionCatalogTable() {
     }
   }
 
-  if (pendingDeleteIndex && *pendingDeleteIndex < ConditionDefinitions().size()) {
-    const auto deletedConditionId = ConditionDefinitions()[*pendingDeleteIndex].id;
+  if (pendingDeleteIndex &&
+      *pendingDeleteIndex < ConditionDefinitions().size()) {
+    const auto deletedConditionId =
+        ConditionDefinitions()[*pendingDeleteIndex].id;
     workbench_.DeleteRowsByConditionId(deletedConditionId, true);
-    ConditionDefinitions().erase(ConditionDefinitions().begin() +
-                      static_cast<std::ptrdiff_t>(*pendingDeleteIndex));
+    ConditionDefinitions().erase(
+        ConditionDefinitions().begin() +
+        static_cast<std::ptrdiff_t>(*pendingDeleteIndex));
     BumpConditionStoreRevision();
-    sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-    sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+    sosr::conditions::RebuildConditionDependencyMetadata(
+        ConditionDefinitions());
+    sosr::conditions::InvalidateConditionMaterializationCaches(
+        ConditionDefinitions());
     for (auto &editor : ConditionEditors()) {
       if (editor.sourceConditionId == deletedConditionId) {
         editor.error.clear();
@@ -889,8 +939,7 @@ void Menu::DrawConditionLibraryTable() {
   if (!ImGui::BeginTable("##condition-library-table", 2,
                          ImGuiTableFlags_SizingStretchProp |
                              ImGuiTableFlags_Resizable |
-                             ImGuiTableFlags_PadOuterX |
-                             ImGuiTableFlags_RowBg |
+                             ImGuiTableFlags_PadOuterX | ImGuiTableFlags_RowBg |
                              ImGuiTableFlags_BordersInnerV,
                          ImVec2(0.0f, 0.0f))) {
     return;
@@ -955,8 +1004,8 @@ void Menu::DrawConditionLibraryTable() {
       ImGui::PopStyleColor();
       if (!deleteEnabled) {
         ui::condition_widgets::DrawHoverDescription(
-            "conditions:library:delete-disabled:" + condition.id,
-            deleteTooltip, 0.2f, ImGuiHoveredFlags_AllowWhenDisabled);
+            "conditions:library:delete-disabled:" + condition.id, deleteTooltip,
+            0.2f, ImGuiHoveredFlags_AllowWhenDisabled);
       }
       ImGui::EndPopup();
     }
@@ -973,7 +1022,8 @@ void Menu::DrawConditionLibraryTable() {
                                     cellRect.Min.y + style.CellPadding.y);
         const auto textMax = ImVec2(cellRect.Max.x - style.CellPadding.x,
                                     textMin.y + ImGui::GetTextLineHeight());
-        const auto textSize = ImGui::CalcTextSize(condition.description.c_str());
+        const auto textSize =
+            ImGui::CalcTextSize(condition.description.c_str());
         if (broken) {
           ImGui::PushStyleColor(ImGuiCol_Text,
                                 ThemeConfig::GetSingleton()->GetColor("WARN"));
@@ -1001,15 +1051,18 @@ void Menu::DrawConditionLibraryTable() {
 
   ImGui::TableNextRow();
   ImGui::TableSetColumnIndex(0);
-  if (ImGui::Button("Add New", ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
+  if (ImGui::Button("Add New",
+                    ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
     OpenNewLibraryConditionDialog();
   }
   ImGui::TableSetColumnIndex(1);
   ImGui::Dummy(ImVec2(0.0f, 0.0f));
   ImGui::EndTable();
 
-  if (pendingDeleteIndex && *pendingDeleteIndex < ConditionDefinitions().size()) {
-    const auto deletedConditionId = ConditionDefinitions()[*pendingDeleteIndex].id;
+  if (pendingDeleteIndex &&
+      *pendingDeleteIndex < ConditionDefinitions().size()) {
+    const auto deletedConditionId =
+        ConditionDefinitions()[*pendingDeleteIndex].id;
     conditions::LibraryChangeResult deleteResult;
     std::string error;
     if (!conditions::CommitLibraryConditionDelete(
@@ -1021,7 +1074,8 @@ void Menu::DrawConditionLibraryTable() {
     ConditionDefinitions() = std::move(deleteResult.definitions);
     BumpConditionStoreRevision();
     conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-    conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+    conditions::InvalidateConditionMaterializationCaches(
+        ConditionDefinitions());
     for (auto &editor : ConditionEditors()) {
       if (editor.sourceConditionId == deletedConditionId) {
         editor.error.clear();

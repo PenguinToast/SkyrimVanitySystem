@@ -2,8 +2,8 @@
 
 #include "imgui.h"
 
-#include <cstdio>
 #include <cstddef>
+#include <cstdio>
 #include <functional>
 #include <optional>
 #include <span>
@@ -27,15 +27,13 @@ template <class TValue> struct EditableDropdownItem {
 };
 
 namespace detail {
-bool DrawEditableDropdownIndexed(const char *a_label, const char *a_hint,
-                                 char *a_buffer, std::size_t a_bufferSize,
-                                 std::span<const EditableDropdownOptionView> a_options,
-                                 float a_width,
-                                 int *a_selectedIndex = nullptr,
-                                 bool a_allowCustomInput = true,
-                                 int a_fallbackIndex = -1,
-                                 const std::function<void(int)> *a_drawItemTooltip =
-                                     nullptr);
+bool DrawEditableDropdownIndexed(
+    const char *a_label, const char *a_hint, char *a_buffer,
+    std::size_t a_bufferSize,
+    std::span<const EditableDropdownOptionView> a_options, float a_width,
+    int *a_selectedIndex = nullptr, bool a_allowCustomInput = true,
+    int a_fallbackIndex = -1,
+    const std::function<void(int)> *a_drawItemTooltip = nullptr);
 } // namespace detail
 
 bool DrawEditableStringDropdown(
@@ -47,13 +45,13 @@ bool DrawEditableStringDropdown(
     int a_fallbackIndex = -1);
 
 template <class TValue>
-bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
-                            std::string &a_value,
-                            std::span<const EditableDropdownItem<TValue>> a_items,
-                            float a_width, int *a_selectedIndex = nullptr,
-                            std::optional<TValue> *a_selectedValue = nullptr,
-                            std::function<void(const EditableDropdownItem<TValue> &)>
-                                a_drawItemTooltip = {}) {
+bool DrawSearchableDropdown(
+    const char *a_label, const char *a_hint, std::string &a_value,
+    std::span<const EditableDropdownItem<TValue>> a_items, float a_width,
+    int *a_selectedIndex = nullptr,
+    std::optional<TValue> *a_selectedValue = nullptr,
+    std::function<void(const EditableDropdownItem<TValue> &)>
+        a_drawItemTooltip = {}) {
   std::vector<EditableDropdownOptionView> optionViews;
   optionViews.reserve(a_items.size());
   for (const auto &item : a_items) {
@@ -85,8 +83,7 @@ bool DrawSearchableDropdown(const char *a_label, const char *a_hint,
     if (selectedIndex >= 0 &&
         selectedIndex < static_cast<int>(a_items.size()) &&
         a_items[static_cast<std::size_t>(selectedIndex)].value.has_value()) {
-      *a_selectedValue =
-          a_items[static_cast<std::size_t>(selectedIndex)].value;
+      *a_selectedValue = a_items[static_cast<std::size_t>(selectedIndex)].value;
     } else {
       a_selectedValue->reset();
     }

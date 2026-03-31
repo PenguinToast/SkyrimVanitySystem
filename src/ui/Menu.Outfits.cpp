@@ -49,10 +49,9 @@ bool Menu::DrawOutfitTab() {
         ImGui::PushStyleColor(ImGuiCol_Header, IM_COL32(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, IM_COL32(0, 0, 0, 0));
-        const bool selected =
-            browser.selectedKey == outfit.id &&
-            (!browser.previewSelected ||
-             workbench_.IsPreviewingSelection(outfit.id));
+        const bool selected = browser.selectedKey == outfit.id &&
+                              (!browser.previewSelected ||
+                               workbench_.IsPreviewingSelection(outfit.id));
         const bool clicked = ImGui::Selectable(
             ("##outfit-row-hit-" + std::to_string(rowIndex)).c_str(), selected,
             ImGuiSelectableFlags_SpanAllColumns |

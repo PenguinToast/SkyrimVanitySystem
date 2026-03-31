@@ -50,8 +50,7 @@ void AppendConflictTarget(TConflictInfo &a_info,
 } // namespace
 
 namespace sosr::ui::workbench_conflicts {
-ConflictState
-BuildConflictState(
+ConflictState BuildConflictState(
     const std::vector<::sosr::workbench::VariantWorkbenchRow> &a_rows) {
   ConflictState state{};
 

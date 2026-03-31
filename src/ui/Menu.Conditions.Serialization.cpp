@@ -165,7 +165,8 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
   int maxConditionId = 0;
   if (const auto conditionsIt = root.find("conditions");
       conditionsIt != root.end() && conditionsIt->is_array()) {
-    ConditionDefinitions().reserve(ConditionDefinitions().size() + conditionsIt->size());
+    ConditionDefinitions().reserve(ConditionDefinitions().size() +
+                                   conditionsIt->size());
     for (const auto &conditionJson : *conditionsIt) {
       if (!conditionJson.is_object()) {
         continue;
@@ -229,7 +230,8 @@ void Menu::DeserializeConditions(SKSE::SerializationInterface *a_skse) {
   EnsureDefaultConditions();
   BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-  sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+  sosr::conditions::InvalidateConditionMaterializationCaches(
+      ConditionDefinitions());
 }
 
 void Menu::RevertConditions() {

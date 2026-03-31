@@ -112,18 +112,17 @@ void Menu::SaveUserSettings() const {
     return;
   }
 
-  const nlohmann::json json = {{"fontSizePx", fontSizePixels_},
-                               {"fontPath", fontPath_},
-                               {"pauseGameWhileOpen", pauseGameWhenOpen_},
-                               {"smoothScroll", smoothScroll_},
-                               {"toggleKey", toggleKey_},
-                               {"toggleModifier", toggleModifier_},
-                               {"theme", themeName_},
-                               {"catalogHostMode",
-                                catalogPane_.hostMode ==
-                                        ui::catalog::HostMode::Popout
-                                    ? "popout"
-                                    : "docked"}};
+  const nlohmann::json json = {
+      {"fontSizePx", fontSizePixels_},
+      {"fontPath", fontPath_},
+      {"pauseGameWhileOpen", pauseGameWhenOpen_},
+      {"smoothScroll", smoothScroll_},
+      {"toggleKey", toggleKey_},
+      {"toggleModifier", toggleModifier_},
+      {"theme", themeName_},
+      {"catalogHostMode", catalogPane_.hostMode == ui::catalog::HostMode::Popout
+                              ? "popout"
+                              : "docked"}};
   output << json.dump(2) << '\n';
 }
 

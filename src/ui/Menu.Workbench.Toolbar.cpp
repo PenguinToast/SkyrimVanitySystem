@@ -56,9 +56,9 @@ void Menu::DrawWorkbenchFilterBar() {
   for (const auto &option : filterOptions) {
     filterItems.push_back(
         {.label = option.label,
-         .value = option.isSection ? std::nullopt
-                                   : std::optional<WorkbenchFilterOption>(
-                                         option)});
+         .value = option.isSection
+                      ? std::nullopt
+                      : std::optional<WorkbenchFilterOption>(option)});
   }
 
   std::optional<WorkbenchFilterOption> selectedFilterOption;
@@ -107,7 +107,8 @@ void Menu::DrawWorkbenchToolbar() {
               [&]() {
                 workbench_.ClearPreview();
                 if (workbench_.ResetEquippedRows(&visibleRowIndices)) {
-                  workbench_.SyncDynamicArmorVariantsExtended(ConditionDefinitions());
+                  workbench_.SyncDynamicArmorVariantsExtended(
+                      ConditionDefinitions());
                 }
               },
           .tooltip =
@@ -285,8 +286,8 @@ void Menu::DrawWorkbenchEmptyState(const char *a_tableId,
   ImGui::TableSetupColumn("Overrides", ImGuiTableColumnFlags_WidthStretch,
                           1.05f);
   ImGui::TableSetupColumn(
-      "Hide",
-      ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, 72.0f);
+      "Hide", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize,
+      72.0f);
   ImGui::TableHeadersRow();
   ImGui::TableNextRow(ImGuiTableRowFlags_None, 116.0f);
 
@@ -296,13 +297,15 @@ void Menu::DrawWorkbenchEmptyState(const char *a_tableId,
     ImGui::SetCursorScreenPos(
         ImVec2(leftCellRect.Min.x + ImGui::GetStyle().CellPadding.x,
                leftCellRect.Min.y + ImGui::GetStyle().CellPadding.y));
-    ImGui::PushTextWrapPos(leftCellRect.Max.x - ImGui::GetStyle().CellPadding.x);
+    ImGui::PushTextWrapPos(leftCellRect.Max.x -
+                           ImGui::GetStyle().CellPadding.x);
     ImGui::TextDisabled("Drop equipment or equipment slots here.");
     ImGui::PopTextWrapPos();
 
-    if (ImGui::BeginDragDropTargetCustom(leftCellRect, ImGui::GetID(a_targetId))) {
-      if (const auto *payload =
-              ImGui::AcceptDragDropPayload(ui::workbench::kVariantItemPayloadType);
+    if (ImGui::BeginDragDropTargetCustom(leftCellRect,
+                                         ImGui::GetID(a_targetId))) {
+      if (const auto *payload = ImGui::AcceptDragDropPayload(
+              ui::workbench::kVariantItemPayloadType);
           payload && payload->Data != nullptr &&
           payload->DataSize == sizeof(DraggedEquipmentPayload)) {
         DraggedEquipmentPayload dragPayload{};

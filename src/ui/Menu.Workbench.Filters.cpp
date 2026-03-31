@@ -72,8 +72,8 @@ void Menu::BuildWorkbenchFilterOptions(
     if (!IsWorkbenchSelectableCondition(condition)) {
       continue;
     }
-    const auto materialized =
-        conditions::MaterializeConditionById(condition.id, ConditionDefinitions());
+    const auto materialized = conditions::MaterializeConditionById(
+        condition.id, ConditionDefinitions());
     if (!materialized.has_value()) {
       continue;
     }
@@ -228,7 +228,8 @@ void Menu::RebuildWorkbenchDerivedState() {
   derived.rowConditionStates.reserve(rows.size());
   for (const auto &row : rows) {
     derived.rowConditionStates.push_back(
-        ui::workbench::ResolveRowConditionVisualState(row, ConditionDefinitions()));
+        ui::workbench::ResolveRowConditionVisualState(row,
+                                                      ConditionDefinitions()));
   }
 
   auto rowsForConflicts = rows;
@@ -302,14 +303,15 @@ Menu::ResolveFirstConditionForActorFilter(const RE::FormID a_actorFormID) {
 void Menu::ApplyInitialWorkbenchFilterSelection() {
   EnsureDefaultConditions();
 
-  auto selection = workbench::BuildInitialFilterSelection(ConditionDefinitions(),
-                                                          NextConditionId());
+  auto selection = workbench::BuildInitialFilterSelection(
+      ConditionDefinitions(), NextConditionId());
   if (selection.createdCondition.has_value()) {
     ConditionDefinitions().push_back(std::move(*selection.createdCondition));
     ++NextConditionId();
     BumpConditionStoreRevision();
     conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-    conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+    conditions::InvalidateConditionMaterializationCaches(
+        ConditionDefinitions());
   }
 
   workbenchFilter_ = std::move(selection.filter);

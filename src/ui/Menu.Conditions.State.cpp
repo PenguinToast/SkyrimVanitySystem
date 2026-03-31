@@ -49,10 +49,9 @@ void PropagateConditionIdRenameToEditors(
 bool EditorMatchesRenamedSource(
     const ui::conditions::editor::State &a_editor,
     const std::vector<std::pair<std::string, std::string>> &a_renamedIds) {
-  return std::ranges::any_of(
-      a_renamedIds, [&](const auto &a_rename) {
-        return a_editor.sourceConditionId == a_rename.second;
-      });
+  return std::ranges::any_of(a_renamedIds, [&](const auto &a_rename) {
+    return a_editor.sourceConditionId == a_rename.second;
+  });
 }
 
 void Menu::EnsureDefaultConditions() {
@@ -67,20 +66,19 @@ void Menu::EnsureDefaultConditions() {
   NextConditionId() = 2;
   BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-  sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+  sosr::conditions::InvalidateConditionMaterializationCaches(
+      ConditionDefinitions());
 }
 
 void Menu::LoadConditionLibrary() {
   auto loaded = conditions::LoadConditionLibrary();
   auto &definitions = ConditionDefinitions();
-  definitions.erase(
-      std::remove_if(definitions.begin(), definitions.end(),
-                     [](const ConditionDefinition &a_definition) {
-                       return a_definition.IsLibrary();
-                     }),
-      definitions.end());
-  definitions.insert(definitions.end(),
-                     std::make_move_iterator(loaded.begin()),
+  definitions.erase(std::remove_if(definitions.begin(), definitions.end(),
+                                   [](const ConditionDefinition &a_definition) {
+                                     return a_definition.IsLibrary();
+                                   }),
+                    definitions.end());
+  definitions.insert(definitions.end(), std::make_move_iterator(loaded.begin()),
                      std::make_move_iterator(loaded.end()));
   BumpConditionStoreRevision();
   sosr::conditions::RebuildConditionDependencyMetadata(definitions);
@@ -120,7 +118,8 @@ int Menu::AllocateConditionEditorWindowSlot() const {
 
 void Menu::OpenNewConditionDialog() {
   std::vector<ui::conditions::Color> existingColors;
-  existingColors.reserve(ConditionDefinitions().size() + ConditionEditors().size());
+  existingColors.reserve(ConditionDefinitions().size() +
+                         ConditionEditors().size());
   for (const auto &condition : ConditionDefinitions()) {
     if (const auto *catalog = condition.GetCatalog(); catalog != nullptr) {
       existingColors.push_back(catalog->color);
@@ -136,7 +135,8 @@ void Menu::OpenNewConditionDialog() {
   }
 
   const auto suggestedName = BuildSuggestedConditionName(
-      ConditionDefinitions(), NextConditionId(), [&](std::string_view a_candidate) {
+      ConditionDefinitions(), NextConditionId(),
+      [&](std::string_view a_candidate) {
         return std::ranges::any_of(
             ConditionEditors(), [&](const ConditionEditorState &a_editor) {
               return a_editor.isNew &&
@@ -156,7 +156,8 @@ void Menu::OpenNewConditionDialog() {
 
 void Menu::OpenNewLibraryConditionDialog() {
   const auto suggestedName = BuildSuggestedConditionName(
-      ConditionDefinitions(), NextConditionId(), [&](std::string_view a_candidate) {
+      ConditionDefinitions(), NextConditionId(),
+      [&](std::string_view a_candidate) {
         return std::ranges::any_of(
             ConditionEditors(), [&](const ConditionEditorState &a_editor) {
               return a_editor.isNew &&
@@ -197,13 +198,13 @@ void Menu::OpenConditionEditorDialog(const std::size_t a_index) {
 }
 
 void Menu::OpenConditionEditorDialogById(const std::string_view a_conditionId) {
-  const auto it =
-      std::ranges::find(ConditionDefinitions(), a_conditionId, &ConditionDefinition::id);
+  const auto it = std::ranges::find(ConditionDefinitions(), a_conditionId,
+                                    &ConditionDefinition::id);
   if (it == ConditionDefinitions().end()) {
     return;
   }
-  OpenConditionEditorDialog(
-      static_cast<std::size_t>(std::distance(ConditionDefinitions().begin(), it)));
+  OpenConditionEditorDialog(static_cast<std::size_t>(
+      std::distance(ConditionDefinitions().begin(), it)));
 }
 
 bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
@@ -222,8 +223,8 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
     clause.comparand = TrimText(clause.comparand);
 
     std::optional<ConditionFunctionInfo> customFunctionInfo;
-    const auto *functionInfo =
-        ResolveConditionFunctionInfo(clause, ConditionDefinitions(), customFunctionInfo);
+    const auto *functionInfo = ResolveConditionFunctionInfo(
+        clause, ConditionDefinitions(), customFunctionInfo);
     if (!functionInfo) {
       a_editor.error = "Unknown or unsupported condition function in clause " +
                        std::to_string(index + 1) + ".";
@@ -339,13 +340,13 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
             ConditionDefinitions(),
             a_editor.isNew ? std::string_view{} : a_editor.sourceConditionId,
             a_editor.draft, saveResult, saveError)) {
-      a_editor.error = saveError.empty() ? "Failed to save library condition."
-                                         : saveError;
+      a_editor.error =
+          saveError.empty() ? "Failed to save library condition." : saveError;
       return false;
     }
     ApplyLibraryChangeResult(saveResult);
-    if (const auto *savedDefinition =
-            conditions::FindDefinitionById(ConditionDefinitions(), a_editor.draft.id);
+    if (const auto *savedDefinition = conditions::FindDefinitionById(
+            ConditionDefinitions(), a_editor.draft.id);
         savedDefinition != nullptr) {
       a_editor.draft = *savedDefinition;
     }
@@ -357,8 +358,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
     a_editor.isNew = false;
     a_editor.sourceConditionId = a_editor.draft.id;
   } else {
-    const auto it = std::ranges::find(ConditionDefinitions(), a_editor.sourceConditionId,
-                                      &ConditionDefinition::id);
+    const auto it =
+        std::ranges::find(ConditionDefinitions(), a_editor.sourceConditionId,
+                          &ConditionDefinition::id);
     if (it == ConditionDefinitions().end()) {
       a_editor.error = "Condition no longer exists.";
       return false;
@@ -386,14 +388,14 @@ void Menu::ApplyLibraryChangeResult(
     if (!EditorMatchesRenamedSource(editor, a_result.renamedIds)) {
       continue;
     }
-    if (const auto *definition =
-            conditions::FindDefinitionById(ConditionDefinitions(),
-                                           editor.sourceConditionId);
+    if (const auto *definition = conditions::FindDefinitionById(
+            ConditionDefinitions(), editor.sourceConditionId);
         definition != nullptr) {
       editor.draft = *definition;
     }
   }
   sosr::conditions::RebuildConditionDependencyMetadata(ConditionDefinitions());
-  sosr::conditions::InvalidateConditionMaterializationCaches(ConditionDefinitions());
+  sosr::conditions::InvalidateConditionMaterializationCaches(
+      ConditionDefinitions());
 }
 } // namespace sosr

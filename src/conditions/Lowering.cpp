@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <array>
 #include <bit>
-#include <charconv>
 #include <cctype>
+#include <charconv>
 #include <cstdint>
 #include <optional>
 #include <ranges>
@@ -124,7 +124,8 @@ RE::CONDITION_ITEM_DATA::OpCode ToOpCode(const Comparator a_comparator) {
   return RE::CONDITION_ITEM_DATA::OpCode::kEqualTo;
 }
 
-const RE::SCRIPT_FUNCTION *FindConditionFunction(const std::string_view a_name) {
+const RE::SCRIPT_FUNCTION *
+FindConditionFunction(const std::string_view a_name) {
   const auto trimmed = sosr::strings::TrimText(a_name);
   if (trimmed.empty()) {
     return nullptr;
@@ -183,8 +184,7 @@ RE::TESObjectREFR *LookupReferenceByToken(const std::string &a_token) {
     RE::FormID formID = 0;
     const auto *begin = trimmed.data();
     const auto *end = begin + trimmed.size();
-    if (const auto [ptr, ec] =
-            std::from_chars(begin, end, formID, 16);
+    if (const auto [ptr, ec] = std::from_chars(begin, end, formID, 16);
         ec == std::errc{} && ptr == end) {
       return RE::TESForm::LookupByID<RE::TESObjectREFR>(formID);
     }
@@ -253,8 +253,8 @@ ConditionParam ParseParam(const std::string &a_text, const ParamType a_type) {
       param.i =
           static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kLeftHand);
     } else if (sosr::strings::EqualsInsensitive(trimmed, "RIGHT")) {
-      param.i = static_cast<std::int32_t>(
-          RE::MagicSystem::CastingSource::kRightHand);
+      param.i =
+          static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kRightHand);
     } else if (sosr::strings::EqualsInsensitive(trimmed, "VOICE")) {
       param.i =
           static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kOther);
@@ -401,6 +401,7 @@ sosr::conditions::DisplayCnf BuildDisplayCnf(const ConditionCnf &a_cnf) {
   return displayCnf;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 ConditionCnf AndCnf(const ConditionCnf &a_left, const ConditionCnf &a_right) {
   ConditionCnf result = a_left;
   result.insert(result.end(), a_right.begin(), a_right.end());
@@ -503,9 +504,8 @@ BuildClauseCnf(const Clause &a_clause,
                const std::vector<Definition> &a_conditions,
                ConditionVisitSet &a_visiting) {
   if (!a_clause.customConditionId.empty()) {
-    const auto *definition =
-        sosr::conditions::FindDefinitionById(a_conditions,
-                                             a_clause.customConditionId);
+    const auto *definition = sosr::conditions::FindDefinitionById(
+        a_conditions, a_clause.customConditionId);
     if (!definition) {
       return std::nullopt;
     }

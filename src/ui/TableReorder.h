@@ -26,8 +26,7 @@ struct LinearReorderPreview {
 
 [[nodiscard]] LinearReorderPreview
 ComputeLinearReorderPreview(std::span<const ImRect> a_rowRects, float a_lineX1,
-                            float a_lineX2,
-                            float a_edgeBandHalfHeight = 6.0f);
+                            float a_lineX2, float a_edgeBandHalfHeight = 6.0f);
 
 void DrawLinearReorderInsertionLine(const LinearReorderPreview &a_preview,
                                     ImU32 a_color, float a_thickness = 2.0f,

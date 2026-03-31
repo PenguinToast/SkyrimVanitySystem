@@ -4,19 +4,19 @@
 #include "Keycode.h"
 #include "ThemeConfig.h"
 #include "VariantWorkbench.h"
+#include "components/EquipmentWidget.h"
 #include "conditions/Library.h"
 #include "conditions/Store.h"
-#include "components/EquipmentWidget.h"
 #include "imgui.h"
 #include "ui/ConditionData.h"
-#include "ui/components/EditableCombo.h"
+#include "ui/WorkbenchConflicts.h"
 #include "ui/catalog/DerivedState.h"
 #include "ui/catalog/PaneState.h"
+#include "ui/components/EditableCombo.h"
 #include "ui/conditions/EditorState.h"
 #include "ui/conditions/PaneState.h"
-#include "ui/WorkbenchConflicts.h"
-#include "ui/workbench/Tooltips.h"
 #include "ui/workbench/FilterState.h"
+#include "ui/workbench/Tooltips.h"
 
 #include <array>
 #include <limits>
@@ -195,8 +195,7 @@ private:
   [[nodiscard]] bool HasAnySelectedSlotFilter() const;
   [[nodiscard]] bool
   MatchesSelectedSlotsOr(const std::vector<std::string> &a_slots) const;
-  [[nodiscard]] bool
-  MatchesSelectedSlotsAnd(std::uint64_t a_slotMask) const;
+  [[nodiscard]] bool MatchesSelectedSlotsAnd(std::uint64_t a_slotMask) const;
   [[nodiscard]] std::string BuildSelectedSlotPreview() const;
 
   [[nodiscard]] bool MatchesGearFilters(const GearEntry &a_entry) const;
@@ -207,9 +206,9 @@ private:
                                  bool a_replaceExisting = true);
   void AddKitEntryToWorkbench(const KitEntry &a_entry,
                               bool a_replaceExisting = true);
-  void OpenCreateKitDialog(
-      KitCreationSource a_source,
-      const std::vector<int> *a_candidateRowIndices = nullptr);
+  void
+  OpenCreateKitDialog(KitCreationSource a_source,
+                      const std::vector<int> *a_candidateRowIndices = nullptr);
   void OpenDeleteKitDialog(const KitEntry &a_entry);
   [[nodiscard]] bool SavePendingKit();
   [[nodiscard]] bool DeletePendingKit();
@@ -226,8 +225,8 @@ private:
   [[nodiscard]] bool
   MatchesWorkbenchFilter(const workbench::VariantWorkbenchRow &a_row);
   void ApplyInitialWorkbenchFilterSelection();
-  void BuildWorkbenchFilterOptions(
-      std::vector<WorkbenchFilterOption> &a_options);
+  void
+  BuildWorkbenchFilterOptions(std::vector<WorkbenchFilterOption> &a_options);
   [[nodiscard]] std::optional<std::string>
   ResolveFirstConditionForActorFilter(RE::FormID a_actorFormID);
   [[nodiscard]] std::optional<std::string> ResolveNewWorkbenchRowConditionId();
@@ -239,7 +238,8 @@ private:
   void OpenConditionEditorDialog(std::size_t a_index);
   void OpenConditionEditorDialogById(std::string_view a_conditionId);
   [[nodiscard]] bool SaveConditionEditor(ConditionEditorState &a_editor);
-  void ApplyLibraryChangeResult(const conditions::LibraryChangeResult &a_result);
+  void
+  ApplyLibraryChangeResult(const conditions::LibraryChangeResult &a_result);
   void LoadConditionLibrary();
   [[nodiscard]] std::size_t CountCatalogConditions() const;
   [[nodiscard]] std::size_t CountLibraryConditions() const;
@@ -290,14 +290,17 @@ private:
   ConditionDefinitions() const {
     return conditionStore_.definitions;
   }
-  [[nodiscard]] int &NextConditionId() { return conditionStore_.nextConditionId; }
+  [[nodiscard]] int &NextConditionId() {
+    return conditionStore_.nextConditionId;
+  }
   [[nodiscard]] const int &NextConditionId() const {
     return conditionStore_.nextConditionId;
   }
   [[nodiscard]] std::vector<ConditionEditorState> &ConditionEditors() {
     return conditionsPane_.editors;
   }
-  [[nodiscard]] const std::vector<ConditionEditorState> &ConditionEditors() const {
+  [[nodiscard]] const std::vector<ConditionEditorState> &
+  ConditionEditors() const {
     return conditionsPane_.editors;
   }
   [[nodiscard]] int &FocusedConditionEditorWindowSlot() {

@@ -190,7 +190,8 @@ void VariantWorkbench::RebuildRowOrder() {
 void VariantWorkbench::MarkChanged() { ++revision_; }
 
 std::vector<int> VariantWorkbench::BuildCandidateRowIndices(
-    const std::vector<int> *a_candidateRowIndices, const std::size_t a_rowCount) {
+    const std::vector<int> *a_candidateRowIndices,
+    const std::size_t a_rowCount) {
   if (a_candidateRowIndices != nullptr) {
     return *a_candidateRowIndices;
   }
@@ -696,8 +697,9 @@ bool VariantWorkbench::DeleteRow(int a_rowIndex) {
   return true;
 }
 
-std::size_t VariantWorkbench::DeleteRowsByConditionId(
-    const std::string_view a_conditionId, const bool a_onlyIfEmpty) {
+std::size_t
+VariantWorkbench::DeleteRowsByConditionId(const std::string_view a_conditionId,
+                                          const bool a_onlyIfEmpty) {
   std::size_t removedCount = 0;
 
   for (auto index = static_cast<int>(rows_.size()) - 1; index >= 0; --index) {
@@ -735,8 +737,8 @@ bool VariantWorkbench::SetConditionId(
       });
   if (duplicateIt != rows_.end()) {
     if (!duplicateIt->HasOverridesOrHideState()) {
-      const auto duplicateIndex = static_cast<std::size_t>(
-          std::distance(rows_.begin(), duplicateIt));
+      const auto duplicateIndex =
+          static_cast<std::size_t>(std::distance(rows_.begin(), duplicateIt));
       DeleteRow(static_cast<int>(duplicateIndex));
       if (duplicateIndex < rowIndex) {
         --rowIndex;
@@ -803,7 +805,8 @@ bool VariantWorkbench::ResetEquippedRows(
   return changed;
 }
 
-bool VariantWorkbench::ResetAllRows(const std::vector<int> *a_candidateRowIndices) {
+bool VariantWorkbench::ResetAllRows(
+    const std::vector<int> *a_candidateRowIndices) {
   if (a_candidateRowIndices == nullptr) {
     Revert();
     return true;
@@ -847,8 +850,9 @@ std::vector<RE::FormID> VariantWorkbench::CollectEquippedArmorFormIDs(
     }
   };
 
-  formIDs.reserve(a_candidateRowIndices != nullptr ? a_candidateRowIndices->size()
-                                                   : rows_.size());
+  formIDs.reserve(a_candidateRowIndices != nullptr
+                      ? a_candidateRowIndices->size()
+                      : rows_.size());
   if (a_candidateRowIndices != nullptr) {
     for (const auto rowIndex : *a_candidateRowIndices) {
       if (rowIndex < 0 || rowIndex >= static_cast<int>(rows_.size())) {
@@ -902,8 +906,7 @@ VariantWorkbench::CollectOverrideArmorFormIDsFromEquippedRows(
   return formIDs;
 }
 
-std::optional<KitEntry::Layout>
-VariantWorkbench::CaptureKitLayout(
+std::optional<KitEntry::Layout> VariantWorkbench::CaptureKitLayout(
     const std::vector<int> *a_candidateRowIndices) const {
   KitEntry::Layout layout;
   const auto candidateRowIndices =
@@ -926,8 +929,9 @@ VariantWorkbench::CaptureKitLayout(
     KitEntry::LayoutRow layoutRow;
     layoutRow.targetKind = row.IsSlotRow() ? KitEntry::LayoutTargetKind::Slot
                                            : KitEntry::LayoutTargetKind::Item;
-    layoutRow.targetSlotMask =
-        row.IsSlotRow() ? row.equipped.slotMask : row.GetSelectionConflictSlotMask();
+    layoutRow.targetSlotMask = row.IsSlotRow()
+                                   ? row.equipped.slotMask
+                                   : row.GetSelectionConflictSlotMask();
     layoutRow.hideEquipped = row.hideEquipped;
 
     for (const auto &overrideItem : row.overrides) {
@@ -980,7 +984,8 @@ bool VariantWorkbench::ApplyKitLayout(
         }
 
         const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
-        if (row.IsSlotRow() && row.equipped.slotMask == layoutRow.targetSlotMask) {
+        if (row.IsSlotRow() &&
+            row.equipped.slotMask == layoutRow.targetSlotMask) {
           targetRowIndex = rowIndex;
           break;
         }
@@ -1009,7 +1014,8 @@ bool VariantWorkbench::ApplyKitLayout(
       if (const auto *overrideArmor =
               armor::LookupByIdentifier<RE::TESObjectARMO>(identifier);
           overrideArmor != nullptr) {
-        changed |= AddCatalogOverride(targetRowIndex, overrideArmor->GetFormID());
+        changed |=
+            AddCatalogOverride(targetRowIndex, overrideArmor->GetFormID());
       }
     }
 

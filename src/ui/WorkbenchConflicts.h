@@ -30,7 +30,6 @@ struct ConflictState {
   std::unordered_map<std::string, OverrideConflictInfo> overrideConflicts;
 };
 
-[[nodiscard]] ConflictState
-BuildConflictState(
+[[nodiscard]] ConflictState BuildConflictState(
     const std::vector<::sosr::workbench::VariantWorkbenchRow> &a_rows);
 } // namespace sosr::ui::workbench_conflicts

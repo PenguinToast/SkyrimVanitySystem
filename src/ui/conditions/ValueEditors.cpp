@@ -108,7 +108,8 @@ RE::SCRIPT_PARAM_TYPE
 ResolveEditorParamType(std::string_view a_functionName,
                        const std::uint16_t a_paramIndex,
                        const RE::SCRIPT_PARAM_TYPE a_type) {
-  if (a_paramIndex == 0 && CompareTextInsensitive(a_functionName, "GetIsID") == 0) {
+  if (a_paramIndex == 0 &&
+      CompareTextInsensitive(a_functionName, "GetIsID") == 0) {
     return RE::SCRIPT_PARAM_TYPE::kActorBase;
   }
 
@@ -149,8 +150,9 @@ bool DrawConditionParamEditor(const char *a_id, std::string &a_value,
         }
         return sosr::ui::components::DrawSearchableDropdown(
             a_id, "Select value", a_value,
-            std::span<const sosr::ui::components::EditableDropdownItem<
-                std::string>>(optionItems),
+            std::span<
+                const sosr::ui::components::EditableDropdownItem<std::string>>(
+                optionItems),
             a_width);
       }
     } else if (state == sosr::ui::conditions::ConditionParamOptionCache::State::

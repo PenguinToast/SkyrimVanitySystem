@@ -5,9 +5,11 @@
 
 namespace {
 constexpr std::string_view kFavoritePrefix = "\xEE\x83\xB5 ";
-constexpr char kIconPanelRightOpen[] = "\xee\x90\xb8";  // ICON_LC_PANEL_RIGHT_OPEN
-constexpr char kIconPanelRightClose[] = "\xee\x90\xb6"; // ICON_LC_PANEL_RIGHT_CLOSE
-}
+constexpr char kIconPanelRightOpen[] =
+    "\xee\x90\xb8"; // ICON_LC_PANEL_RIGHT_OPEN
+constexpr char kIconPanelRightClose[] =
+    "\xee\x90\xb6"; // ICON_LC_PANEL_RIGHT_CLOSE
+} // namespace
 
 namespace sosr {
 void Menu::ClearCatalogSelection() {
@@ -162,10 +164,10 @@ void Menu::PreviewOutfitEntry(const OutfitEntry &a_entry) {
 void Menu::DrawCatalogHostControls(const bool) {
   auto &browser = CatalogBrowserState();
   const auto &style = ImGui::GetStyle();
-  const auto optionsButtonWidth = ImGui::CalcTextSize("Options").x +
-                                  (style.FramePadding.x * 2.0f);
-  const auto browserButtonWidth = ImGui::CalcTextSize("Browser").x +
-                                  (style.FramePadding.x * 2.0f);
+  const auto optionsButtonWidth =
+      ImGui::CalcTextSize("Options").x + (style.FramePadding.x * 2.0f);
+  const auto browserButtonWidth =
+      ImGui::CalcTextSize("Browser").x + (style.FramePadding.x * 2.0f);
   const auto browserOptionsWidth =
       browserButtonWidth + optionsButtonWidth + style.ItemSpacing.x;
   const auto browserOptionsStartX =
@@ -178,16 +180,14 @@ void Menu::DrawCatalogHostControls(const bool) {
 
   if (ImGui::Selectable("Browser",
                         browser.activeTab != ui::catalog::BrowserTab::Options,
-                        0,
-                        ImVec2(browserButtonWidth, 0.0f)) &&
+                        0, ImVec2(browserButtonWidth, 0.0f)) &&
       browser.activeTab == ui::catalog::BrowserTab::Options) {
     browser.activeTab = ui::catalog::BrowserTab::Gear;
   }
   ImGui::SameLine();
   if (ImGui::Selectable("Options",
                         browser.activeTab == ui::catalog::BrowserTab::Options,
-                        0,
-                        ImVec2(optionsButtonWidth, 0.0f))) {
+                        0, ImVec2(optionsButtonWidth, 0.0f))) {
     browser.activeTab = ui::catalog::BrowserTab::Options;
   }
 }
@@ -268,11 +268,12 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
       }
     };
 
-    const bool inPopout = catalogPane_.hostMode == ui::catalog::HostMode::Popout;
+    const bool inPopout =
+        catalogPane_.hostMode == ui::catalog::HostMode::Popout;
     const char *hostToggleIcon =
         inPopout ? kIconPanelRightClose : kIconPanelRightOpen;
     if (ImGui::BeginTabBar("##catalog-tabs")) {
-        const bool gearTabOpen = ImGui::BeginTabItem("Gear");
+      const bool gearTabOpen = ImGui::BeginTabItem("Gear");
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:gear-tab", ui::catalog::IsDelayedHover(),
           {"Use this tab to override a specific equipped gear piece.",
@@ -288,94 +289,94 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         ImGui::EndTabItem();
       }
 
-        const bool outfitsTabOpen = ImGui::BeginTabItem("Outfits");
-        ui::catalog::DrawCatalogTabHelpTooltip(
-            "catalog:outfits-tab", ui::catalog::IsDelayedHover(),
-            {"Browse full outfits from plugins in the catalog.",
-             "Double-click to replace matching row overrides so the result "
-             "matches the preview. The context menu also offers the old append "
-             "behavior, or you can add the outfit as workbench rows instead."});
-        if (outfitsTabOpen) {
-          if (browser.activeTab != ui::catalog::BrowserTab::Outfits) {
-            ClearCatalogSelection();
-          }
-          browser.activeTab = ui::catalog::BrowserTab::Outfits;
-          ImGui::EndTabItem();
+      const bool outfitsTabOpen = ImGui::BeginTabItem("Outfits");
+      ui::catalog::DrawCatalogTabHelpTooltip(
+          "catalog:outfits-tab", ui::catalog::IsDelayedHover(),
+          {"Browse full outfits from plugins in the catalog.",
+           "Double-click to replace matching row overrides so the result "
+           "matches the preview. The context menu also offers the old append "
+           "behavior, or you can add the outfit as workbench rows instead."});
+      if (outfitsTabOpen) {
+        if (browser.activeTab != ui::catalog::BrowserTab::Outfits) {
+          ClearCatalogSelection();
         }
+        browser.activeTab = ui::catalog::BrowserTab::Outfits;
+        ImGui::EndTabItem();
+      }
 
-        const bool kitsTabOpen = ImGui::BeginTabItem("Kits");
-        ui::catalog::DrawCatalogTabHelpTooltip(
-            "catalog:kits-tab", ui::catalog::IsDelayedHover(),
-            {"Browse Mod Explorer kits loaded from "
-             "data/interface/modex/user/kits.",
-             "Kits behave like outfits: double-click replaces matching row "
-             "overrides so the result matches the preview. The context menu also "
-             "offers the old append behavior, can add rows to the workbench, "
-             "and can delete kits.",
-             "Kits that refer to non-existent items are not shown."});
-        if (kitsTabOpen) {
-          if (browser.activeTab != ui::catalog::BrowserTab::Kits) {
-            ClearCatalogSelection();
-          }
-          browser.activeTab = ui::catalog::BrowserTab::Kits;
-          ImGui::EndTabItem();
+      const bool kitsTabOpen = ImGui::BeginTabItem("Kits");
+      ui::catalog::DrawCatalogTabHelpTooltip(
+          "catalog:kits-tab", ui::catalog::IsDelayedHover(),
+          {"Browse Mod Explorer kits loaded from "
+           "data/interface/modex/user/kits.",
+           "Kits behave like outfits: double-click replaces matching row "
+           "overrides so the result matches the preview. The context menu also "
+           "offers the old append behavior, can add rows to the workbench, "
+           "and can delete kits.",
+           "Kits that refer to non-existent items are not shown."});
+      if (kitsTabOpen) {
+        if (browser.activeTab != ui::catalog::BrowserTab::Kits) {
+          ClearCatalogSelection();
         }
+        browser.activeTab = ui::catalog::BrowserTab::Kits;
+        ImGui::EndTabItem();
+      }
 
-        const bool slotsTabOpen = ImGui::BeginTabItem("Equipment Slots");
-        ui::catalog::DrawCatalogTabHelpTooltip(
-            "catalog:slots-tab", ui::catalog::IsDelayedHover(),
-            {"Use this tab to override a specific equipment slot no matter "
-             "which armor you have equipped there, as long as something is "
-             "equipped in that slot.",
-             "Browse slot-based overrides that target armor addon slots.",
-             "Armor addons are sub-components of an armor, and Dynamic Armor "
-             "Variants Extended resolves slot overrides against the union of "
-             "those addon slots rather than only the slots declared on the "
-             "armor form itself.",
-             "Double-click to add a slot row to the workbench, or use the "
-             "context menu to add it manually."});
-        if (slotsTabOpen) {
-          if (browser.activeTab != ui::catalog::BrowserTab::Slots) {
-            ClearCatalogSelection();
-          }
-          browser.activeTab = ui::catalog::BrowserTab::Slots;
-          ImGui::EndTabItem();
+      const bool slotsTabOpen = ImGui::BeginTabItem("Equipment Slots");
+      ui::catalog::DrawCatalogTabHelpTooltip(
+          "catalog:slots-tab", ui::catalog::IsDelayedHover(),
+          {"Use this tab to override a specific equipment slot no matter "
+           "which armor you have equipped there, as long as something is "
+           "equipped in that slot.",
+           "Browse slot-based overrides that target armor addon slots.",
+           "Armor addons are sub-components of an armor, and Dynamic Armor "
+           "Variants Extended resolves slot overrides against the union of "
+           "those addon slots rather than only the slots declared on the "
+           "armor form itself.",
+           "Double-click to add a slot row to the workbench, or use the "
+           "context menu to add it manually."});
+      if (slotsTabOpen) {
+        if (browser.activeTab != ui::catalog::BrowserTab::Slots) {
+          ClearCatalogSelection();
         }
+        browser.activeTab = ui::catalog::BrowserTab::Slots;
+        ImGui::EndTabItem();
+      }
 
-        const bool conditionsTabOpen = ImGui::BeginTabItem("Conditions");
-        ui::catalog::DrawCatalogTabHelpTooltip(
-            "catalog:conditions-tab", ui::catalog::IsDelayedHover(),
-            {"Use this tab to define reusable condition sets for Dynamic Armor "
-             "Variants Extended.",
-             "Conditions are built from condition functions joined by AND and "
-             "OR operators, plus a shared display color so you can recognize "
-             "them later.",
-             "Double-click a condition to edit it, or use Add New to create a "
-             "fresh one."});
-        if (conditionsTabOpen) {
-          if (browser.activeTab != ui::catalog::BrowserTab::Conditions) {
-            ClearCatalogSelection();
-          }
-          browser.activeTab = ui::catalog::BrowserTab::Conditions;
-          ImGui::EndTabItem();
+      const bool conditionsTabOpen = ImGui::BeginTabItem("Conditions");
+      ui::catalog::DrawCatalogTabHelpTooltip(
+          "catalog:conditions-tab", ui::catalog::IsDelayedHover(),
+          {"Use this tab to define reusable condition sets for Dynamic Armor "
+           "Variants Extended.",
+           "Conditions are built from condition functions joined by AND and "
+           "OR operators, plus a shared display color so you can recognize "
+           "them later.",
+           "Double-click a condition to edit it, or use Add New to create a "
+           "fresh one."});
+      if (conditionsTabOpen) {
+        if (browser.activeTab != ui::catalog::BrowserTab::Conditions) {
+          ClearCatalogSelection();
         }
+        browser.activeTab = ui::catalog::BrowserTab::Conditions;
+        ImGui::EndTabItem();
+      }
 
-        const bool hostToggleHovered =
-            ImGui::TabItemButton(hostToggleIcon, ImGuiTabItemFlags_Trailing);
-        ui::catalog::DrawCatalogTabHelpTooltip(
-            "catalog:host-toggle", ImGui::IsItemHovered(),
-            {inPopout ? "Pop the catalog back into the main window."
-                      : "Pop the catalog out into its own window."});
-        if (hostToggleHovered) {
-          if (inPopout) {
-            catalogPane_.hostMode = ui::catalog::HostMode::Docked;
-            catalogPane_.popoutOpen = false;
-          } else {
-            catalogPane_.hostMode = ui::catalog::HostMode::Popout;
-            catalogPane_.popoutOpen = true;
-          }
-          SaveUserSettings();
+      const bool hostToggleHovered =
+          ImGui::TabItemButton(hostToggleIcon, ImGuiTabItemFlags_Trailing);
+      ui::catalog::DrawCatalogTabHelpTooltip(
+          "catalog:host-toggle", ImGui::IsItemHovered(),
+          {inPopout ? "Pop the catalog back into the main window."
+                    : "Pop the catalog out into its own window."});
+      if (hostToggleHovered) {
+        if (inPopout) {
+          catalogPane_.hostMode = ui::catalog::HostMode::Docked;
+          catalogPane_.popoutOpen = false;
+        } else {
+          catalogPane_.hostMode = ui::catalog::HostMode::Popout;
+          catalogPane_.popoutOpen = true;
         }
+        SaveUserSettings();
+      }
 
       ImGui::EndTabBar();
     }
@@ -425,8 +426,9 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         }
       }
     }
-    if (a_drawBodyChild && ImGui::BeginChild("##catalog-pane", ImVec2(0.0f, 0.0f),
-                                             ImGuiChildFlags_Borders)) {
+    if (a_drawBodyChild &&
+        ImGui::BeginChild("##catalog-pane", ImVec2(0.0f, 0.0f),
+                          ImGuiChildFlags_Borders)) {
       DrawCatalogPaneBody();
       ImGui::EndChild();
     } else if (a_drawBodyChild) {
@@ -516,27 +518,27 @@ void Menu::DrawWindow() {
                             ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchProp,
                             ImVec2(0.0f, ImGui::GetContentRegionAvail().y))) {
-      ImGui::TableSetupColumn("Catalog", ImGuiTableColumnFlags_WidthStretch,
-                              1.20f);
-      ImGui::TableSetupColumn("Variants", ImGuiTableColumnFlags_WidthStretch,
-                              0.95f);
-      ImGui::TableNextRow();
+        ImGui::TableSetupColumn("Catalog", ImGuiTableColumnFlags_WidthStretch,
+                                1.20f);
+        ImGui::TableSetupColumn("Variants", ImGuiTableColumnFlags_WidthStretch,
+                                0.95f);
+        ImGui::TableNextRow();
 
-      ImGui::TableSetColumnIndex(0);
-      if (ImGui::BeginChild("##catalog-pane", ImVec2(0.0f, 0.0f),
-                            ImGuiChildFlags_Borders)) {
-        DrawCatalogPaneBody();
-      }
-      ImGui::EndChild();
+        ImGui::TableSetColumnIndex(0);
+        if (ImGui::BeginChild("##catalog-pane", ImVec2(0.0f, 0.0f),
+                              ImGuiChildFlags_Borders)) {
+          DrawCatalogPaneBody();
+        }
+        ImGui::EndChild();
 
-      ImGui::TableSetColumnIndex(1);
-      if (ImGui::BeginChild("##variant-pane", ImVec2(0.0f, 0.0f),
-                            ImGuiChildFlags_Borders)) {
-        DrawVariantWorkbenchPane();
-      }
-      ImGui::EndChild();
+        ImGui::TableSetColumnIndex(1);
+        if (ImGui::BeginChild("##variant-pane", ImVec2(0.0f, 0.0f),
+                              ImGuiChildFlags_Borders)) {
+          DrawVariantWorkbenchPane();
+        }
+        ImGui::EndChild();
 
-      ImGui::EndTable();
+        ImGui::EndTable();
       }
     }
   } else {

@@ -44,8 +44,8 @@ void CollectMissingDependencyChainsRecursive(
       continue;
     }
 
-    const auto *referenced =
-        sosr::conditions::FindDefinitionById(a_conditions, clause.customConditionId);
+    const auto *referenced = sosr::conditions::FindDefinitionById(
+        a_conditions, clause.customConditionId);
     if (!referenced) {
       auto chain = a_path;
       chain.push_back(clause.customConditionId);
@@ -55,9 +55,8 @@ void CollectMissingDependencyChainsRecursive(
       continue;
     }
 
-    CollectMissingDependencyChainsRecursive(*referenced, a_conditions,
-                                            a_missingChains, a_visitStack,
-                                            a_path);
+    CollectMissingDependencyChainsRecursive(
+        *referenced, a_conditions, a_missingChains, a_visitStack, a_path);
   }
 
   a_path.pop_back();
@@ -162,7 +161,7 @@ CollectMissingDependencyChains(const Definition &a_definition,
 }
 
 std::string FormatMissingDependencyChain(const MissingDependencyChain &a_chain,
-                                        const std::size_t a_skipFrontCount) {
+                                         const std::size_t a_skipFrontCount) {
   std::string formatted;
   const auto start = (std::min)(a_skipFrontCount, a_chain.size());
   bool first = true;
