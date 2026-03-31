@@ -3,7 +3,7 @@ set_xmakever("3.0.0")
 
 includes("lib/commonlibsse-ng")
 
-local build_version = os.getenv("SVS_BUILD_VERSION") or "1.1.1"
+local build_version = os.getenv("SVS_BUILD_VERSION") or "1.4.0"
 local build_version_string = os.getenv("SVS_BUILD_VERSION_STRING") or build_version
 local major, minor, patch = build_version:match("^(%d+)%.(%d+)%.(%d+)$")
 if not major then
