@@ -91,7 +91,7 @@ private:
       "Data/Interface/SkyrimVanitySystem/fonts/lucide.ttf";
   static constexpr const char *kBundledFontDirectory =
       "Data/Interface/SkyrimVanitySystem/fonts";
-  static constexpr int kDefaultFontSizePixels = 16;
+  static constexpr int kDefaultFontSizePixels = 21;
   static constexpr int kMinFontSizePixels = 8;
   static constexpr int kMaxFontSizePixels = 48;
 
@@ -316,8 +316,8 @@ private:
   ui::conditions::PaneState conditionsPane_;
   conditions::Store conditionStore_;
   WorkbenchFilterState workbenchFilter_;
-  int fontSizePixels_{13};
-  int pendingFontSizePixels_{13};
+  int fontSizePixels_{21};
+  int pendingFontSizePixels_{21};
   std::string fontPath_{kDefaultFontPath};
   bool pendingFontAtlasRebuild_{false};
   bool pauseGameWhenOpen_{false};
