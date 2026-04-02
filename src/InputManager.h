@@ -23,8 +23,7 @@ private:
   std::mutex inputLock_;
   std::vector<RE::InputEvent *> inputQueue_;
   std::array<bool, ImGuiKey_COUNT> imguiKeyDown_{};
-  bool shiftDown_{false};
-  bool ctrlDown_{false};
-  bool altDown_{false};
+  bool toggleKeyDown_{false};
+  std::uint8_t modifierSidesDown_{0};
 };
 } // namespace sosr
