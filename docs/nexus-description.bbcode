@@ -1,0 +1,128 @@
+[center]
+[size=6][b][color=#42ACC8]Skyrim Vanity System[/color][/b][/size]
+[size=3][color=#F5F5F5]Native in-game transmog and vanity outfit management for Skyrim[/color][/size]
+
+[color=#F5F5F5]Keep your real equipped gear for gameplay while changing the visible appearance through a fast native browser, preview tools, and a condition-aware variant workbench.[/color]
+
+[b][color=#D19349]Requires [url=https://www.nexusmods.com/skyrimspecialedition/mods/175181]Dynamic Armor Variants Extended[/url][/color][/b] to function.
+
+[b][color=#42ACC8]Default hotkey:[/color][/b] [b][color=#F5F5F5]F6[/color][/b]
+[i][color=#9B9B9B]Configurable in the UI or in settings.json.[/color][/i]
+[/center]
+
+[hr]
+
+[size=4][b][color=#42ACC8]What It Is[/color][/b][/size]
+
+Skyrim Vanity System is a player-facing transmog system for Skyrim.
+
+It separates [i]gameplay equipment[/i] from [i]visible appearance[/i], so you can keep the armor you actually want for stats and enchantments while presenting a completely different look in-game.
+
+It is built around a native SKSE + Dear ImGui interface designed for fast iteration: browse gear, outfits, slots, and kits in one place, preview before committing, apply item or slot overrides, build conditional rules in-game, and target yourself or NPCs directly.
+
+[size=4][b][color=#42ACC8]Highlights[/color][/b][/size]
+[list]
+[*][b]Live preview workflow[/b] for gear, outfits, and kits before applying changes[/*]
+[*][b]Item-based and slot-based overrides[/b] for both precise and broad appearance control[/*]
+[*][b]Searchable browser[/b] for individual armor pieces, outfits, and [url=https://www.nexusmods.com/skyrimspecialedition/mods/137877]Modex[/url] kits[/*]
+[*][b]Condition editor[/b] for building context-sensitive appearance rules in-game[/*]
+[*][b]NPC targeting[/b] by opening the menu while focused on another actor[/*]
+[*][b]Favorites, persistence, and Modex-style presentation[/b] built into the native UI[/*]
+[/list]
+
+[hr]
+
+[size=4][b][color=#42ACC8]Feature Demos[/color][/b][/size]
+[i][color=#9B9B9B]Each embed below is an animated WebP preview. Click any image to open the full-quality WebM demo.[/color][/i]
+
+[center][b][color=#1D6A7E]Preview and Override Workflow[/color][/b][/center]
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/preview_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/preview_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Preview gear before applying it.[/color][/i][/center]
+
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/override_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/override_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Attach a visible replacement to a specific equipped item.[/color][/i][/center]
+
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/slot_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/slot_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Apply appearance control by slot instead of by item.[/color][/i][/center]
+
+[hr]
+
+[center][b][color=#1D6A7E]Catalogs and Browsing[/color][/b][/center]
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/outfit_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/outfit_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Browse and apply full outfits quickly.[/color][/i][/center]
+
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/kit_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/kit_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Use Modex kits directly inside the SVS workflow.[/color][/i][/center]
+
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/hide_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/hide_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Hide visible components without changing the real equipped item.[/color][/i][/center]
+
+[hr]
+
+[center][b][color=#1D6A7E]Conditions and Reactive Appearance[/color][/b][/center]
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/condition_editor.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/condition_editor.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Build conditional appearance rules from inside the UI.[/color][/i][/center]
+
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/override_with_condition.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/override_with_condition.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Attach overrides that only apply when their condition is true.[/color][/i][/center]
+
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/combat_condition.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/combat_condition.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Drive appearance changes from combat state and other context.[/color][/i][/center]
+
+[hr]
+
+[center][b][color=#1D6A7E]NPC Targeting[/color][/b][/center]
+[center]
+[url=https://penguintoast.github.io/SkyrimVanitySystem/media/npc_feature.webm][img]https://penguintoast.github.io/SkyrimVanitySystem/media/npc_feature.webp[/img][/url]
+[/center]
+[center][i][color=#9B9B9B]Open SVS on the actor you are looking at instead of only on the player.[/color][/i][/center]
+
+[hr]
+
+[size=4][b][color=#42ACC8]Requirements[/color][/b][/size]
+[list]
+[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/32444]Address Library for SKSE Plugins[/url][/*]
+[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/175181]Dynamic Armor Variants Extended[/url][/*]
+[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/51073]powerofthree's Tweaks[/url][/*]
+[/list]
+
+[size=4][b][color=#42ACC8]Compatibility[/color][/b][/size]
+[list]
+[*]Compatible with everything [url=https://www.nexusmods.com/skyrimspecialedition/mods/175181]Dynamic Armor Variants Extended[/url] supports[/*]
+[*]Safe to add or remove mid-save[/*]
+[*]Works best in load orders with strong armor variety, since SVS builds on the appearance options already available in your setup[/*]
+[/list]
+
+[hr]
+
+[size=4][b][color=#42ACC8]Preview Image[/color][/b][/size]
+[center]
+[url=https://ibb.co/dwtm00vY][img]https://i.ibb.co/RkNjppKw/cropped.webp[/img][/url]
+[/center]
+
+[hr]
+
+[size=4][b][color=#42ACC8]Notes[/color][/b][/size]
+[list]
+[*]Skyrim Vanity System is the continuation of [i]Skyrim Outfit System Redone[/i] under a new name[/*]
+[*]The focus is fast, native, player-facing appearance control inside the game, not an external patching workflow[/*]
+[*]Source and development notes are available on [url=https://github.com/PenguinToast/SkyrimVanitySystem]GitHub[/url][/*]
+[/list]
