@@ -26,6 +26,8 @@ add_requires("nlohmann_json v3.12.0")
 add_requires("rapidcsv v8.92")
 
 target("SkyrimVanitySystem")
+    set_version(build_version)
+
     add_deps("commonlibsse-ng")
     add_packages("nlohmann_json")
 

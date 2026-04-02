@@ -1,19 +1,19 @@
 #pragma once
 
 #ifndef SVS_VERSION_MAJOR
-#define SVS_VERSION_MAJOR 1
+#error "SVS_VERSION_MAJOR must be provided by the build system"
 #endif
 
 #ifndef SVS_VERSION_MINOR
-#define SVS_VERSION_MINOR 1
+#error "SVS_VERSION_MINOR must be provided by the build system"
 #endif
 
 #ifndef SVS_VERSION_PATCH
-#define SVS_VERSION_PATCH 1
+#error "SVS_VERSION_PATCH must be provided by the build system"
 #endif
 
 #ifndef SVS_VERSION_STRING
-#define SVS_VERSION_STRING "1.1.1-dev"
+#error "SVS_VERSION_STRING must be provided by the build system"
 #endif
 
 namespace Plugin {
