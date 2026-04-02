@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace sosr::workbench {
@@ -45,6 +46,13 @@ struct VariantWorkbenchRow {
 
 class VariantWorkbench {
 public:
+  struct InitialEquippedState {
+    std::unordered_set<RE::FormID> wornArmorForms;
+    std::uint64_t occupiedSlotMask{0};
+  };
+
+  [[nodiscard]] static InitialEquippedState
+  BuildInitialEquippedState(RE::Actor *a_actor);
   void SyncRowsFromActor(RE::Actor *a_actor,
                          std::optional<std::string> a_newRowConditionId);
   void SyncRowsFromPlayer(std::optional<std::string> a_newRowConditionId);
@@ -62,9 +70,12 @@ public:
       const std::vector<RE::FormID> &a_formIDs,
       const std::vector<int> *a_candidateRowIndices = nullptr);
   bool AddCatalogSelectionAsRows(const std::vector<RE::FormID> &a_formIDs,
-                                 std::optional<std::string> a_conditionId);
+                                 std::optional<std::string> a_conditionId,
+                                 const InitialEquippedState
+                                     *a_initialEquippedState = nullptr);
   bool AddSlotRow(std::uint64_t a_slotMask,
-                  std::optional<std::string> a_conditionId);
+                  std::optional<std::string> a_conditionId,
+                  const InitialEquippedState *a_initialEquippedState = nullptr);
   bool
   ApplyCatalogPreview(std::string_view a_selectionKey,
                       const std::vector<RE::FormID> &a_formIDs,
@@ -92,15 +103,21 @@ public:
   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   bool InsertCatalogRow(RE::FormID a_formID, int a_targetRowIndex,
                         bool a_insertAfter,
-                        std::optional<std::string> a_conditionId);
+                        std::optional<std::string> a_conditionId,
+                        const InitialEquippedState
+                            *a_initialEquippedState = nullptr);
   bool InsertSlotRow(std::uint64_t a_slotMask, int a_targetRowIndex,
                      bool a_insertAfter,
-                     std::optional<std::string> a_conditionId);
+                     std::optional<std::string> a_conditionId,
+                     const InitialEquippedState
+                         *a_initialEquippedState = nullptr);
   bool ApplyRowReorder(int a_sourceRowIndex, int a_targetRowIndex,
                        bool a_insertAfter);
   bool SetConditionId(int a_rowIndex, std::optional<std::string> a_conditionId);
   bool ApplyKitLayout(const KitEntry::Layout &a_layout, bool a_replaceExisting,
                       std::optional<std::string> a_newSlotRowConditionId,
+                      const InitialEquippedState
+                          *a_initialEquippedState = nullptr,
                       const std::vector<int> *a_candidateRowIndices = nullptr);
   bool
   PreviewKitLayout(std::string_view a_selectionKey,
@@ -150,10 +167,12 @@ private:
                          const std::vector<int> *a_candidateRowIndices) const;
   [[nodiscard]] std::vector<VariantWorkbenchRow>
   BuildCatalogRows(const std::vector<RE::FormID> &a_formIDs,
-                   std::optional<std::string> a_conditionId) const;
+                   std::optional<std::string> a_conditionId,
+                   const InitialEquippedState *a_initialEquippedState) const;
   [[nodiscard]] std::optional<VariantWorkbenchRow>
   BuildSlotRow(std::uint64_t a_slotMask,
-               std::optional<std::string> a_conditionId) const;
+               std::optional<std::string> a_conditionId,
+               const InitialEquippedState *a_initialEquippedState) const;
   [[nodiscard]] int
   FindBestCatalogTargetRowIndex(const EquipmentWidgetItem &a_item,
                                 bool a_requireAcceptable) const;

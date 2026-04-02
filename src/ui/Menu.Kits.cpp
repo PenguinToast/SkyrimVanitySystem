@@ -92,9 +92,10 @@ bool Menu::DrawKitTab() {
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
+            const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
                 kit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId(),
-                ResolveWorkbenchPreviewActor());
+                &initialEquippedState);
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
@@ -176,9 +177,11 @@ bool Menu::DrawKitTab() {
 void Menu::AddKitEntryToWorkbench(const KitEntry &a_entry,
                                   const bool a_replaceExisting) {
   const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
+  const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
   if (const auto *layout = a_entry.GetLayout(); layout != nullptr) {
     workbench_.ApplyKitLayout(*layout, a_replaceExisting,
                               ResolveNewWorkbenchRowConditionId(),
+                              &initialEquippedState,
                               &visibleRowIndices);
     return;
   }

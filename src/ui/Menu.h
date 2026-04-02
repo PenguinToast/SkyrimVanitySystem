@@ -231,6 +231,8 @@ private:
   ResolveFirstConditionForActorFilter(RE::FormID a_actorFormID);
   [[nodiscard]] std::optional<std::string> ResolveNewWorkbenchRowConditionId();
   [[nodiscard]] RE::Actor *ResolveWorkbenchPreviewActor();
+  [[nodiscard]] workbench::VariantWorkbench::InitialEquippedState
+  BuildWorkbenchInitialEquippedState();
   void EnsureDefaultConditions();
   [[nodiscard]] int AllocateConditionEditorWindowSlot() const;
   void OpenNewConditionDialog();

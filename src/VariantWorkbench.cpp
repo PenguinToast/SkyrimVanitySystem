@@ -13,6 +13,40 @@ namespace sosr::workbench {
 namespace {
 using BipedSlot = RE::BGSBipedObjectForm::BipedObjectSlot;
 
+constexpr std::array kTrackedWornSlots{
+    BipedSlot::kHead,
+    BipedSlot::kHair,
+    BipedSlot::kBody,
+    BipedSlot::kHands,
+    BipedSlot::kForearms,
+    BipedSlot::kAmulet,
+    BipedSlot::kRing,
+    BipedSlot::kFeet,
+    BipedSlot::kCalves,
+    BipedSlot::kShield,
+    BipedSlot::kTail,
+    BipedSlot::kLongHair,
+    BipedSlot::kCirclet,
+    BipedSlot::kEars,
+    BipedSlot::kModMouth,
+    BipedSlot::kModNeck,
+    BipedSlot::kModChestPrimary,
+    BipedSlot::kModBack,
+    BipedSlot::kModMisc1,
+    BipedSlot::kModPelvisPrimary,
+    BipedSlot::kDecapitateHead,
+    BipedSlot::kDecapitate,
+    BipedSlot::kModPelvisSecondary,
+    BipedSlot::kModLegRight,
+    BipedSlot::kModLegLeft,
+    BipedSlot::kModFaceJewelry,
+    BipedSlot::kModChestSecondary,
+    BipedSlot::kModShoulder,
+    BipedSlot::kModArmLeft,
+    BipedSlot::kModArmRight,
+    BipedSlot::kModMisc2,
+    BipedSlot::kFX01};
+
 constexpr std::uint64_t SlotBit(const BipedSlot a_slot) {
   return static_cast<std::uint64_t>(std::to_underlying(a_slot));
 }
@@ -128,7 +162,43 @@ int ScoreFallbackTargetRow(const std::uint64_t a_itemMask,
 bool IsValidRowIndex(const int a_rowIndex, const std::size_t a_rowCount) {
   return a_rowIndex >= 0 && a_rowIndex < static_cast<int>(a_rowCount);
 }
+
+template <class F> void VisitDistinctWornArmorItems(RE::Actor *a_actor, F &&a_visit) {
+  if (a_actor == nullptr) {
+    return;
+  }
+
+  std::unordered_set<RE::FormID> seenArmorForms;
+  for (const auto slot : kTrackedWornSlots) {
+    const auto *armor = a_actor->GetWornArmor(slot);
+    if (armor == nullptr ||
+        !seenArmorForms.insert(armor->GetFormID()).second) {
+      continue;
+    }
+
+    EquipmentWidgetItem equipped{};
+    if (!workbench::BuildCatalogItem(armor->GetFormID(), equipped)) {
+      continue;
+    }
+
+    a_visit(armor, equipped);
+  }
+}
 } // namespace
+
+VariantWorkbench::InitialEquippedState
+VariantWorkbench::BuildInitialEquippedState(RE::Actor *a_actor) {
+  InitialEquippedState initialState;
+  VisitDistinctWornArmorItems(
+      a_actor, [&](const RE::TESObjectARMO *a_armor,
+                   const EquipmentWidgetItem &a_equipped) {
+        initialState.wornArmorForms.insert(a_armor->GetFormID());
+        const auto addonSlotMask = armor::GetArmorAddonSlotMask(a_armor);
+        initialState.occupiedSlotMask |=
+            addonSlotMask != 0 ? addonSlotMask : a_equipped.slotMask;
+      });
+  return initialState;
+}
 
 std::uint64_t VariantWorkbenchRow::GetSelectionConflictSlotMask() const {
   if (equipped.IsSlot()) {
@@ -161,7 +231,6 @@ bool VariantWorkbench::ResolveCatalogArmors(
 
   return !a_armors.empty();
 }
-
 bool VariantWorkbench::CanAcceptOverrideWithPendingAssignments(
     int a_targetRowIndex, const EquipmentWidgetItem &a_item,
     const std::vector<PlannedCatalogAssignment> &a_pendingAssignments) const {
@@ -343,85 +412,42 @@ void VariantWorkbench::SyncRowsFromActor(
   }
 
   std::uint64_t occupiedSlotMask = 0;
-  std::unordered_set<RE::FormID> seenArmorForms;
   std::vector<VariantWorkbenchRow> newlyEquippedRows;
   std::vector<std::string> newlyEquippedRowKeys;
 
-  for (const auto slot :
-       {RE::BGSBipedObjectForm::BipedObjectSlot::kHead,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kHair,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kBody,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kHands,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kForearms,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kAmulet,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kRing,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kFeet,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kCalves,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kShield,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kTail,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kLongHair,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kCirclet,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kEars,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModMouth,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModNeck,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModChestPrimary,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModBack,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModMisc1,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModPelvisPrimary,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kDecapitateHead,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kDecapitate,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModPelvisSecondary,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModLegRight,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModLegLeft,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModFaceJewelry,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModChestSecondary,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModShoulder,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModArmLeft,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModArmRight,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kModMisc2,
-        RE::BGSBipedObjectForm::BipedObjectSlot::kFX01}) {
-    auto *armor = a_actor->GetWornArmor(slot);
-    if (!armor) {
-      continue;
-    }
+  VisitDistinctWornArmorItems(
+      a_actor, [&](const RE::TESObjectARMO *a_armor,
+                   const EquipmentWidgetItem &a_equipped) {
+        const auto formID = a_armor->GetFormID();
+        const auto addonSlotMask = armor::GetArmorAddonSlotMask(a_armor);
+        occupiedSlotMask |=
+            addonSlotMask != 0 ? addonSlotMask : a_equipped.slotMask;
 
-    const auto formID = armor->GetFormID();
-    if (!seenArmorForms.insert(formID).second) {
-      continue;
-    }
+        const auto sourceKey = BuildArmorSourceKey(formID);
+        bool hasSyncConditionRow = false;
+        for (auto &row : rows_) {
+          if (row.sourceKey != sourceKey) {
+            continue;
+          }
 
-    EquipmentWidgetItem equipped{};
-    if (!workbench::BuildCatalogItem(formID, equipped)) {
-      continue;
-    }
-    const auto addonSlotMask = armor::GetArmorAddonSlotMask(armor);
-    occupiedSlotMask |= addonSlotMask != 0 ? addonSlotMask : equipped.slotMask;
+          row.equipped = a_equipped;
+          row.isEquipped = true;
+          UpdateRowIdentity(row);
+          hasSyncConditionRow |= row.conditionId == syncConditionId;
+        }
+        if (hasSyncConditionRow) {
+          return;
+        }
 
-    const auto sourceKey = BuildArmorSourceKey(formID);
-    bool hasSyncConditionRow = false;
-    for (auto &row : rows_) {
-      if (row.sourceKey != sourceKey) {
-        continue;
-      }
-
-      row.equipped = equipped;
-      row.isEquipped = true;
-      UpdateRowIdentity(row);
-      hasSyncConditionRow |= row.conditionId == syncConditionId;
-    }
-    if (hasSyncConditionRow) {
-      continue;
-    }
-
-    VariantWorkbenchRow row{};
-    row.sourceKey = sourceKey;
-    row.conditionId = syncConditionId;
-    row.equipped = std::move(equipped);
-    row.isEquipped = true;
-    UpdateRowIdentity(row);
-    newlyEquippedRowKeys.push_back(row.key);
-    newlyEquippedRows.push_back(std::move(row));
-  }
+        VariantWorkbenchRow row{};
+        row.sourceKey = sourceKey;
+        row.conditionId = syncConditionId;
+        row.equipped = a_equipped;
+        row.isEquipped = true;
+        UpdateRowIdentity(row);
+        newlyEquippedRowKeys.push_back(row.key);
+        newlyEquippedRows.push_back(std::move(row));
+      });
 
   if (!newlyEquippedRows.empty()) {
     rows_.insert(rows_.begin(),
@@ -543,8 +569,10 @@ bool VariantWorkbench::ReplaceCatalogSelectionInWorkbench(
 
 bool VariantWorkbench::AddCatalogSelectionAsRows(
     const std::vector<RE::FormID> &a_formIDs,
-    std::optional<std::string> a_conditionId) {
-  auto newRows = BuildCatalogRows(a_formIDs, std::move(a_conditionId));
+    std::optional<std::string> a_conditionId,
+    const InitialEquippedState *a_initialEquippedState) {
+  auto newRows = BuildCatalogRows(a_formIDs, std::move(a_conditionId),
+                                  a_initialEquippedState);
   bool addedAny = false;
   for (auto &row : newRows) {
     rowOrder_.push_back(row.key);
@@ -560,8 +588,11 @@ bool VariantWorkbench::AddCatalogSelectionAsRows(
 }
 
 bool VariantWorkbench::AddSlotRow(const std::uint64_t a_slotMask,
-                                  std::optional<std::string> a_conditionId) {
-  auto row = BuildSlotRow(a_slotMask, std::move(a_conditionId));
+                                  std::optional<std::string> a_conditionId,
+                                  const InitialEquippedState
+                                      *a_initialEquippedState) {
+  auto row = BuildSlotRow(a_slotMask, std::move(a_conditionId),
+                          a_initialEquippedState);
   if (!row) {
     return false;
   }
@@ -574,7 +605,8 @@ bool VariantWorkbench::AddSlotRow(const std::uint64_t a_slotMask,
 
 std::vector<VariantWorkbenchRow> VariantWorkbench::BuildCatalogRows(
     const std::vector<RE::FormID> &a_formIDs,
-    std::optional<std::string> a_conditionId) const {
+    std::optional<std::string> a_conditionId,
+    const InitialEquippedState *a_initialEquippedState) const {
   std::vector<VariantWorkbenchRow> newRows;
   const auto resolvedConditionId = std::move(a_conditionId);
 
@@ -608,6 +640,9 @@ std::vector<VariantWorkbenchRow> VariantWorkbench::BuildCatalogRows(
     row.sourceKey = sourceKey;
     row.conditionId = resolvedConditionId;
     row.equipped = std::move(equipped);
+    row.isEquipped = a_initialEquippedState != nullptr &&
+                     a_initialEquippedState->wornArmorForms.contains(
+                         armor->GetFormID());
     UpdateRowIdentity(row);
     newRows.push_back(std::move(row));
   }
@@ -617,7 +652,9 @@ std::vector<VariantWorkbenchRow> VariantWorkbench::BuildCatalogRows(
 
 std::optional<VariantWorkbenchRow>
 VariantWorkbench::BuildSlotRow(const std::uint64_t a_slotMask,
-                               std::optional<std::string> a_conditionId) const {
+                               std::optional<std::string> a_conditionId,
+                               const InitialEquippedState
+                                   *a_initialEquippedState) const {
   const auto sourceKey = BuildSlotKey(a_slotMask);
   if (sourceKey.empty()) {
     return std::nullopt;
@@ -639,6 +676,8 @@ VariantWorkbench::BuildSlotRow(const std::uint64_t a_slotMask,
   row.sourceKey = sourceKey;
   row.conditionId = resolvedConditionId;
   row.equipped = std::move(slotItem);
+  row.isEquipped = a_initialEquippedState != nullptr &&
+                   (a_slotMask & a_initialEquippedState->occupiedSlotMask) != 0;
   UpdateRowIdentity(row);
   return row;
 }
@@ -966,6 +1005,7 @@ std::optional<KitEntry::Layout> VariantWorkbench::CaptureKitLayout(
 bool VariantWorkbench::ApplyKitLayout(
     const KitEntry::Layout &a_layout, const bool a_replaceExisting,
     std::optional<std::string> a_newSlotRowConditionId,
+    const InitialEquippedState *a_initialEquippedState,
     const std::vector<int> *a_candidateRowIndices) {
   auto candidateRowIndices =
       BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
@@ -999,7 +1039,8 @@ bool VariantWorkbench::ApplyKitLayout(
     if (targetRowIndex < 0 &&
         layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot &&
         a_newSlotRowConditionId.has_value()) {
-      if (AddSlotRow(layoutRow.targetSlotMask, a_newSlotRowConditionId)) {
+      if (AddSlotRow(layoutRow.targetSlotMask, a_newSlotRowConditionId,
+                     a_initialEquippedState)) {
         targetRowIndex = static_cast<int>(rows_.size()) - 1;
         candidateRowIndices.push_back(targetRowIndex);
         changed = true;
@@ -1028,14 +1069,16 @@ bool VariantWorkbench::ApplyKitLayout(
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 bool VariantWorkbench::InsertCatalogRow(
     RE::FormID a_formID, int a_targetRowIndex, bool a_insertAfter,
-    std::optional<std::string> a_conditionId) {
+    std::optional<std::string> a_conditionId,
+    const InitialEquippedState *a_initialEquippedState) {
   if (a_targetRowIndex < 0 ||
       a_targetRowIndex >= static_cast<int>(rows_.size())) {
     return false;
   }
 
   auto newRows = BuildCatalogRows(std::vector<RE::FormID>{a_formID},
-                                  std::move(a_conditionId));
+                                  std::move(a_conditionId),
+                                  a_initialEquippedState);
   if (newRows.empty()) {
     return false;
   }
@@ -1051,13 +1094,16 @@ bool VariantWorkbench::InsertCatalogRow(
 
 bool VariantWorkbench::InsertSlotRow(const std::uint64_t a_slotMask,
                                      int a_targetRowIndex, bool a_insertAfter,
-                                     std::optional<std::string> a_conditionId) {
+                                     std::optional<std::string> a_conditionId,
+                                     const InitialEquippedState
+                                         *a_initialEquippedState) {
   if (a_targetRowIndex < 0 ||
       a_targetRowIndex >= static_cast<int>(rows_.size())) {
     return false;
   }
 
-  auto row = BuildSlotRow(a_slotMask, std::move(a_conditionId));
+  auto row = BuildSlotRow(a_slotMask, std::move(a_conditionId),
+                          a_initialEquippedState);
   if (!row) {
     return false;
   }

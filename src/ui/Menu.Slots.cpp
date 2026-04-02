@@ -145,9 +145,10 @@ bool Menu::DrawSlotTab() {
         ImGui::PopStyleColor(3);
         if (ImGui::BeginPopupContextItem()) {
           if (ImGui::MenuItem("Add to Workbench")) {
+            const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddSlotRow(row.slotItem.slotMask,
                                   ResolveNewWorkbenchRowConditionId(),
-                                  ResolveWorkbenchPreviewActor());
+                                  &initialEquippedState);
           }
           ImGui::EndPopup();
         }
@@ -174,9 +175,10 @@ bool Menu::DrawSlotTab() {
             (rowHovered || widgetResult.hovered);
         if (doubleClicked) {
           rowClicked = true;
+          const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
           workbench_.AddSlotRow(row.slotItem.slotMask,
                                 ResolveNewWorkbenchRowConditionId(),
-                                ResolveWorkbenchPreviewActor());
+                                &initialEquippedState);
         } else if (releasedOnRow) {
           rowClicked = true;
           if (selected) {

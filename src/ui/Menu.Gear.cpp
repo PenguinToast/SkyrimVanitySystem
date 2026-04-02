@@ -74,10 +74,10 @@ bool Menu::DrawGearCatalogTable() {
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
+            const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
                 std::vector<RE::FormID>{entry.formID},
-                ResolveNewWorkbenchRowConditionId(),
-                ResolveWorkbenchPreviewActor());
+                ResolveNewWorkbenchRowConditionId(), &initialEquippedState);
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {

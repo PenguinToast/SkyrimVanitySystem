@@ -29,17 +29,19 @@ void Menu::AcceptOverridePayload(int a_targetRowIndex) {
 bool Menu::ApplyWorkbenchRowDrop(const DraggedEquipmentPayload &a_dragPayload,
                                  const int a_targetRowIndex,
                                  const bool a_insertAfter) {
+  const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
   if (a_targetRowIndex < 0) {
     if (a_dragPayload.sourceKind ==
         static_cast<std::uint32_t>(DragSourceKind::Catalog)) {
       return workbench_.AddCatalogSelectionAsRows(
           std::vector<RE::FormID>{a_dragPayload.formID},
-          ResolveNewWorkbenchRowConditionId());
+          ResolveNewWorkbenchRowConditionId(), &initialEquippedState);
     }
     if (a_dragPayload.sourceKind ==
         static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
       return workbench_.AddSlotRow(a_dragPayload.slotMask,
-                                   ResolveNewWorkbenchRowConditionId());
+                                   ResolveNewWorkbenchRowConditionId(),
+                                   &initialEquippedState);
     }
     return false;
   }
@@ -50,6 +52,7 @@ bool Menu::ApplyWorkbenchRowDrop(const DraggedEquipmentPayload &a_dragPayload,
 
 void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
                            int a_targetRowIndex, bool a_insertAfter) {
+  const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
   if (a_dragPayload.sourceKind ==
       static_cast<std::uint32_t>(DragSourceKind::Row)) {
     workbench_.ApplyRowReorder(a_dragPayload.rowIndex, a_targetRowIndex,
@@ -57,13 +60,13 @@ void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
   } else if (a_dragPayload.sourceKind ==
              static_cast<std::uint32_t>(DragSourceKind::Catalog)) {
     workbench_.InsertCatalogRow(a_dragPayload.formID, a_targetRowIndex,
-                                a_insertAfter,
-                                ResolveNewWorkbenchRowConditionId());
+                                a_insertAfter, ResolveNewWorkbenchRowConditionId(),
+                                &initialEquippedState);
   } else if (a_dragPayload.sourceKind ==
              static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
     workbench_.InsertSlotRow(a_dragPayload.slotMask, a_targetRowIndex,
-                             a_insertAfter,
-                             ResolveNewWorkbenchRowConditionId());
+                             a_insertAfter, ResolveNewWorkbenchRowConditionId(),
+                             &initialEquippedState);
   }
 }
 

@@ -351,6 +351,12 @@ RE::Actor *Menu::ResolveWorkbenchPreviewActor() {
   return RE::PlayerCharacter::GetSingleton();
 }
 
+workbench::VariantWorkbench::InitialEquippedState
+Menu::BuildWorkbenchInitialEquippedState() {
+  return workbench::VariantWorkbench::BuildInitialEquippedState(
+      ResolveWorkbenchPreviewActor());
+}
+
 void Menu::SyncWorkbenchRowsForCurrentFilter() {
   EnsureWorkbenchDerivedState();
   if (!IsWorkbenchFilterSelectionValid()) {

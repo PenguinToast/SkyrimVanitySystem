@@ -68,9 +68,10 @@ bool Menu::DrawOutfitTab() {
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
+            const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
                 outfit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId(),
-                ResolveWorkbenchPreviewActor());
+                &initialEquippedState);
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
