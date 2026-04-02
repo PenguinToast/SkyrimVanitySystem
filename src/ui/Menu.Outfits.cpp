@@ -52,7 +52,7 @@ bool Menu::DrawOutfitTab() {
         const bool selected = browser.selectedKey == outfit.id &&
                               (!browser.previewSelected ||
                                workbench_.IsPreviewingSelection(outfit.id));
-        const bool clicked = ImGui::Selectable(
+        ImGui::Selectable(
             ("##outfit-row-hit-" + std::to_string(rowIndex)).c_str(), selected,
             ImGuiSelectableFlags_SpanAllColumns |
                 ImGuiSelectableFlags_AllowOverlap |
@@ -69,7 +69,8 @@ bool Menu::DrawOutfitTab() {
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
             workbench_.AddCatalogSelectionAsRows(
-                outfit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId());
+                outfit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId(),
+                ResolveWorkbenchPreviewActor());
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
@@ -92,9 +93,16 @@ bool Menu::DrawOutfitTab() {
               ThemeConfig::GetSingleton()->GetColorU32("TABLE_HOVER", 0.12f));
         }
 
-        if (clicked) {
+        const bool doubleClicked =
+            rowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+        const bool releasedOnRow =
+            ImGui::IsMouseReleased(ImGuiMouseButton_Left) && rowHovered;
+        if (doubleClicked) {
           rowClicked = true;
-          if (browser.selectedKey == outfit.id) {
+          AddOutfitEntryToWorkbench(outfit, true);
+        } else if (releasedOnRow) {
+          rowClicked = true;
+          if (selected) {
             ClearCatalogSelection();
           } else {
             CatalogBrowserState().selectedKey = outfit.id;
@@ -104,11 +112,6 @@ bool Menu::DrawOutfitTab() {
               workbench_.ClearPreview();
             }
           }
-        }
-
-        if (rowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-          rowClicked = true;
-          AddOutfitEntryToWorkbench(outfit, true);
         }
         if (!ImGui::IsDragDropActive() &&
             ui::components::ShouldDrawPinnableTooltip("outfit:" + outfit.id,

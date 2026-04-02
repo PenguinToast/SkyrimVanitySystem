@@ -58,7 +58,7 @@ bool Menu::DrawGearCatalogTable() {
         const bool selected = browser.selectedKey == entry.id &&
                               (!browser.previewSelected ||
                                workbench_.IsPreviewingSelection(entry.id));
-        const bool clicked = ImGui::Selectable(
+        ImGui::Selectable(
             ("##catalog-row-hit-" + std::to_string(rowIndex)).c_str(), selected,
             ImGuiSelectableFlags_SpanAllColumns |
                 ImGuiSelectableFlags_AllowOverlap |
@@ -76,7 +76,8 @@ bool Menu::DrawGearCatalogTable() {
           if (ImGui::MenuItem("Add to Workbench")) {
             workbench_.AddCatalogSelectionAsRows(
                 std::vector<RE::FormID>{entry.formID},
-                ResolveNewWorkbenchRowConditionId());
+                ResolveNewWorkbenchRowConditionId(),
+                ResolveWorkbenchPreviewActor());
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
@@ -101,9 +102,18 @@ bool Menu::DrawGearCatalogTable() {
               ThemeConfig::GetSingleton()->GetColorU32("TABLE_HOVER", 0.12f));
         }
 
-        if (clicked || widgetResult.clicked) {
+        const bool doubleClicked =
+            (rowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) ||
+            widgetResult.doubleClicked;
+        const bool releasedOnRow =
+            ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+            (rowHovered || widgetResult.hovered);
+        if (doubleClicked) {
           rowClicked = true;
-          if (browser.selectedKey == entry.id) {
+          AddGearEntryToWorkbench(entry);
+        } else if (releasedOnRow) {
+          rowClicked = true;
+          if (selected) {
             ClearCatalogSelection();
           } else {
             CatalogBrowserState().selectedKey = entry.id;
@@ -113,13 +123,6 @@ bool Menu::DrawGearCatalogTable() {
               workbench_.ClearPreview();
             }
           }
-        }
-
-        if ((rowHovered &&
-             ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) ||
-            widgetResult.doubleClicked) {
-          rowClicked = true;
-          AddGearEntryToWorkbench(entry);
         }
       }
     }

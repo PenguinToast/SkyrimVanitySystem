@@ -76,7 +76,7 @@ bool Menu::DrawKitTab() {
         const bool selected = browser.selectedKey == kit.id &&
                               (!browser.previewSelected ||
                                workbench_.IsPreviewingSelection(kit.id));
-        const bool clicked = ImGui::Selectable(
+        ImGui::Selectable(
             ("##kit-row-hit-" + std::to_string(rowIndex)).c_str(), selected,
             ImGuiSelectableFlags_SpanAllColumns |
                 ImGuiSelectableFlags_AllowOverlap |
@@ -93,7 +93,8 @@ bool Menu::DrawKitTab() {
           ImGui::Separator();
           if (ImGui::MenuItem("Add to Workbench")) {
             workbench_.AddCatalogSelectionAsRows(
-                kit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId());
+                kit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId(),
+                ResolveWorkbenchPreviewActor());
           }
           ImGui::Separator();
           if (ImGui::MenuItem("Add Override")) {
@@ -125,9 +126,16 @@ bool Menu::DrawKitTab() {
               ThemeConfig::GetSingleton()->GetColorU32("TABLE_HOVER", 0.12f));
         }
 
-        if (clicked) {
+        const bool doubleClicked =
+            rowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+        const bool releasedOnRow =
+            ImGui::IsMouseReleased(ImGuiMouseButton_Left) && rowHovered;
+        if (doubleClicked) {
           rowClicked = true;
-          if (browser.selectedKey == kit.id) {
+          AddKitEntryToWorkbench(kit, true);
+        } else if (releasedOnRow) {
+          rowClicked = true;
+          if (selected) {
             ClearCatalogSelection();
           } else {
             CatalogBrowserState().selectedKey = kit.id;
@@ -137,11 +145,6 @@ bool Menu::DrawKitTab() {
               workbench_.ClearPreview();
             }
           }
-        }
-
-        if (rowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-          rowClicked = true;
-          AddKitEntryToWorkbench(kit, true);
         }
         if (!ImGui::IsDragDropActive() &&
             ui::components::ShouldDrawPinnableTooltip("kit:" + kit.id,

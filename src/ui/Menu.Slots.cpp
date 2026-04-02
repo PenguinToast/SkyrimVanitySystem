@@ -135,7 +135,7 @@ bool Menu::DrawSlotTab() {
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(0, 0, 0, 0));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, IM_COL32(0, 0, 0, 0));
         const bool selected = browser.selectedKey == row.slotItem.key;
-        const bool clicked = ImGui::Selectable(
+        ImGui::Selectable(
             ("##slot-row-hit-" + std::to_string(rowIndex)).c_str(), selected,
             ImGuiSelectableFlags_SpanAllColumns |
                 ImGuiSelectableFlags_AllowOverlap |
@@ -146,7 +146,8 @@ bool Menu::DrawSlotTab() {
         if (ImGui::BeginPopupContextItem()) {
           if (ImGui::MenuItem("Add to Workbench")) {
             workbench_.AddSlotRow(row.slotItem.slotMask,
-                                  ResolveNewWorkbenchRowConditionId());
+                                  ResolveNewWorkbenchRowConditionId(),
+                                  ResolveWorkbenchPreviewActor());
           }
           ImGui::EndPopup();
         }
@@ -165,22 +166,25 @@ bool Menu::DrawSlotTab() {
         const auto widgetResult =
             DrawCatalogDragWidget(row.slotItem, DragSourceKind::SlotCatalog);
 
-        if (clicked || widgetResult.clicked) {
+        const bool doubleClicked =
+            (rowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) ||
+            widgetResult.doubleClicked;
+        const bool releasedOnRow =
+            ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+            (rowHovered || widgetResult.hovered);
+        if (doubleClicked) {
           rowClicked = true;
-          if (browser.selectedKey == row.slotItem.key) {
+          workbench_.AddSlotRow(row.slotItem.slotMask,
+                                ResolveNewWorkbenchRowConditionId(),
+                                ResolveWorkbenchPreviewActor());
+        } else if (releasedOnRow) {
+          rowClicked = true;
+          if (selected) {
             ClearCatalogSelection();
           } else {
             CatalogBrowserState().selectedKey = row.slotItem.key;
             workbench_.ClearPreview();
           }
-        }
-
-        if ((rowHovered &&
-             ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) ||
-            widgetResult.doubleClicked) {
-          rowClicked = true;
-          workbench_.AddSlotRow(row.slotItem.slotMask,
-                                ResolveNewWorkbenchRowConditionId());
         }
 
         ImGui::TableSetColumnIndex(1);

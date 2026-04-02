@@ -212,7 +212,7 @@ void Menu::DrawCatalogPaneBody() {
     }
 
     if (!browser.selectedKey.empty() &&
-        ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !catalogRowClicked) {
+        ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !catalogRowClicked) {
       ClearCatalogSelection();
     }
   }
