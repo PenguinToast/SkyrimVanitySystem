@@ -387,6 +387,7 @@ void Menu::PreviewKitEntry(const KitEntry &a_entry) {
 }
 
 void Menu::DrawCreateKitDialog() {
+  constexpr float kCreateDialogWidth = 400.0f;
   auto &createDialog = CreateKitDialogState();
   if (createDialog.openRequested) {
     ImGui::OpenPopup("Create Modex Kit");
@@ -418,10 +419,16 @@ void Menu::DrawCreateKitDialog() {
   }
 
   createDialog.open = false;
+  if (const auto *viewport = ImGui::GetMainViewport()) {
+    ImGui::SetNextWindowSize(ImVec2(kCreateDialogWidth, 0.0f),
+                             ImGuiCond_Appearing);
+    ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing,
+                            ImVec2(0.5f, 0.5f));
+  }
   if (ImGui::BeginPopupModal("Create Modex Kit", nullptr,
-                             ImGuiWindowFlags_AlwaysAutoResize)) {
+                             ImGuiWindowFlags_AlwaysAutoResize |
+                                 ImGuiWindowFlags_NoSavedSettings)) {
     createDialog.open = true;
-    const bool popupAppearing = ImGui::IsWindowAppearing();
     ImGui::TextWrapped(
         "%s",
         createDialog.source == KitCreationSource::Equipped
@@ -434,7 +441,7 @@ void Menu::DrawCreateKitDialog() {
     constexpr float fieldWidth = 360.0f;
     std::optional<std::string> selectedName;
     ImGui::TextUnformatted("Name");
-    if (popupAppearing) {
+    if (ImGui::IsWindowAppearing()) {
       ImGui::SetKeyboardFocusHere();
     }
     if (ui::components::DrawEditableStringDropdown(
