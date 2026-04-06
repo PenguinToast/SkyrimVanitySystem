@@ -97,6 +97,7 @@ void Menu::NotifyWindowShutdown() {
   pendingSmoothWheelDelta_ = 0.0f;
   smoothScrollWindowId_ = 0;
   smoothScrollTargetY_ = 0.0f;
+  lastAppliedSmoothScrollY_ = 0.0f;
   FocusedConditionEditorWindowSlot() = 0;
   enabled_ = false;
 }
@@ -125,6 +126,7 @@ void Menu::OnMenuShow() {
   pendingSmoothWheelDelta_ = 0.0f;
   smoothScrollWindowId_ = 0;
   smoothScrollTargetY_ = 0.0f;
+  lastAppliedSmoothScrollY_ = 0.0f;
   ApplyInitialWorkbenchFilterSelection();
   SyncWorkbenchRowsForCurrentFilter();
   enabled_ = true;
@@ -154,6 +156,7 @@ void Menu::OnMenuHide() {
   pendingSmoothWheelDelta_ = 0.0f;
   smoothScrollWindowId_ = 0;
   smoothScrollTargetY_ = 0.0f;
+  lastAppliedSmoothScrollY_ = 0.0f;
   FocusedConditionEditorWindowSlot() = 0;
   hideMessageQueued_ = false;
   visibilityState_ = VisibilityState::Closed;
@@ -266,6 +269,7 @@ void Menu::ApplySmoothScroll() {
   if (!smoothScroll_) {
     pendingSmoothWheelDelta_ = 0.0f;
     smoothScrollWindowId_ = 0;
+    lastAppliedSmoothScrollY_ = 0.0f;
     return;
   }
 
@@ -273,6 +277,7 @@ void Menu::ApplySmoothScroll() {
   if (context == nullptr) {
     pendingSmoothWheelDelta_ = 0.0f;
     smoothScrollWindowId_ = 0;
+    lastAppliedSmoothScrollY_ = 0.0f;
     return;
   }
 
@@ -293,6 +298,7 @@ void Menu::ApplySmoothScroll() {
       if (smoothScrollWindowId_ != scrollWindow->ID) {
         smoothScrollWindowId_ = scrollWindow->ID;
         smoothScrollTargetY_ = scrollWindow->Scroll.y;
+        lastAppliedSmoothScrollY_ = scrollWindow->Scroll.y;
       }
 
       const auto scrollStep =
@@ -319,12 +325,18 @@ void Menu::ApplySmoothScroll() {
   if (scrollWindow == nullptr) {
     smoothScrollWindowId_ = 0;
     smoothScrollTargetY_ = 0.0f;
+    lastAppliedSmoothScrollY_ = 0.0f;
     return;
   }
 
   smoothScrollTargetY_ =
       std::clamp(smoothScrollTargetY_, 0.0f, scrollWindow->ScrollMax.y);
   const auto currentScrollY = scrollWindow->Scroll.y;
+  if (pendingSmoothWheelDelta_ == 0.0f &&
+      std::abs(currentScrollY - lastAppliedSmoothScrollY_) > 0.5f &&
+      std::abs(currentScrollY - smoothScrollTargetY_) > 0.5f) {
+    smoothScrollTargetY_ = currentScrollY;
+  }
   auto nextScrollY = currentScrollY + ((smoothScrollTargetY_ - currentScrollY) *
                                        kSmoothScrollLerpFactor);
   if (std::abs(smoothScrollTargetY_ - nextScrollY) <= 0.5f) {
@@ -334,9 +346,11 @@ void Menu::ApplySmoothScroll() {
   scrollWindow->Scroll.y = nextScrollY;
   scrollWindow->ScrollTarget.y = nextScrollY;
   scrollWindow->ScrollTargetCenterRatio.y = 0.0f;
+  lastAppliedSmoothScrollY_ = nextScrollY;
 
   if (std::abs(smoothScrollTargetY_ - nextScrollY) <= 0.5f) {
     smoothScrollWindowId_ = 0;
+    lastAppliedSmoothScrollY_ = 0.0f;
   }
 }
 

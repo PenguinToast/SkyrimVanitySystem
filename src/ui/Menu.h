@@ -340,6 +340,7 @@ private:
   float pendingSmoothWheelDelta_{0.0f};
   ImGuiID smoothScrollWindowId_{0};
   float smoothScrollTargetY_{0.0f};
+  float lastAppliedSmoothScrollY_{0.0f};
   std::string settingsDirectory_;
   std::string imguiIniPath_;
   std::string userSettingsPath_;
