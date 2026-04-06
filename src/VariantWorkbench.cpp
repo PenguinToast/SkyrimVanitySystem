@@ -287,10 +287,6 @@ int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
     const EquipmentWidgetItem *a_item,
     const std::vector<PlannedCatalogAssignment> *a_pendingAssignments,
     const std::vector<int> *a_candidateRowIndices) const {
-  if (a_targetSlotMask == 0) {
-    return -1;
-  }
-
   int fallbackRowIndex = -1;
   int bestPrecedenceRowIndex = -1;
   int bestPrecedenceScore = -1;
@@ -307,6 +303,13 @@ int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
                                                    *a_pendingAssignments)) ||
          (a_pendingAssignments == nullptr &&
           !CanAcceptOverride(rowIndex, *a_item)))) {
+      return false;
+    }
+
+    if (a_targetSlotMask == 0) {
+      if (fallbackRowIndex < 0) {
+        fallbackRowIndex = rowIndex;
+      }
       return false;
     }
 
@@ -504,9 +507,6 @@ bool VariantWorkbench::CanAcceptOverride(int a_targetRowIndex,
     }
   }
 
-  if (a_item.slotMask == 0) {
-    return false;
-  }
   return true;
 }
 
