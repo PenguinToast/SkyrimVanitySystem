@@ -8,7 +8,7 @@ Menu::DrawCatalogDragWidget(const workbench::EquipmentWidgetItem &a_item,
                             const DragSourceKind a_sourceKind) {
   const auto widgetResult =
       ui::components::DrawEquipmentWidget(a_item.key.c_str(), a_item);
-  if (!ImGui::BeginDragDropSource()) {
+  if (!a_item.SupportsDavArmorReplacement() || !ImGui::BeginDragDropSource()) {
     return widgetResult;
   }
 

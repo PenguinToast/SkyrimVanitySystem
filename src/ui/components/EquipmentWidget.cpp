@@ -145,6 +145,16 @@ void DrawEquipmentInfoTooltipBody(
 
     ImGui::EndTable();
   }
+
+  if (!a_item.IsSlot() && !a_item.hasArmorAddons) {
+    ImGui::Spacing();
+    ImGui::PushTextWrapPos();
+    ImGui::TextColored(sosr::ThemeConfig::GetSingleton()->GetColor("WARN"),
+                       "This item has no armor add-ons, so Skyrim Vanity "
+                       "System cannot use it for DAVE row or override "
+                       "variants.");
+    ImGui::PopTextWrapPos();
+  }
 }
 } // namespace
 

@@ -223,7 +223,7 @@ bool VariantWorkbench::ResolveCatalogArmors(
   for (const auto formID :
        EquipmentCatalog::Get().ResolveArmorFormIDs(a_formIDs)) {
     const auto *armor = RE::TESForm::LookupByID<RE::TESObjectARMO>(formID);
-    if (!armor) {
+    if (!armor || !armor::HasArmorAddons(armor)) {
       continue;
     }
     a_armors.push_back(armor);
@@ -490,6 +490,10 @@ bool VariantWorkbench::CanAcceptOverride(int a_targetRowIndex,
   }
 
   if (a_sourceRowIndex == a_targetRowIndex && a_sourceItemIndex >= 0) {
+    return false;
+  }
+
+  if (!a_item.SupportsDavArmorReplacement()) {
     return false;
   }
 

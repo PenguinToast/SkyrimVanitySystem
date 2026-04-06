@@ -15,6 +15,7 @@ struct EquipmentWidgetItem {
   std::string name;
   std::string slotText;
   std::uint64_t slotMask{0};
+  bool hasArmorAddons{true};
 
   [[nodiscard]] bool IsSlot() const {
     return kind == EquipmentWidgetItemKind::Slot;
@@ -24,6 +25,10 @@ struct EquipmentWidgetItem {
 
   [[nodiscard]] bool SupportsInfoTooltip() const {
     return !IsSlot() && HasForm();
+  }
+
+  [[nodiscard]] bool SupportsDavArmorReplacement() const {
+    return IsSlot() || hasArmorAddons;
   }
 };
 } // namespace sosr::workbench

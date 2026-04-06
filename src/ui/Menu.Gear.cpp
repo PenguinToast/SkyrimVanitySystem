@@ -46,6 +46,8 @@ bool Menu::DrawGearCatalogTable() {
           item.key = "catalog:" + entry.id;
           item.name = entry.name;
         }
+        const auto supportsDavArmorReplacement =
+            item.SupportsDavArmorReplacement();
         item.name = BuildFavoriteLabel(item.name, favorite);
 
         ImGui::TableNextRow();
@@ -73,6 +75,7 @@ bool Menu::DrawGearCatalogTable() {
             SetFavorite(ui::catalog::BrowserTab::Gear, entry.id, !favorite);
           }
           ImGui::Separator();
+          ImGui::BeginDisabled(!supportsDavArmorReplacement);
           if (ImGui::MenuItem("Add to Workbench")) {
             const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
@@ -83,11 +86,16 @@ bool Menu::DrawGearCatalogTable() {
           if (ImGui::MenuItem("Add Override")) {
             AddGearEntryToWorkbench(entry);
           }
+          ImGui::EndDisabled();
           ImGui::EndPopup();
         }
         ImGui::SetCursorScreenPos(rowContentPos);
-        const auto widgetResult =
-            DrawCatalogDragWidget(item, DragSourceKind::Catalog);
+        const auto widgetResult = supportsDavArmorReplacement
+                                      ? DrawCatalogDragWidget(
+                                            item, DragSourceKind::Catalog)
+                                      : ui::components::DrawEquipmentWidget(
+                                            item.key.c_str(), item,
+                                            {.disabledAppearance = true});
 
         ImGui::TableSetColumnIndex(1);
         ImGui::TextUnformatted(entry.plugin.data());
@@ -110,7 +118,9 @@ bool Menu::DrawGearCatalogTable() {
             (rowHovered || widgetResult.hovered);
         if (doubleClicked) {
           rowClicked = true;
-          AddGearEntryToWorkbench(entry);
+          if (supportsDavArmorReplacement) {
+            AddGearEntryToWorkbench(entry);
+          }
         } else if (releasedOnRow) {
           rowClicked = true;
           if (selected) {

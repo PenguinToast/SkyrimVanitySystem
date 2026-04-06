@@ -27,6 +27,7 @@ bool BuildCatalogItem(const RE::FormID a_formID, EquipmentWidgetItem &a_item) {
   a_item.name = armor::GetDisplayName(form);
 
   if (const auto *armorForm = form->As<RE::TESObjectARMO>()) {
+    a_item.hasArmorAddons = armor::HasArmorAddons(armorForm);
     a_item.slotMask = armorForm->GetSlotMask().underlying();
     a_item.slotText =
         armor::JoinStrings(armor::GetArmorSlotLabels(a_item.slotMask));
@@ -50,6 +51,7 @@ bool BuildSlotItem(const std::uint64_t a_slotMask,
   a_item.name = armor::JoinStrings(armor::GetArmorSlotLabels(a_slotMask));
   a_item.slotText = "Equipment slot";
   a_item.slotMask = a_slotMask;
+  a_item.hasArmorAddons = true;
   return true;
 }
 } // namespace sosr::workbench

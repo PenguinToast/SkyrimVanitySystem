@@ -1,5 +1,6 @@
 #include "ArmorUtils.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <windows.h>
 
@@ -168,6 +169,17 @@ std::uint64_t GetArmorAddonSlotMask(const RE::TESObjectARMO *a_armor) {
   }
 
   return slotMask;
+}
+
+bool HasArmorAddons(const RE::TESObjectARMO *a_armor) {
+  if (!a_armor) {
+    return false;
+  }
+
+  return std::ranges::any_of(a_armor->armorAddons,
+                             [](const auto *a_armorAddon) {
+                               return a_armorAddon != nullptr;
+                             });
 }
 
 std::vector<std::string>
