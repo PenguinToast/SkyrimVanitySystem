@@ -51,6 +51,10 @@ bool Menu::MatchesGearFilters(const GearEntry &a_entry) const {
     return false;
   }
 
+  if (browser.hideUnnamedGear && !a_entry.hasDisplayName) {
+    return false;
+  }
+
   const auto &catalog = EquipmentCatalog::Get();
   if (browser.gearPluginIndex > 0 &&
       a_entry.plugin != catalog.GetGearPlugins()[browser.gearPluginIndex - 1]) {
@@ -234,6 +238,7 @@ const std::vector<const GearEntry *> &Menu::GetFilteredGearRows() {
       .favoritesRevision = catalogDerived_.favoritesRevision,
       .favoritesOnly = browser.favoritesOnly,
       .inventoryOnly = browser.inventoryOnly,
+      .hideUnnamedGear = browser.hideUnnamedGear,
       .pluginIndex = browser.gearPluginIndex,
       .selectedSlotFilters = browser.selectedSlotFilters,
       .searchText = ReadFilterInputText(browser.gearSearch),

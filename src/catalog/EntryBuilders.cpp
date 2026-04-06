@@ -522,6 +522,7 @@ std::optional<GearEntry> BuildGearEntry(
   const auto editorID = sosr::armor::GetEditorID(a_armor);
   const auto &metadata = GetOrBuildArmorMetadata(a_armor, a_armorMetadataCache);
   auto displayName = metadata.displayName;
+  const auto hasDisplayName = !GetName(a_armor).empty();
   if (displayName.empty()) {
     displayName = editorID;
   }
@@ -534,6 +535,7 @@ std::optional<GearEntry> BuildGearEntry(
   entry.id = BuildEntryID(a_armor);
   entry.name = std::move(displayName);
   entry.editorID = editorID;
+  entry.hasDisplayName = hasDisplayName;
   entry.plugin = sosr::armor::GetPluginName(a_armor);
   entry.category = metadata.category;
   entry.slots = metadata.slots;

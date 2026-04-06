@@ -24,6 +24,7 @@ struct BrowserState {
   bool showAllSlots{false};
   bool favoritesOnly{false};
   bool inventoryOnly{false};
+  bool hideUnnamedGear{true};
   std::string selectedKey;
   std::string pendingSelectionAfterRefresh;
   std::unordered_set<std::string> favoriteKeys;

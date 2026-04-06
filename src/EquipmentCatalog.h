@@ -51,6 +51,7 @@ struct GearEntry {
   std::string id;
   std::string name;
   std::string editorID;
+  bool hasDisplayName{false};
   std::string plugin;
   std::string category;
   std::string slot;

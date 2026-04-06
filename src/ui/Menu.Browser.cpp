@@ -405,6 +405,17 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
           ClearCatalogSelection();
         }
       }
+
+      ImGui::SameLine();
+      if (ImGui::Checkbox("Hide unnamed", &browser.hideUnnamedGear) &&
+          browser.hideUnnamedGear && !browser.selectedKey.empty()) {
+        const auto &catalog = EquipmentCatalog::Get().GetGear();
+        const auto selectedIt =
+            std::ranges::find(catalog, browser.selectedKey, &GearEntry::id);
+        if (selectedIt != catalog.end() && !selectedIt->hasDisplayName) {
+          ClearCatalogSelection();
+        }
+      }
     }
     if (browser.activeTab == ui::catalog::BrowserTab::Slots) {
       ImGui::Checkbox("Show all", &browser.showAllSlots);

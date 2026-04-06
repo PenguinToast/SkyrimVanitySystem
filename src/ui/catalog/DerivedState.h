@@ -23,6 +23,7 @@ struct GearFilterState {
   std::uint64_t favoritesRevision{0};
   bool favoritesOnly{false};
   bool inventoryOnly{false};
+  bool hideUnnamedGear{true};
   int pluginIndex{0};
   std::vector<bool> selectedSlotFilters;
   std::string searchText;
@@ -32,6 +33,7 @@ struct GearFilterState {
            favoritesRevision == a_other.favoritesRevision &&
            favoritesOnly == a_other.favoritesOnly &&
            inventoryOnly == a_other.inventoryOnly &&
+           hideUnnamedGear == a_other.hideUnnamedGear &&
            pluginIndex == a_other.pluginIndex &&
            selectedSlotFilters == a_other.selectedSlotFilters &&
            searchText == a_other.searchText;
