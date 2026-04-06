@@ -72,6 +72,7 @@ void Menu::LoadUserSettings() {
 
   try {
     const auto json = nlohmann::json::parse(input, nullptr, true, true);
+    auto &browser = CatalogBrowserState();
     fontSizePixels_ = std::clamp(json.value("fontSizePx", fontSizePixels_),
                                  kMinFontSizePixels, kMaxFontSizePixels);
     pendingFontSizePixels_ = fontSizePixels_;
@@ -89,6 +90,15 @@ void Menu::LoadUserSettings() {
       catalogPane_.hostMode = ui::catalog::HostMode::Docked;
       catalogPane_.popoutOpen = false;
     }
+    browser.previewSelected =
+        json.value("catalogPreviewSelected", browser.previewSelected);
+    browser.showAllSlots = json.value("catalogShowAllSlots", browser.showAllSlots);
+    browser.favoritesOnly =
+        json.value("catalogFavoritesOnly", browser.favoritesOnly);
+    browser.inventoryOnly =
+        json.value("catalogInventoryOnly", browser.inventoryOnly);
+    browser.hideUnnamedGear =
+        json.value("catalogHideUnnamedGear", browser.hideUnnamedGear);
   } catch (const std::exception &exception) {
     logger::warn("Failed to parse user settings from {}: {}", userSettingsPath_,
                  exception.what());
@@ -120,6 +130,11 @@ void Menu::SaveUserSettings() const {
       {"toggleKey", toggleKey_},
       {"toggleModifier", toggleModifier_},
       {"theme", themeName_},
+      {"catalogPreviewSelected", CatalogBrowserState().previewSelected},
+      {"catalogShowAllSlots", CatalogBrowserState().showAllSlots},
+      {"catalogFavoritesOnly", CatalogBrowserState().favoritesOnly},
+      {"catalogInventoryOnly", CatalogBrowserState().inventoryOnly},
+      {"catalogHideUnnamedGear", CatalogBrowserState().hideUnnamedGear},
       {"catalogHostMode", catalogPane_.hostMode == ui::catalog::HostMode::Popout
                               ? "popout"
                               : "docked"}};

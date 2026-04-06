@@ -385,10 +385,12 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
     DrawCatalogFilters();
     if (browser.activeTab != ui::catalog::BrowserTab::Slots &&
         browser.activeTab != ui::catalog::BrowserTab::Conditions) {
-      if (ImGui::Checkbox("Favorites Only", &browser.favoritesOnly) &&
-          browser.favoritesOnly && !browser.selectedKey.empty() &&
-          !IsFavorite(browser.activeTab, browser.selectedKey)) {
-        ClearCatalogSelection();
+      if (ImGui::Checkbox("Favorites Only", &browser.favoritesOnly)) {
+        if (browser.favoritesOnly && !browser.selectedKey.empty() &&
+            !IsFavorite(browser.activeTab, browser.selectedKey)) {
+          ClearCatalogSelection();
+        }
+        SaveUserSettings();
       }
     }
     if (browser.activeTab == ui::catalog::BrowserTab::Gear) {
@@ -404,6 +406,7 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
             !inventoryFormIDs.contains(selectedIt->formID)) {
           ClearCatalogSelection();
         }
+        SaveUserSettings();
       }
 
       ImGui::SameLine();
@@ -415,10 +418,13 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         if (selectedIt != catalog.end() && !selectedIt->hasDisplayName) {
           ClearCatalogSelection();
         }
+        SaveUserSettings();
       }
     }
     if (browser.activeTab == ui::catalog::BrowserTab::Slots) {
-      ImGui::Checkbox("Show all", &browser.showAllSlots);
+      if (ImGui::Checkbox("Show all", &browser.showAllSlots)) {
+        SaveUserSettings();
+      }
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:slots-show-all", ui::catalog::IsDelayedHover(0.55f),
           {"When unchecked, only slots that currently have equipped items are "
@@ -435,6 +441,7 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         } else {
           applySelectedPreview();
         }
+        SaveUserSettings();
       }
     }
     if (a_drawBodyChild &&
