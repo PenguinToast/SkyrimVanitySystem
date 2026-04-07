@@ -761,6 +761,7 @@ bool Menu::DrawConditionCatalogTable() {
     ImGui::BeginDisabled(broken);
     if (ImGui::Checkbox("##condition-disabled", &disabled)) {
       condition.EnsureCatalog().enabled = !disabled;
+      conditions::EraseConditionStatusCache(condition.id);
       BumpConditionStoreRevision();
     }
     ImGui::EndDisabled();
