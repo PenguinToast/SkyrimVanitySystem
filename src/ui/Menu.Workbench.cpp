@@ -33,10 +33,6 @@ void Menu::AcceptOverridePayload(int a_targetRowIndex) {
                             a_targetRowIndex);
   } else if (dragPayload.sourceKind ==
              static_cast<std::uint32_t>(DragSourceKind::Row)) {
-    if (dragPayload.rowIndex == a_targetRowIndex) {
-      return;
-    }
-
     if (!workbench_.AddCatalogOverride(a_targetRowIndex, dragPayload.formID)) {
       return;
     }
