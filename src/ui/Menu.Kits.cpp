@@ -221,6 +221,8 @@ void Menu::OpenCreateKitDialog(const KitCreationSource a_source,
   if (a_source == KitCreationSource::Equipped) {
     createDialog.pendingFormIDs =
         workbench_.CollectEquippedArmorFormIDs(a_candidateRowIndices);
+    createDialog.pendingLayout =
+        workbench_.CaptureEquippedKitLayout(a_candidateRowIndices);
   } else {
     createDialog.pendingFormIDs =
         workbench_.CollectOverrideArmorFormIDsFromEquippedRows(
@@ -286,11 +288,7 @@ bool Menu::SavePendingKit() {
 
     const auto editorID = armor::GetEditorID(armorForm);
     if (editorID.empty()) {
-      auto displayName = armor::GetDisplayName(armorForm);
-      createDialog.error = std::vformat(
-          std::string(localization->Get("kits.create_error.no_editor_id")),
-          std::make_format_args(displayName));
-      return false;
+      continue;
     }
 
     items[editorID] = {{"Plugin", armor::GetPluginName(armorForm)},

@@ -98,6 +98,8 @@ public:
   [[nodiscard]] std::vector<RE::FormID>
   CollectOverrideArmorFormIDsFromEquippedRows(
       const std::vector<int> *a_candidateRowIndices = nullptr) const;
+  [[nodiscard]] std::optional<KitEntry::Layout> CaptureEquippedKitLayout(
+      const std::vector<int> *a_candidateRowIndices = nullptr) const;
   [[nodiscard]] std::optional<KitEntry::Layout> CaptureKitLayout(
       const std::vector<int> *a_candidateRowIndices = nullptr) const;
   // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

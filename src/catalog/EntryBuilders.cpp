@@ -480,8 +480,8 @@ KitDescription DescribeKitItems(
   }
 
   std::unordered_set<RE::FormID> seenArmorForms;
-  for (const auto &[editorID, _] : a_items.items()) {
-    auto *form = RE::TESForm::LookupByEditorID(editorID);
+  for (const auto &[itemKey, _] : a_items.items()) {
+    RE::TESForm *form = RE::TESForm::LookupByEditorID(itemKey);
     if (!form) {
       description.hasMissingItems = true;
       break;

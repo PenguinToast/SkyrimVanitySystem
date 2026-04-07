@@ -1006,6 +1006,49 @@ std::optional<KitEntry::Layout> VariantWorkbench::CaptureKitLayout(
   return layout;
 }
 
+std::optional<KitEntry::Layout> VariantWorkbench::CaptureEquippedKitLayout(
+    const std::vector<int> *a_candidateRowIndices) const {
+  KitEntry::Layout layout;
+  const auto candidateRowIndices =
+      BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
+  layout.rows.reserve(candidateRowIndices.size());
+
+  for (const auto rowIndex : candidateRowIndices) {
+    if (!IsValidRowIndex(rowIndex, rows_.size())) {
+      continue;
+    }
+
+    const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
+    if (!row.isEquipped || row.IsSlotRow()) {
+      continue;
+    }
+
+    const auto *equippedArmor =
+        RE::TESForm::LookupByID<RE::TESObjectARMO>(row.equipped.formID);
+    if (!equippedArmor) {
+      continue;
+    }
+
+    const auto targetSlotMask = row.GetSelectionConflictSlotMask();
+    const auto identifier = armor::GetFormIdentifier(equippedArmor);
+    if (targetSlotMask == 0 || identifier.empty()) {
+      continue;
+    }
+
+    KitEntry::LayoutRow layoutRow;
+    layoutRow.targetKind = KitEntry::LayoutTargetKind::Item;
+    layoutRow.targetSlotMask = targetSlotMask;
+    layoutRow.overrideIdentifiers.push_back(identifier);
+    layout.rows.push_back(std::move(layoutRow));
+  }
+
+  if (layout.rows.empty()) {
+    return std::nullopt;
+  }
+
+  return layout;
+}
+
 bool VariantWorkbench::ApplyKitLayout(
     const KitEntry::Layout &a_layout, const bool a_replaceExisting,
     std::optional<std::string> a_newSlotRowConditionId,
