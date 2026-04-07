@@ -4,6 +4,18 @@
 
 #include <cstring>
 namespace sosr {
+namespace {
+int AdjustSourceRowIndexAfterInsert(const int a_sourceRowIndex,
+                                    const int a_targetRowIndex,
+                                    const bool a_insertAfter) {
+  auto insertIndex = a_targetRowIndex + (a_insertAfter ? 1 : 0);
+  if (a_sourceRowIndex >= insertIndex) {
+    return a_sourceRowIndex + 1;
+  }
+  return a_sourceRowIndex;
+}
+} // namespace
+
 void Menu::AcceptOverridePayload(int a_targetRowIndex) {
   const auto *payload =
       ImGui::AcceptDragDropPayload(ui::workbench::kVariantItemPayloadType);
@@ -19,9 +31,29 @@ void Menu::AcceptOverridePayload(int a_targetRowIndex) {
     workbench_.MoveOverride(dragPayload.rowIndex, dragPayload.itemIndex,
                             a_targetRowIndex);
   } else if (dragPayload.sourceKind ==
-                 static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
-             dragPayload.sourceKind ==
-                 static_cast<std::uint32_t>(DragSourceKind::Row)) {
+             static_cast<std::uint32_t>(DragSourceKind::Row)) {
+    if (dragPayload.rowIndex == a_targetRowIndex) {
+      return;
+    }
+
+    if (!workbench_.AddCatalogOverride(a_targetRowIndex, dragPayload.formID)) {
+      return;
+    }
+
+    const auto &rows = workbench_.GetRows();
+    if (dragPayload.rowIndex < 0 ||
+        dragPayload.rowIndex >= static_cast<int>(rows.size())) {
+      return;
+    }
+
+    const auto &sourceRow = rows[static_cast<std::size_t>(dragPayload.rowIndex)];
+    if (!sourceRow.overrides.empty()) {
+      return;
+    }
+
+    workbench_.DeleteRow(dragPayload.rowIndex);
+  } else if (dragPayload.sourceKind ==
+             static_cast<std::uint32_t>(DragSourceKind::Catalog)) {
     workbench_.AddCatalogOverride(a_targetRowIndex, dragPayload.formID);
   }
 }
@@ -35,9 +67,15 @@ bool Menu::ApplyWorkbenchRowDrop(const DraggedEquipmentPayload &a_dragPayload,
             static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
         a_dragPayload.sourceKind ==
             static_cast<std::uint32_t>(DragSourceKind::Override)) {
-      return workbench_.AddCatalogSelectionAsRows(
+      const bool added = workbench_.AddCatalogSelectionAsRows(
           std::vector<RE::FormID>{a_dragPayload.formID},
           ResolveNewWorkbenchRowConditionId(), &initialEquippedState);
+      if (added && a_dragPayload.sourceKind ==
+                       static_cast<std::uint32_t>(DragSourceKind::Override)) {
+        workbench_.DeleteOverride(a_dragPayload.rowIndex,
+                                  a_dragPayload.itemIndex);
+      }
+      return added;
     }
     if (a_dragPayload.sourceKind ==
         static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
@@ -63,9 +101,18 @@ void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
                  static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
              a_dragPayload.sourceKind ==
                  static_cast<std::uint32_t>(DragSourceKind::Override)) {
-    workbench_.InsertCatalogRow(a_dragPayload.formID, a_targetRowIndex,
-                                a_insertAfter, ResolveNewWorkbenchRowConditionId(),
-                                &initialEquippedState);
+    const bool inserted =
+        workbench_.InsertCatalogRow(a_dragPayload.formID, a_targetRowIndex,
+                                    a_insertAfter,
+                                    ResolveNewWorkbenchRowConditionId(),
+                                    &initialEquippedState);
+    if (inserted && a_dragPayload.sourceKind ==
+                        static_cast<std::uint32_t>(DragSourceKind::Override)) {
+      workbench_.DeleteOverride(
+          AdjustSourceRowIndexAfterInsert(a_dragPayload.rowIndex,
+                                          a_targetRowIndex, a_insertAfter),
+          a_dragPayload.itemIndex);
+    }
   } else if (a_dragPayload.sourceKind ==
              static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
     workbench_.InsertSlotRow(a_dragPayload.slotMask, a_targetRowIndex,
