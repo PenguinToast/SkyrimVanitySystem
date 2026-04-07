@@ -2,10 +2,12 @@
 
 #include "ThemeConfig.h"
 #include "backends/imgui_impl_dx11.h"
+#include "ui/Localization.h"
 
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <unordered_set>
 
 namespace sosr {
@@ -232,8 +234,38 @@ void Menu::RebuildFontAtlas() {
 }
 
 void Menu::DrawOptionsTab() {
+  auto *localization = ui::Localization::GetSingleton();
+  const auto interfaceLabel = localization->Get("options.interface");
+  const auto descriptionLabel = localization->Get("options.description");
+  const auto controlsLabel = localization->Get("options.controls");
+  const auto languageLabel = localization->Get("options.language");
+  const auto fontLabel = localization->Get("options.font");
+  const auto defaultLabel = localization->Get("common.default");
+  const auto bundledFontsLabel = localization->Get("options.font.bundled");
+  const auto systemFontsLabel = localization->Get("options.font.system");
+  const auto fontSizeLabel = localization->Get("options.font_size");
+  const auto minFontSize = kMinFontSizePixels;
+  const auto maxFontSize = kMaxFontSizePixels;
+  const auto fontSizeRangeLabel = std::vformat(
+      std::string(localization->Get("options.font_size.range")),
+      std::make_format_args(minFontSize, maxFontSize));
+  const auto resetToDefaultLabel = localization->Get("options.reset_default");
+  const auto toggleUIButtonLabel =
+      localization->Get("options.toggle_ui_button");
+  const auto pauseGameLabel =
+      localization->Get("options.pause_game_while_open");
+  const auto smoothScrollingLabel =
+      localization->Get("options.smooth_scrolling");
+  const auto toggleCaptureTitle =
+      localization->Get("options.toggle_capture.title");
+  const auto toggleCaptureBody =
+      localization->Get("options.toggle_capture.body");
+  const auto toggleCaptureHint =
+      localization->Get("options.toggle_capture.hint");
+  const auto cancelLabel = localization->Get("common.cancel");
+
   ClearCatalogSelection();
-  ImGui::TextUnformatted("Interface");
+  ImGui::TextUnformatted(interfaceLabel.data());
   ImGui::Separator();
 
   if (ImGui::BeginChild("##options-font-panel", ImVec2(0.0f, 0.0f),
@@ -242,14 +274,40 @@ void Menu::DrawOptionsTab() {
     if (ImGui::BeginTable("##options-layout", 2,
                           ImGuiTableFlags_SizingStretchProp,
                           ImVec2(0.0f, 0.0f))) {
-      ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch,
+      ImGui::TableSetupColumn(descriptionLabel.data(), ImGuiTableColumnFlags_WidthStretch,
                               1.15f);
-      ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch,
+      ImGui::TableSetupColumn(controlsLabel.data(), ImGuiTableColumnFlags_WidthStretch,
                               0.85f);
       ImGui::TableNextRow();
 
       ImGui::TableSetColumnIndex(0);
-      ImGui::TextUnformatted("Font");
+      ImGui::TextUnformatted(languageLabel.data());
+
+      ImGui::TableSetColumnIndex(1);
+      {
+        const auto &localeOptions = localization->GetAvailableLocales();
+        const auto &selectedLocaleName = localization->GetCurrentLocaleName();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::BeginCombo("##locale", selectedLocaleName.c_str())) {
+          for (const auto &option : localeOptions) {
+            const bool selected = option.id == localeId_;
+            if (ImGui::Selectable(option.name.c_str(), selected)) {
+              localeId_ = option.id;
+              NormalizeSelectedLocaleId();
+              SaveUserSettings();
+            }
+            if (selected) {
+              ImGui::SetItemDefaultFocus();
+            }
+          }
+          ImGui::EndCombo();
+        }
+      }
+
+      ImGui::TableNextRow();
+
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextUnformatted(fontLabel.data());
 
       ImGui::TableSetColumnIndex(1);
       const char *selectedFontLabel =
@@ -259,13 +317,13 @@ void Menu::DrawOptionsTab() {
             FindSelectedFontLabel(systemFontOptions_, fontPath_);
       }
       if (!selectedFontLabel) {
-        selectedFontLabel = "Default";
+        selectedFontLabel = defaultLabel.data();
       }
 
       ImGui::SetNextItemWidth(-FLT_MIN);
       if (ImGui::BeginCombo("##font-path", selectedFontLabel)) {
         if (!bundledFontOptions_.empty()) {
-          ImGui::SeparatorText("Bundled Fonts");
+          ImGui::SeparatorText(bundledFontsLabel.data());
           for (const auto &option : bundledFontOptions_) {
             const bool selected = option.path == fontPath_;
             if (ImGui::Selectable(option.label.c_str(), selected)) {
@@ -280,7 +338,7 @@ void Menu::DrawOptionsTab() {
         }
 
         if (!systemFontOptions_.empty()) {
-          ImGui::SeparatorText("System Fonts");
+          ImGui::SeparatorText(systemFontsLabel.data());
           for (const auto &option : systemFontOptions_) {
             const bool selected = option.path == fontPath_;
             if (ImGui::Selectable(option.label.c_str(), selected)) {
@@ -299,9 +357,8 @@ void Menu::DrawOptionsTab() {
 
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::TextUnformatted("Font Size");
-      ImGui::TextDisabled("Range: %d px to %d px", kMinFontSizePixels,
-                          kMaxFontSizePixels);
+      ImGui::TextUnformatted(fontSizeLabel.data());
+      ImGui::TextDisabled("%s", fontSizeRangeLabel.c_str());
 
       ImGui::TableSetColumnIndex(1);
       ImGui::SetNextItemWidth(-FLT_MIN);
@@ -313,7 +370,7 @@ void Menu::DrawOptionsTab() {
         pendingFontAtlasRebuild_ = true;
       }
 
-      if (ImGui::Button("Reset to Default")) {
+      if (ImGui::Button(resetToDefaultLabel.data())) {
         fontPath_ = kDefaultFontPath;
         fontSizePixels_ = kDefaultFontSizePixels;
         pendingFontSizePixels_ = fontSizePixels_;
@@ -323,7 +380,7 @@ void Menu::DrawOptionsTab() {
 
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::TextUnformatted("Toggle UI Button");
+      ImGui::TextUnformatted(toggleUIButtonLabel.data());
 
       ImGui::TableSetColumnIndex(1);
       ImGui::SetNextItemWidth(-FLT_MIN);
@@ -333,7 +390,7 @@ void Menu::DrawOptionsTab() {
 
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::TextUnformatted("Pause Game While Open");
+      ImGui::TextUnformatted(pauseGameLabel.data());
 
       ImGui::TableSetColumnIndex(1);
       bool pauseGameWhenOpen = pauseGameWhenOpen_;
@@ -344,7 +401,7 @@ void Menu::DrawOptionsTab() {
 
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
-      ImGui::TextUnformatted("Smooth Scrolling");
+      ImGui::TextUnformatted(smoothScrollingLabel.data());
 
       ImGui::TableSetColumnIndex(1);
       bool smoothScroll = smoothScroll_;
@@ -370,20 +427,17 @@ void Menu::DrawOptionsTab() {
   if (ImGui::BeginPopupModal("##toggle-key-capture", nullptr,
                              ImGuiWindowFlags_NoResize |
                                  ImGuiWindowFlags_NoMove)) {
-    ImGui::TextUnformatted("Change Toggle UI Button");
+    ImGui::TextUnformatted(toggleCaptureTitle.data());
     ImGui::Separator();
-    ImGui::TextWrapped(
-        "Press the key combination you want to use. Hold Shift, Ctrl, or Alt "
-        "while pressing the key to include a modifier.");
-    ImGui::TextWrapped(
-        "Press T to reset to default (F6). Press Escape to cancel.");
+    ImGui::TextWrapped("%s", toggleCaptureBody.data());
+    ImGui::TextWrapped("%s", toggleCaptureHint.data());
     if (!toggleKeyCaptureError_.empty()) {
       ImGui::Spacing();
       ImGui::TextColored(ThemeConfig::GetSingleton()->GetColor("ERROR"), "%s",
                          toggleKeyCaptureError_.c_str());
     }
     ImGui::Spacing();
-    if (ImGui::Button("Cancel", ImVec2(-FLT_MIN, 0.0f))) {
+    if (ImGui::Button(cancelLabel.data(), ImVec2(-FLT_MIN, 0.0f))) {
       CloseToggleKeyCapture();
       ImGui::CloseCurrentPopup();
     }

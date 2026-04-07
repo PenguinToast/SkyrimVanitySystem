@@ -2,11 +2,13 @@
 
 #include "ArmorUtils.h"
 #include "imgui_internal.h"
+#include "ui/Localization.h"
 #include "ui/ThemeConfig.h"
 #include "ui/components/EquipmentWidget.h"
 #include "ui/components/PinnableTooltip.h"
 
 #include <algorithm>
+#include <format>
 
 namespace {
 constexpr float kTreeIndentWidth = 18.0f;
@@ -32,8 +34,15 @@ std::string GetNodeName(const sosr::CatalogCollectionItemNode &a_node) {
   }
 
   const auto *form = RE::TESForm::LookupByID(a_node.formID);
-  return form ? sosr::armor::GetDisplayName(form)
-              : ("Form " + sosr::armor::FormatFormID(a_node.formID));
+  if (form) {
+    return sosr::armor::GetDisplayName(form);
+  }
+
+  const auto formID = sosr::armor::FormatFormID(a_node.formID);
+  return std::vformat(
+      std::string(sosr::ui::Localization::GetSingleton()->Get(
+          "catalog.collection.form_fallback")),
+      std::make_format_args(formID));
 }
 
 std::string GetNodeName(const GroupedTooltipItemNode &a_node) {
@@ -64,11 +73,14 @@ std::string GetNodeSlots(const GroupedTooltipItemNode &a_node) {
 }
 
 std::string FormatLevelLabel(const std::int32_t a_level) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   if (a_level < 0) {
-    return "Any";
+    return std::string(localization->Get("catalog.collection.level_any"));
   }
 
-  return "Level " + std::to_string(a_level);
+  return std::vformat(
+      std::string(localization->Get("catalog.collection.level_format")),
+      std::make_format_args(a_level));
 }
 
 void DrawTooltipInfoRow(const char *a_icon, const std::string &a_label,
@@ -219,7 +231,8 @@ void DrawDuplicateItemsTooltip(const std::string_view a_tooltipId,
       ImGuiCond_Always);
   sosr::ui::components::DrawPinnableTooltip(
       a_tooltipId, a_hoveredSource, [&]() {
-        ImGui::TextUnformatted("Duplicate Leveled Entries");
+        ImGui::TextUnformatted(sosr::ui::Localization::GetSingleton()
+                                   ->GetCStr("catalog.collection.duplicates"));
         ImGui::Spacing();
         if (ImGui::BeginTable("##duplicate-items", 2,
                               ImGuiTableFlags_NoSavedSettings |
@@ -436,12 +449,17 @@ void DrawCatalogCollectionTooltip(
       ImGui::PopStyleColor();
       ImGui::Spacing();
 
-      constexpr auto sectionTitle = "Included Items";
-      const auto sectionWidth = ImGui::CalcTextSize(sectionTitle).x;
+      const auto sectionTitle =
+          sosr::ui::Localization::GetSingleton()->Get("catalog.collection.items");
+      const auto sectionWidth =
+          ImGui::CalcTextSize(sectionTitle.data(),
+                             sectionTitle.data() + sectionTitle.size())
+              .x;
       ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
                            (ImGui::GetContentRegionAvail().x - sectionWidth) *
                                0.5f);
-      ImGui::TextUnformatted(sectionTitle);
+      ImGui::TextUnformatted(sectionTitle.data(),
+                             sectionTitle.data() + sectionTitle.size());
       ImGui::Spacing();
       if (ImGui::BeginTable("##catalog-collection-items", 2,
                             ImGuiTableFlags_NoSavedSettings |

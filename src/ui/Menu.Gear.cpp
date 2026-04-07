@@ -1,6 +1,9 @@
 #include "Menu.h"
 
+#include "ui/Localization.h"
 #include "workbench/ItemFactory.h"
+
+#include <format>
 
 namespace {
 enum class GearColumn : ImGuiID { Name = 1, Plugin };
@@ -8,14 +11,24 @@ enum class GearColumn : ImGuiID { Name = 1, Plugin };
 
 namespace sosr {
 bool Menu::DrawGearTab() {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &rows = GetFilteredGearRows();
-  ImGui::Text("Results: %zu", rows.size());
+  const auto resultCount = rows.size();
+  const auto equippedRowCount = workbench_.GetRowCount();
+  const auto resultsLabel = std::vformat(
+      std::string(localization->Get("catalog.results")),
+      std::make_format_args(resultCount));
+  const auto equippedRowsLabel = std::vformat(
+      std::string(localization->Get("catalog.equipped_rows")),
+      std::make_format_args(equippedRowCount));
+  ImGui::TextUnformatted(resultsLabel.c_str());
   ImGui::SameLine();
-  ImGui::Text("| Equipped rows: %zu", workbench_.GetRowCount());
+  ImGui::TextUnformatted(equippedRowsLabel.c_str());
   return DrawGearCatalogTable();
 }
 
 bool Menu::DrawGearCatalogTable() {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &browser = CatalogBrowserState();
   bool rowClicked = false;
   if (ImGui::BeginTable("##gear-table", 2,
@@ -23,9 +36,15 @@ bool Menu::DrawGearCatalogTable() {
                             ImGuiTableFlags_Resizable |
                             ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY,
                         ImVec2(0.0f, 0.0f))) {
-    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort, 0.0f,
+    const auto nameLabel = localization->Get("common.name");
+    const auto pluginLabel = localization->Get("common.plugin");
+    const auto removeFavoriteLabel = localization->Get("favorites.remove");
+    const auto addFavoriteLabel = localization->Get("favorites.add");
+    const auto addWorkbenchLabel = localization->Get("workbench.add");
+    const auto addOverrideLabel = localization->Get("workbench.add_override");
+    ImGui::TableSetupColumn(nameLabel.data(), ImGuiTableColumnFlags_DefaultSort, 0.0f,
                             static_cast<ImGuiID>(GearColumn::Name));
-    ImGui::TableSetupColumn("Plugin", ImGuiTableColumnFlags_None, 0.0f,
+    ImGui::TableSetupColumn(pluginLabel.data(), ImGuiTableColumnFlags_None, 0.0f,
                             static_cast<ImGuiID>(GearColumn::Plugin));
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
@@ -70,20 +89,20 @@ bool Menu::DrawGearCatalogTable() {
         ImGui::PopStyleColor(3);
         if (ImGui::BeginPopupContextItem()) {
           const auto favoriteLabel =
-              favorite ? "Remove from Favorites" : "Add to Favorites";
+              favorite ? removeFavoriteLabel.data() : addFavoriteLabel.data();
           if (ImGui::MenuItem(favoriteLabel)) {
             SetFavorite(ui::catalog::BrowserTab::Gear, entry.id, !favorite);
           }
           ImGui::Separator();
           ImGui::BeginDisabled(!supportsDavArmorReplacement);
-          if (ImGui::MenuItem("Add to Workbench")) {
+          if (ImGui::MenuItem(addWorkbenchLabel.data())) {
             const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
                 std::vector<RE::FormID>{entry.formID},
                 ResolveNewWorkbenchRowConditionId(), &initialEquippedState);
           }
           ImGui::Separator();
-          if (ImGui::MenuItem("Add Override")) {
+          if (ImGui::MenuItem(addOverrideLabel.data())) {
             AddGearEntryToWorkbench(entry);
           }
           ImGui::EndDisabled();

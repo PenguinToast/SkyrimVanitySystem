@@ -3,6 +3,7 @@
 #include "ArmorUtils.h"
 #include "conditions/Status.h"
 #include "conditions/Validation.h"
+#include "ui/Localization.h"
 #include "ui/components/PinnableTooltip.h"
 
 namespace sosr::ui::workbench {
@@ -76,14 +77,18 @@ void DrawWrappedColoredTextRuns(
 
 void DrawConflictEntry(const ui::workbench_conflicts::ConflictEntry &a_desc,
                        const ThemeConfig *a_theme) {
+  const auto *localization = ui::Localization::GetSingleton();
   ImGui::Bullet();
   ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
   ImGui::BeginGroup();
   DrawWrappedColoredTextRuns(
       {{a_desc.primaryName,
         a_theme->GetColorU32(a_desc.isHideConflict ? "WARN" : "TEXT")},
-       {a_desc.isHideConflict ? " hide equipped on "
-                              : (a_desc.isOverride ? " override on " : " "),
+       {a_desc.isHideConflict
+            ? localization->Get("workbench.conflict.hide_equipped_on")
+            : (a_desc.isOverride
+                   ? localization->Get("workbench.conflict.override_on")
+                   : localization->Get("workbench.conflict.separator")),
         a_theme->GetColorU32("TEXT_DISABLED")},
        {a_desc.secondaryName,
         a_theme->GetColorU32(a_desc.isHideConflict ? "TEXT" : "PRIMARY")},
@@ -114,19 +119,19 @@ void DrawSimplePinnableTooltip(const std::string_view a_id,
 }
 
 void DrawWorkbenchFilterSectionTooltip(const std::string_view a_sectionLabel) {
-  if (a_sectionLabel == "Actor Ref Filter") {
+  const auto *localization = ui::Localization::GetSingleton();
+  if (a_sectionLabel == localization->Get("workbench.filters.actor_section")) {
     ImGui::PushTextWrapPos(360.0f);
     ImGui::TextUnformatted(
-        "Filters the workbench to rows whose condition targets a specific "
-        "actor reference.");
+        localization->Get("workbench.filters.actor_section_help").data());
     ImGui::PopTextWrapPos();
     return;
   }
 
-  if (a_sectionLabel == "Condition Filter") {
+  if (a_sectionLabel == localization->Get("workbench.filters.condition_section")) {
     ImGui::PushTextWrapPos(360.0f);
     ImGui::TextUnformatted(
-        "Filters the workbench to rows assigned to a specific condition.");
+        localization->Get("workbench.filters.condition_section_help").data());
     ImGui::PopTextWrapPos();
   }
 }
@@ -141,14 +146,24 @@ void DrawWorkbenchFilterOptionTooltip(
 
   switch (a_option.kind) {
   case ui::workbench::FilterKind::All:
-    ImGui::TextDisabled("Show every workbench row.");
+    ImGui::TextDisabled("%s",
+                        ui::Localization::GetSingleton()
+                            ->Get("workbench.filters.show_all_help")
+                            .data());
     return;
   case ui::workbench::FilterKind::ActorRef:
     if (auto *actor = RE::TESForm::LookupByID<RE::Actor>(a_option.actorFormID);
         actor != nullptr) {
-      ImGui::Text("Ref Name: %s", armor::GetDisplayName(actor).c_str());
+      ImGui::Text("%s %s",
+                  ui::Localization::GetSingleton()
+                      ->Get("workbench.filters.ref_name_prefix")
+                      .data(),
+                  armor::GetDisplayName(actor).c_str());
     } else {
-      ImGui::TextDisabled("Reference could not be resolved.");
+      ImGui::TextDisabled("%s",
+                          ui::Localization::GetSingleton()
+                              ->Get("workbench.filters.ref_unresolved")
+                              .data());
     }
     return;
   case ui::workbench::FilterKind::Condition:
@@ -170,10 +185,16 @@ void DrawWorkbenchFilterOptionTooltip(
         ImGui::TextDisabled("%s", condition->description.c_str());
         ImGui::PopTextWrapPos();
       } else {
-        ImGui::TextDisabled("No description.");
+        ImGui::TextDisabled("%s",
+                            ui::Localization::GetSingleton()
+                                ->Get("conditions.no_description")
+                                .data());
       }
     } else {
-      ImGui::TextDisabled("Condition could not be resolved.");
+      ImGui::TextDisabled("%s",
+                          ui::Localization::GetSingleton()
+                              ->Get("workbench.filters.condition_unresolved")
+                              .data());
     }
     return;
   }
@@ -184,8 +205,10 @@ RowConditionVisualState ResolveRowConditionVisualState(
     const std::vector<ui::conditions::Definition> &a_conditions) {
   RowConditionVisualState state;
   if (!a_row.conditionId.has_value()) {
-    state.name = "Disabled";
-    state.description = "This row has no condition and will not apply.";
+    state.name = std::string(
+        ui::Localization::GetSingleton()->Get("workbench.condition.disabled_name"));
+    state.description = std::string(ui::Localization::GetSingleton()->Get(
+        "workbench.condition.disabled_description"));
     state.disabled = true;
     return state;
   }
@@ -204,9 +227,10 @@ RowConditionVisualState ResolveRowConditionVisualState(
       if (!state.description.empty()) {
         state.description.append("\n\n");
       }
-      state.description.append(
-          "This condition references missing conditions and will not apply.");
-      state.description.append("\nMissing:");
+      state.description.append(ui::Localization::GetSingleton()
+                                   ->Get("workbench.condition.broken_description"));
+      state.description.append(ui::Localization::GetSingleton()
+                                   ->Get("workbench.condition.missing_list_header"));
       for (const auto &missingChain : conditionStatus.missingDependencyChains) {
         state.description.append("\n- ");
         state.description.append(
@@ -222,8 +246,8 @@ RowConditionVisualState ResolveRowConditionVisualState(
       if (!state.description.empty()) {
         state.description.append("\n\n");
       }
-      state.description.append(
-          "This condition is disabled, so this row will not apply.");
+      state.description.append(ui::Localization::GetSingleton()->Get(
+          "workbench.condition.condition_disabled_description"));
       state.disabled = true;
       state.disabledCondition = true;
       return state;
@@ -233,9 +257,10 @@ RowConditionVisualState ResolveRowConditionVisualState(
     return state;
   }
 
-  state.name = "Missing Condition";
-  state.description =
-      "The referenced condition no longer exists. This row will not apply.";
+  state.name = std::string(
+      ui::Localization::GetSingleton()->Get("workbench.condition.missing_name"));
+  state.description = std::string(ui::Localization::GetSingleton()->Get(
+      "workbench.condition.missing_description"));
   state.disabled = true;
   state.missing = true;
   return state;

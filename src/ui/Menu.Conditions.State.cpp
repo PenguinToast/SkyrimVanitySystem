@@ -5,9 +5,11 @@
 #include "conditions/Defaults.h"
 #include "conditions/Library.h"
 #include "conditions/Status.h"
+#include "ui/Localization.h"
 #include "ui/conditions/EditorSupport.h"
 
 #include <algorithm>
+#include <format>
 
 namespace sosr {
 using ConditionDefinition = ui::conditions::Definition;
@@ -208,6 +210,7 @@ void Menu::OpenConditionEditorDialogById(const std::string_view a_conditionId) {
 }
 
 bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
+  auto *localization = ui::Localization::GetSingleton();
   if (const auto validationError =
           ValidateConditionDraft(a_editor.draft, ConditionDefinitions());
       !validationError.empty()) {
@@ -217,6 +220,7 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
 
   for (std::size_t index = 0; index < a_editor.draft.clauses.size(); ++index) {
     auto &clause = a_editor.draft.clauses[index];
+    const auto clauseNumber = index + 1;
     clause.functionName = TrimText(clause.functionName);
     clause.arguments[0] = TrimText(clause.arguments[0]);
     clause.arguments[1] = TrimText(clause.arguments[1]);
@@ -226,15 +230,17 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
     const auto *functionInfo = ResolveConditionFunctionInfo(
         clause, ConditionDefinitions(), customFunctionInfo);
     if (!functionInfo) {
-      a_editor.error = "Unknown or unsupported condition function in clause " +
-                       std::to_string(index + 1) + ".";
+      a_editor.error = std::vformat(
+          std::string(localization->Get("conditions.validation.unknown_function")),
+          std::make_format_args(clauseNumber));
       return false;
     }
     if (!clause.customConditionId.empty()) {
       if (clause.customConditionId == a_editor.draft.id &&
           !a_editor.draft.id.empty()) {
-        a_editor.error = "A condition cannot reference itself in clause " +
-                         std::to_string(index + 1) + ".";
+        a_editor.error = std::vformat(
+            std::string(localization->Get("conditions.validation.self_reference")),
+            std::make_format_args(clauseNumber));
         return false;
       }
       clause.arguments[0].clear();
@@ -245,11 +251,12 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
     for (std::uint16_t paramIndex = 0;
          paramIndex < functionInfo->parameterCount && paramIndex < 2;
          ++paramIndex) {
+      const auto &parameterLabel = functionInfo->parameterLabels[paramIndex];
       if (!functionInfo->parameterOptional[paramIndex] &&
           clause.arguments[paramIndex].empty()) {
-        a_editor.error = functionInfo->parameterLabels[paramIndex] +
-                         " is required in clause " + std::to_string(index + 1) +
-                         ".";
+        a_editor.error = std::vformat(
+            std::string(localization->Get("conditions.validation.parameter_required")),
+            std::make_format_args(parameterLabel, clauseNumber));
         return false;
       }
 
@@ -257,9 +264,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
           ResolveEditorParamType(clause.functionName, paramIndex,
                                  functionInfo->parameterTypes[paramIndex]));
       if (editorKind == ConditionValueEditorKind::Unsupported) {
-        a_editor.error = functionInfo->parameterLabels[paramIndex] +
-                         " uses an unsupported parameter type in clause " +
-                         std::to_string(index + 1) + ".";
+        a_editor.error = std::vformat(
+            std::string(localization->Get("conditions.validation.parameter_unsupported")),
+            std::make_format_args(parameterLabel, clauseNumber));
         return false;
       }
       if (editorKind == ConditionValueEditorKind::Integer &&
@@ -268,9 +275,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
           clause.arguments[paramIndex] =
               std::to_string(std::stoi(clause.arguments[paramIndex]));
         } catch (const std::exception &) {
-          a_editor.error = functionInfo->parameterLabels[paramIndex] +
-                           " must be an integer in clause " +
-                           std::to_string(index + 1) + ".";
+          a_editor.error = std::vformat(
+              std::string(localization->Get("conditions.validation.parameter_integer")),
+              std::make_format_args(parameterLabel, clauseNumber));
           return false;
         }
       } else if (editorKind == ConditionValueEditorKind::Number &&
@@ -280,9 +287,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
               ui::condition_editor::FormatNumberString(
                   std::stod(clause.arguments[paramIndex]));
         } catch (const std::exception &) {
-          a_editor.error = functionInfo->parameterLabels[paramIndex] +
-                           " must be numeric in clause " +
-                           std::to_string(index + 1) + ".";
+          a_editor.error = std::vformat(
+              std::string(localization->Get("conditions.validation.parameter_numeric")),
+              std::make_format_args(parameterLabel, clauseNumber));
           return false;
         }
       }
@@ -290,9 +297,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
 
     if (functionInfo->returnsBooleanResult) {
       if (!IsBooleanComparator(clause.comparator)) {
-        a_editor.error =
-            "Boolean-return conditions only support == and != in clause " +
-            std::to_string(index + 1) + ".";
+        a_editor.error = std::vformat(
+            std::string(localization->Get("conditions.validation.boolean_comparator")),
+            std::make_format_args(clauseNumber));
         return false;
       }
       clause.comparand =
@@ -301,8 +308,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
               : "0";
     } else {
       if (clause.comparand.empty()) {
-        a_editor.error = "A comparison value is required in clause " +
-                         std::to_string(index + 1) + ".";
+        a_editor.error = std::vformat(
+            std::string(localization->Get("conditions.validation.comparison_required")),
+            std::make_format_args(clauseNumber));
         return false;
       }
 
@@ -310,8 +318,9 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
         clause.comparand = ui::condition_editor::FormatNumberString(
             std::stod(clause.comparand));
       } catch (const std::exception &) {
-        a_editor.error = "Comparison value must be numeric in clause " +
-                         std::to_string(index + 1) + ".";
+        a_editor.error = std::vformat(
+            std::string(localization->Get("conditions.validation.comparison_numeric")),
+            std::make_format_args(clauseNumber));
         return false;
       }
     }
@@ -327,9 +336,8 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
 
   if (a_editor.draft.IsLibrary() &&
       !conditions::IsLibraryFileNameValid(a_editor.draft.name)) {
-    a_editor.error =
-        "Library condition names must be valid file names and cannot contain "
-        "\\ / : * ? \" < > |.";
+    a_editor.error = std::string(
+        localization->Get("conditions.validation.library_filename"));
     return false;
   }
 
@@ -340,8 +348,10 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
             ConditionDefinitions(),
             a_editor.isNew ? std::string_view{} : a_editor.sourceConditionId,
             a_editor.draft, saveResult, saveError)) {
-      a_editor.error =
-          saveError.empty() ? "Failed to save library condition." : saveError;
+      a_editor.error = saveError.empty()
+                           ? std::string(localization->Get(
+                                 "conditions.validation.save_library_failed"))
+                           : saveError;
       return false;
     }
     ApplyLibraryChangeResult(saveResult);
@@ -362,7 +372,8 @@ bool Menu::SaveConditionEditor(ConditionEditorState &a_editor) {
         std::ranges::find(ConditionDefinitions(), a_editor.sourceConditionId,
                           &ConditionDefinition::id);
     if (it == ConditionDefinitions().end()) {
-      a_editor.error = "Condition no longer exists.";
+      a_editor.error = std::string(
+          localization->Get("conditions.validation.no_longer_exists"));
       return false;
     }
     *it = a_editor.draft;

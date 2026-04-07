@@ -1,6 +1,7 @@
 #include "conditions/Validation.h"
 
 #include "StringUtils.h"
+#include "ui/Localization.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -194,26 +195,28 @@ void RenameConditionReferences(std::vector<Definition> &a_definitions,
 std::string ValidateDefinitionNameAndGraph(
     const Definition &a_definition, const std::vector<Definition> &a_conditions,
     const std::function<bool(std::string_view)> &a_reservedNameConflict) {
+  auto *localization = sosr::ui::Localization::GetSingleton();
   const auto name = sosr::strings::TrimText(a_definition.name);
   if (name.empty()) {
-    return "Condition name is required.";
+    return std::string(localization->Get("conditions.validation.name_required"));
   }
 
   if (a_reservedNameConflict && a_reservedNameConflict(name)) {
-    return "Condition name conflicts with an existing condition function.";
+    return std::string(
+        localization->Get("conditions.validation.name_conflicts_function"));
   }
 
   if (FindDefinitionByName(a_conditions, name, a_definition.id) != nullptr) {
-    return "Condition name conflicts with another custom condition.";
+    return std::string(
+        localization->Get("conditions.validation.name_conflicts_custom"));
   }
 
   if (a_definition.clauses.empty()) {
-    return "At least one clause is required.";
+    return std::string(localization->Get("conditions.validation.clause_required"));
   }
 
   if (HasDependencyCycle(a_definition, a_conditions)) {
-    return "Custom condition references must not contain circular "
-           "dependencies.";
+    return std::string(localization->Get("conditions.validation.circular_dependency"));
   }
 
   return {};

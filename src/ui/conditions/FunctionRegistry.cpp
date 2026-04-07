@@ -3,11 +3,13 @@
 #include "StringUtils.h"
 #include "conditions/Validation.h"
 #include "ui/ConditionFunctionMetadata.h"
+#include "ui/Localization.h"
 #include "ui/conditions/ValueEditors.h"
 
 #include <RE/C/CommandTable.h>
 
 #include <algorithm>
+#include <format>
 
 namespace {
 using Clause = sosr::conditions::Clause;
@@ -89,8 +91,11 @@ const std::vector<FunctionInfo> &GetConditionFunctionInfos() {
               TrimText(command.params[paramIndex].paramName);
         }
         if (info.parameterLabels[paramIndex].empty()) {
-          info.parameterLabels[paramIndex] =
-              "Argument " + std::to_string(paramIndex + 1);
+          const auto parameterNumber = static_cast<std::int32_t>(paramIndex + 1);
+          info.parameterLabels[paramIndex] = std::vformat(
+              std::string(
+                  Localization::GetSingleton()->Get("conditions.argument")),
+              std::make_format_args(parameterNumber));
         }
         info.parameterOptional[paramIndex] =
             command.params != nullptr && command.params[paramIndex].optional;
@@ -154,6 +159,7 @@ ResolveClauseDisplayName(const Clause &a_clause,
 std::vector<DropdownItem>
 BuildConditionFunctionItems(const std::vector<Definition> &a_conditions,
                             std::string_view a_excludedConditionId) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   std::vector<DropdownItem> items;
   const auto &infos = GetConditionFunctionInfos();
 
@@ -180,18 +186,24 @@ BuildConditionFunctionItems(const std::vector<Definition> &a_conditions,
 
   items.reserve(customNames.size() + libraryNames.size() + infos.size() + 3);
   if (!customNames.empty()) {
-    items.push_back({.label = "Conditions", .value = std::nullopt});
+    items.push_back({.label = std::string(
+                         localization->Get("conditions.groups.conditions")),
+                     .value = std::nullopt});
     for (const auto &name : customNames) {
       items.push_back({.label = name, .value = name});
     }
   }
   if (!libraryNames.empty()) {
-    items.push_back({.label = "Condition Library", .value = std::nullopt});
+    items.push_back({.label = std::string(
+                         localization->Get("conditions.groups.library")),
+                     .value = std::nullopt});
     for (const auto &name : libraryNames) {
       items.push_back({.label = name, .value = name});
     }
   }
-  items.push_back({.label = "Condition Functions", .value = std::nullopt});
+  items.push_back({.label = std::string(
+                       localization->Get("conditions.groups.functions")),
+                   .value = std::nullopt});
   for (const auto &info : infos) {
     items.push_back({.label = info.name, .value = info.name});
   }

@@ -1,5 +1,7 @@
 #include "integrations/DynamicArmorVariantsExtendedClient.h"
 
+#include "ui/Localization.h"
+
 namespace sosr::integrations {
 namespace {
 constexpr REL::Version kMinimumDavVersion{1, 3, 0, 0};
@@ -103,25 +105,24 @@ auto DynamicArmorVariantsExtendedClient::GetStatus() -> Status {
 
 auto DynamicArmorVariantsExtendedClient::GetAvailabilityMessage()
     -> std::optional<std::string> {
+  auto *localization = ui::Localization::GetSingleton();
   switch (GetStatus()) {
   case Status::Unavailable:
-    return "Dynamic Armor Variants Extended is unavailable. Browsing will "
-           "work, but previews and overrides are disabled.";
+    return std::string(localization->Get("dav.status.unavailable"));
   case Status::VersionTooOld: {
-    std::string message =
-        "Dynamic Armor Variants Extended 1.3.0 or newer is required. "
-        "Browsing will work, but previews and overrides are disabled.";
+    std::string message = std::string(localization->Get("dav.status.too_old"));
     if (const auto detectedVersion = GetDetectedVersion();
         detectedVersion.has_value()) {
-      message.append(" Detected version: ");
+      message.append(" ");
+      message.append(localization->Get("dav.status.detected_version"));
+      message.append(" ");
       message.append(std::to_string(*detectedVersion));
       message.push_back('.');
     }
     return message;
   }
   case Status::NotReady:
-    return "Dynamic Armor Variants Extended is loaded but not ready yet. "
-           "Previews and overrides are temporarily unavailable.";
+    return std::string(localization->Get("dav.status.not_ready"));
   case Status::Ready:
     return std::nullopt;
   }

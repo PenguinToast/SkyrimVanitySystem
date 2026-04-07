@@ -9,6 +9,7 @@
 #include "conditions/Store.h"
 #include "imgui.h"
 #include "ui/ConditionData.h"
+#include "ui/Localization.h"
 #include "ui/WorkbenchConflicts.h"
 #include "ui/catalog/DerivedState.h"
 #include "ui/catalog/PaneState.h"
@@ -91,6 +92,9 @@ private:
       "Data/Interface/SkyrimVanitySystem/fonts/lucide.ttf";
   static constexpr const char *kBundledFontDirectory =
       "Data/Interface/SkyrimVanitySystem/fonts";
+  static constexpr const char *kLocaleDirectory =
+      "Data/Interface/SkyrimVanitySystem/locales";
+  static constexpr const char *kDefaultLocaleId = "en";
   static constexpr int kDefaultFontSizePixels = 18;
   static constexpr int kMinFontSizePixels = 8;
   static constexpr int kMaxFontSizePixels = 48;
@@ -130,6 +134,7 @@ private:
   void LoadFavorites();
   void SaveFavorites() const;
   void RefreshAvailableFonts();
+  void NormalizeSelectedLocaleId();
   void NormalizeSelectedFontPath();
   void RebuildFontAtlas();
   void SyncAllowTextInput();
@@ -324,6 +329,7 @@ private:
   int fontSizePixels_{18};
   int pendingFontSizePixels_{18};
   std::string fontPath_{kDefaultFontPath};
+  std::string localeId_{kDefaultLocaleId};
   bool pendingFontAtlasRebuild_{false};
   bool pauseGameWhenOpen_{false};
   bool smoothScroll_{true};

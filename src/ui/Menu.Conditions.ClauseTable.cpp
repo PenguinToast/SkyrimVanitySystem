@@ -3,6 +3,7 @@
 #include "ThemeConfig.h"
 #include "conditions/Validation.h"
 #include "imgui_internal.h"
+#include "ui/Localization.h"
 #include "ui/TableReorder.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/components/PinnableTooltip.h"
@@ -12,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <format>
 #include <optional>
 #include <span>
 
@@ -40,11 +42,6 @@ constexpr float kOrGroupIndicatorInsetX = 4.0f;
 constexpr float kOrGroupBoundaryGap = 4.0f;
 constexpr float kOrGroupIndicatorRounding = 4.0f;
 constexpr float kOrGroupTooltipWrapWidth = 360.0f;
-constexpr std::string_view kOrGroupTooltip =
-    "In Skyrim, consecutive OR clauses are evaluated as a grouped block "
-    "before surrounding AND clauses. Example: A AND B OR C AND D becomes "
-    "A AND (B OR C) AND D.";
-
 struct OrGroupSpan {
   std::size_t startIndex{0};
   std::size_t endIndex{0};
@@ -124,9 +121,10 @@ void DrawOrGroupIndicator(const std::string &a_id, const ImRect &a_groupRect) {
       indicatorMin, indicatorMax, color, kOrGroupIndicatorRounding, drawFlags);
 
   ui::components::DrawPinnableTooltip(a_id, hovered, [&]() {
+    const auto tooltip =
+        ui::Localization::GetSingleton()->Get("conditions.clauses.or_group_tooltip");
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + kOrGroupTooltipWrapWidth);
-    ImGui::TextUnformatted(kOrGroupTooltip.data(),
-                           kOrGroupTooltip.data() + kOrGroupTooltip.size());
+    ImGui::TextUnformatted(tooltip.data(), tooltip.data() + tooltip.size());
     ImGui::PopTextWrapPos();
   });
 }
@@ -146,50 +144,60 @@ bool Menu::DrawConditionEditorClauseTable(
                          ImVec2(0.0f, 0.0f))) {
     return false;
   }
+  auto *localization = ui::Localization::GetSingleton();
 
   const auto tableOuterRect = ImGui::GetCurrentTable()->OuterRect;
   ImGui::TableSetupColumn(
       "", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize,
       18.0f);
-  ImGui::TableSetupColumn("Function", ImGuiTableColumnFlags_WidthFixed, 240.0f);
-  ImGui::TableSetupColumn("Arg 1", ImGuiTableColumnFlags_WidthFixed, 170.0f);
-  ImGui::TableSetupColumn("Arg 2", ImGuiTableColumnFlags_WidthFixed, 170.0f);
-  ImGui::TableSetupColumn("Comparator", ImGuiTableColumnFlags_WidthFixed,
-                          120.0f);
-  ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 130.0f);
-  ImGui::TableSetupColumn("Join", ImGuiTableColumnFlags_WidthFixed, 90.0f);
-  ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed,
-                          a_actionsColumnWidth);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.function").data(),
+                          ImGuiTableColumnFlags_WidthFixed, 240.0f);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.arg1").data(),
+                          ImGuiTableColumnFlags_WidthFixed, 170.0f);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.arg2").data(),
+                          ImGuiTableColumnFlags_WidthFixed, 170.0f);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.comparator").data(),
+                          ImGuiTableColumnFlags_WidthFixed, 120.0f);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.value").data(),
+                          ImGuiTableColumnFlags_WidthFixed, 130.0f);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.join").data(),
+                          ImGuiTableColumnFlags_WidthFixed, 90.0f);
+  ImGui::TableSetupColumn(localization->Get("conditions.clauses.actions").data(),
+                          ImGuiTableColumnFlags_WidthFixed, a_actionsColumnWidth);
 
   ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
   ImGui::TableSetColumnIndex(0);
-  ImGui::TextDisabled(" ");
-  DrawHoverDescription("conditions:help:move", "Drag to reorder clauses.");
+  ImGui::TextDisabled("%s", localization->GetCStr("conditions.clauses.move_column"));
+  DrawHoverDescription("conditions:help:move",
+                       localization->Get("conditions.clauses.move_help"));
   ImGui::TableSetColumnIndex(1);
-  DrawClauseHeaderCell("conditions:help:function", "Function",
-                       "Condition function to evaluate for this clause.");
-  ImGui::TableSetColumnIndex(2);
-  DrawClauseHeaderCell("conditions:help:arg1", "Arg 1",
-                       "First function argument. Input type follows the "
-                       "selected function.");
-  ImGui::TableSetColumnIndex(3);
-  DrawClauseHeaderCell("conditions:help:arg2", "Arg 2",
-                       "Second function argument when the selected function "
-                       "needs one.");
-  ImGui::TableSetColumnIndex(4);
-  DrawClauseHeaderCell("conditions:help:comparator", "Comparator",
-                       "How the function result is compared.");
-  ImGui::TableSetColumnIndex(5);
   DrawClauseHeaderCell(
-      "conditions:help:value", "Value",
-      "Value compared against the function result. Boolean-returning "
-      "functions use a true/false checkbox.");
+      "conditions:help:function", localization->GetCStr("conditions.clauses.function"),
+      localization->Get("conditions.clauses.function_help"));
+  ImGui::TableSetColumnIndex(2);
+  DrawClauseHeaderCell("conditions:help:arg1",
+                       localization->GetCStr("conditions.clauses.arg1"),
+                       localization->Get("conditions.clauses.arg1_help"));
+  ImGui::TableSetColumnIndex(3);
+  DrawClauseHeaderCell("conditions:help:arg2",
+                       localization->GetCStr("conditions.clauses.arg2"),
+                       localization->Get("conditions.clauses.arg2_help"));
+  ImGui::TableSetColumnIndex(4);
+  DrawClauseHeaderCell("conditions:help:comparator",
+                       localization->GetCStr("conditions.clauses.comparator"),
+                       localization->Get("conditions.clauses.comparator_help"));
+  ImGui::TableSetColumnIndex(5);
+  DrawClauseHeaderCell("conditions:help:value",
+                       localization->GetCStr("conditions.clauses.value"),
+                       localization->Get("conditions.clauses.value_help"));
   ImGui::TableSetColumnIndex(6);
-  DrawClauseHeaderCell("conditions:help:join", "Join",
-                       "How this clause combines with the next one.");
+  DrawClauseHeaderCell("conditions:help:join",
+                       localization->GetCStr("conditions.clauses.join"),
+                       localization->Get("conditions.clauses.join_help"));
   ImGui::TableSetColumnIndex(7);
-  DrawClauseHeaderCell("conditions:help:actions", "Actions",
-                       "Remove this clause.");
+  DrawClauseHeaderCell("conditions:help:actions",
+                       localization->GetCStr("conditions.clauses.actions"),
+                       localization->Get("conditions.clauses.actions_help"));
 
   const auto *activePayload = ImGui::GetDragDropPayload();
   const bool reorderPreviewActive =
@@ -249,12 +257,16 @@ bool Menu::DrawConditionEditorClauseTable(
         "##drag-handle",
         ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetFrameHeight()));
     DrawHoverDescription("conditions:editor:drag:" + std::to_string(index),
-                         "Drag this handle to reorder the clause.");
+                         localization->Get("conditions.clauses.move_help"));
     if (ImGui::BeginDragDropSource()) {
       const int payloadIndex = static_cast<int>(index);
       ImGui::SetDragDropPayload(kConditionClausePayloadType, &payloadIndex,
                                 sizeof(payloadIndex));
-      ImGui::Text("Move clause %zu", index + 1);
+      const auto clauseNumber = index + 1;
+      const auto moveClauseLabel = std::vformat(
+          std::string(localization->Get("conditions.clauses.move_drag")),
+          std::make_format_args(clauseNumber));
+      ImGui::TextUnformatted(moveClauseLabel.c_str());
       ImGui::EndDragDropSource();
     }
 
@@ -270,19 +282,21 @@ bool Menu::DrawConditionEditorClauseTable(
       const float spacing = ImGui::GetStyle().ItemSpacing.x;
       if (customCondition->IsLibrary()) {
         DrawConditionPlaceholderSwatch("##custom-condition-color",
-                                       "Referenced library condition: " +
+                                       std::string(localization->Get("conditions.clauses.ref_library_prefix")) +
                                            customCondition->name);
       } else {
         DrawConditionColorSwatch(
             "##custom-condition-color", customCondition->GetCatalog()->color,
-            "Referenced custom condition color: " + customCondition->name);
+            std::string(localization->Get("conditions.clauses.ref_custom_prefix")) +
+                customCondition->name);
       }
       ImGui::SameLine(0.0f, spacing);
       functionWidth = (std::max)(0.0f, functionWidth - swatchSize - spacing);
     }
     std::optional<std::string> selectedFunctionValue;
     if (ui::components::DrawSearchableDropdown(
-            "##function", "Condition function", selectedFunctionName,
+            "##function", localization->GetCStr("conditions.clauses.function"),
+            selectedFunctionName,
             std::span<const ui::components::EditableDropdownItem<std::string>>(
                 a_conditionFunctionItems),
             functionWidth, nullptr, &selectedFunctionValue) &&
@@ -311,8 +325,7 @@ bool Menu::DrawConditionEditorClauseTable(
     }
     DrawHoverDescription(
         "conditions:editor:function:" + std::to_string(index),
-        "Select a condition function. Only functions whose parameters SVS can "
-        "model with typed inputs are shown.");
+        localization->Get("conditions.clauses.function_picker_help"));
 
     const auto argumentCount =
         functionInfo ? functionInfo->parameterCount : std::uint16_t{2};
@@ -337,12 +350,15 @@ bool Menu::DrawConditionEditorClauseTable(
 
       std::string tooltip = functionInfo && paramIndex < argumentCount
                                 ? functionInfo->parameterLabels[paramIndex]
-                                : "Unused argument for the current function.";
+                                : std::string(localization->Get(
+                                      "conditions.clauses.argument_unused"));
       if (functionInfo && paramIndex < argumentCount &&
           functionInfo->parameterOptional[paramIndex]) {
-        tooltip.append(" Optional.");
+        tooltip.push_back(' ');
+        tooltip.append(localization->Get("conditions.clauses.argument_optional"));
       } else if (functionInfo && paramIndex < argumentCount) {
-        tooltip.append(" Required.");
+        tooltip.push_back(' ');
+        tooltip.append(localization->Get("conditions.clauses.argument_required"));
       }
       DrawHoverDescription("conditions:editor:arg:" + std::to_string(index) +
                                ":" + std::to_string(paramIndex),
@@ -397,7 +413,8 @@ bool Menu::DrawConditionEditorClauseTable(
     }
     DrawHoverDescription("conditions:editor:comparator:" +
                              std::to_string(index),
-                         "Comparison operator applied to the function result.");
+                         localization->Get(
+                             "conditions.clauses.comparator_inline_help"));
 
     ImGui::TableSetColumnIndex(5);
     if (functionInfo && functionInfo->returnsBooleanResult) {
@@ -416,8 +433,8 @@ bool Menu::DrawConditionEditorClauseTable(
     DrawHoverDescription(
         "conditions:editor:value:" + std::to_string(index),
         functionInfo && functionInfo->returnsBooleanResult
-            ? "Checked stores 1 (true). Unchecked stores 0 (false)."
-            : "Numeric value compared against the function result.");
+            ? localization->Get("conditions.clauses.boolean_value_help")
+            : localization->Get("conditions.clauses.numeric_value_help"));
 
     ImGui::TableSetColumnIndex(6);
     joinCellRects[index] =
@@ -445,17 +462,18 @@ bool Menu::DrawConditionEditorClauseTable(
     }
     ImGui::EndDisabled();
     DrawHoverDescription("conditions:editor:join:" + std::to_string(index),
-                         "How this clause combines with the next clause.");
+                         localization->Get("conditions.clauses.join_help"));
 
     ImGui::TableSetColumnIndex(7);
     const bool hasCustomEditTarget = !clause.customConditionId.empty();
     if (hasCustomEditTarget) {
-      if (ImGui::Button("Edit", ImVec2(a_editButtonWidth, 0.0f))) {
+      if (ImGui::Button(localization->GetCStr("common.edit"),
+                        ImVec2(a_editButtonWidth, 0.0f))) {
         OpenConditionEditorDialogById(clause.customConditionId);
       }
       DrawHoverDescription("conditions:editor:edit-custom:" +
                                std::to_string(index),
-                           "Open the referenced custom condition.");
+                           localization->Get("conditions.clauses.edit_custom_help"));
       if (a_editor.draft.clauses.size() > 1) {
         ImGui::SameLine();
       }
@@ -476,7 +494,7 @@ bool Menu::DrawConditionEditorClauseTable(
       }
       ImGui::PopStyleColor(3);
       DrawHoverDescription("conditions:editor:remove:" + std::to_string(index),
-                           "Remove this clause from the condition.");
+                           localization->Get("conditions.clauses.remove_help"));
     }
 
     if (const auto *table = ImGui::GetCurrentTable(); table != nullptr) {
@@ -528,12 +546,12 @@ bool Menu::DrawConditionEditorClauseTable(
   ImGui::TableSetColumnIndex(0);
   ImGui::Dummy(ImVec2(0.0f, 0.0f));
   ImGui::TableSetColumnIndex(1);
-  if (ImGui::Button("Add Clause",
+  if (ImGui::Button(localization->GetCStr("conditions.clauses.add"),
                     ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
     addClauseRequested = true;
   }
   DrawHoverDescription("conditions:editor:add-clause",
-                       "Append another clause to this condition.");
+                       localization->Get("conditions.clauses.add_help"));
   for (int column = 2; column < 8; ++column) {
     ImGui::TableSetColumnIndex(column);
     ImGui::Dummy(ImVec2(0.0f, 0.0f));

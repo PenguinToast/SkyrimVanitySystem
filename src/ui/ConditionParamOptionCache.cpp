@@ -2,6 +2,7 @@
 
 #include "ArmorUtils.h"
 #include "IncrementalLoader.h"
+#include "ui/Localization.h"
 
 #include <RE/Skyrim.h>
 
@@ -186,52 +187,53 @@ std::vector<RE::TESForm *> CollectFormsForType(const ParamType a_type) {
 }
 
 std::string GetStatusLabel(const ParamType a_type) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   switch (a_type) {
   case ParamType::kObject:
   case ParamType::kInventoryObject:
   case ParamType::kKnowableForm:
   case ParamType::kForm:
-    return "Loading forms...";
+    return std::string(localization->Get("conditions.loading.forms"));
   case ParamType::kFormList:
-    return "Loading form lists...";
+    return std::string(localization->Get("conditions.loading.form_lists"));
   case ParamType::kSpellItem:
-    return "Loading spells...";
+    return std::string(localization->Get("conditions.loading.spells"));
   case ParamType::kObjectRef:
-    return "Loading references...";
+    return std::string(localization->Get("conditions.loading.references"));
   case ParamType::kActor:
   case ParamType::kActorBase:
   case ParamType::kNPC:
-    return "Loading actors...";
+    return std::string(localization->Get("conditions.loading.actors"));
   case ParamType::kRace:
-    return "Loading races...";
+    return std::string(localization->Get("conditions.loading.races"));
   case ParamType::kActorValue:
-    return "Loading actor values...";
+    return std::string(localization->Get("conditions.loading.actor_values"));
   case ParamType::kClass:
-    return "Loading classes...";
+    return std::string(localization->Get("conditions.loading.classes"));
   case ParamType::kFaction:
-    return "Loading factions...";
+    return std::string(localization->Get("conditions.loading.factions"));
   case ParamType::kGlobal:
-    return "Loading globals...";
+    return std::string(localization->Get("conditions.loading.globals"));
   case ParamType::kQuest:
-    return "Loading quests...";
+    return std::string(localization->Get("conditions.loading.quests"));
   case ParamType::kKeyword:
-    return "Loading keywords...";
+    return std::string(localization->Get("conditions.loading.keywords"));
   case ParamType::kPerk:
-    return "Loading perks...";
+    return std::string(localization->Get("conditions.loading.perks"));
   case ParamType::kVoiceType:
-    return "Loading voice types...";
+    return std::string(localization->Get("conditions.loading.voice_types"));
   case ParamType::kCell:
-    return "Loading cells...";
+    return std::string(localization->Get("conditions.loading.cells"));
   case ParamType::kLocation:
-    return "Loading locations...";
+    return std::string(localization->Get("conditions.loading.locations"));
   case ParamType::kWeather:
-    return "Loading weather...";
+    return std::string(localization->Get("conditions.loading.weather"));
   case ParamType::kShout:
-    return "Loading shouts...";
+    return std::string(localization->Get("conditions.loading.shouts"));
   case ParamType::kWordOfPower:
-    return "Loading words of power...";
+    return std::string(localization->Get("conditions.loading.words_of_power"));
   default:
-    return "Loading options...";
+    return std::string(localization->Get("conditions.loading.options"));
   }
 }
 
@@ -480,7 +482,10 @@ public:
                    cellCount);
 
       loadState->loader.Start({
-          {"Loading interior references...", interiorCount,
+          {std::string(
+               sosr::ui::Localization::GetSingleton()->Get(
+                   "conditions.loading.interior_references")),
+           interiorCount,
            [statePtr, dataHandler](const std::size_t a_index) {
              if (!dataHandler) {
                return;
@@ -491,7 +496,10 @@ public:
              AppendCellRefTokens(*statePtr,
                                  dataHandler->interiorCells[cellIndex]);
            }},
-          {"Loading worldspace references...", worldspaceCount,
+          {std::string(
+               sosr::ui::Localization::GetSingleton()->Get(
+                   "conditions.loading.worldspace_references")),
+           worldspaceCount,
            [statePtr, dataHandler](const std::size_t a_index) {
              if (!dataHandler) {
                return;
@@ -511,7 +519,10 @@ public:
                AppendFormToken(*statePtr, ref.get());
              }
            }},
-          {"Loading cell references...", cellCount,
+          {std::string(
+               sosr::ui::Localization::GetSingleton()->Get(
+                   "conditions.loading.cell_references")),
+           cellCount,
            [statePtr, dataHandler](const std::size_t a_index) {
              if (!dataHandler) {
                return;

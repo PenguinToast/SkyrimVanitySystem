@@ -3,6 +3,7 @@
 #include "ArmorUtils.h"
 #include "imgui_internal.h"
 #include "ui/InputWidgets.h"
+#include "ui/Localization.h"
 #include "ui/ThemeConfig.h"
 #include "ui/components/PinnableTooltip.h"
 #include "workbench/ItemFactory.h"
@@ -129,17 +130,32 @@ void DrawEquipmentInfoTooltipBody(
                             138.0f);
     ImGui::TableSetupColumn("##value", ImGuiTableColumnFlags_WidthStretch);
 
-    DrawTooltipInfoRow(kIconEditorId.data(), "Editor ID", a_editorID);
-    DrawTooltipInfoRow(kIconPlugin.data(), "Plugin", a_plugin);
-    DrawTooltipInfoRow(kIconFormId.data(), "Form ID", a_formID);
-    DrawTooltipInfoRow(kIconIdentifier.data(), "Identifier", a_identifier);
+    auto *localization = sosr::ui::Localization::GetSingleton();
+    DrawTooltipInfoRow(kIconEditorId.data(),
+                       localization->GetCStr("equipment.editor_id"),
+                       a_editorID);
+    DrawTooltipInfoRow(kIconPlugin.data(),
+                       localization->GetCStr("common.plugin"),
+                       a_plugin);
+    DrawTooltipInfoRow(kIconFormId.data(),
+                       localization->GetCStr("equipment.form_id"),
+                       a_formID);
+    DrawTooltipInfoRow(
+        kIconIdentifier.data(),
+        localization->GetCStr("equipment.identifier"),
+        a_identifier);
     for (std::size_t index = 0; index < a_slotLabels.size(); ++index) {
       DrawTooltipInfoRow(index == 0 ? kIconSlot.data() : "",
-                         index == 0 ? "Slots" : "", a_slotLabels[index]);
+                         index == 0
+                             ? localization->GetCStr("equipment.slots")
+                             : "",
+                         a_slotLabels[index]);
     }
     for (std::size_t index = 0; index < a_addonSlotLabels.size(); ++index) {
       DrawTooltipInfoRow(index == 0 ? kIconSlot.data() : "",
-                         index == 0 ? "Addon Slots" : "",
+                         index == 0
+                             ? localization->GetCStr("equipment.addon_slots")
+                             : "",
                          a_addonSlotLabels[index]);
     }
 
@@ -150,9 +166,9 @@ void DrawEquipmentInfoTooltipBody(
     ImGui::Spacing();
     ImGui::PushTextWrapPos();
     ImGui::TextColored(sosr::ThemeConfig::GetSingleton()->GetColor("WARN"),
-                       "This item has no armor add-ons, so Skyrim Vanity "
-                       "System cannot use it for DAVE row or override "
-                       "variants.");
+                       "%s",
+                       sosr::ui::Localization::GetSingleton()
+                           ->GetCStr("equipment.no_addons_warning"));
     ImGui::PopTextWrapPos();
   }
 }

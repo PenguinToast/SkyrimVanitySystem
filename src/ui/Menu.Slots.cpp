@@ -2,10 +2,12 @@
 
 #include "ArmorUtils.h"
 #include "StringUtils.h"
+#include "ui/Localization.h"
 #include "ui/components/EquipmentWidget.h"
 #include "workbench/ItemFactory.h"
 
 #include <algorithm>
+#include <format>
 
 namespace {
 enum class SlotColumn : ImGuiID { Slot = 1, Occupied };
@@ -13,6 +15,7 @@ enum class SlotColumn : ImGuiID { Slot = 1, Occupied };
 
 namespace sosr {
 bool Menu::DrawSlotTab() {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &browser = CatalogBrowserState();
   struct SlotCatalogRow {
     workbench::EquipmentWidgetItem slotItem;
@@ -55,7 +58,7 @@ bool Menu::DrawSlotTab() {
       row.occupantSortText.append(item.name);
     }
     if (row.occupantSortText.empty()) {
-      row.occupantSortText = "Empty";
+      row.occupantSortText = localization->Get("common.empty");
     }
 
     if (!browser.showAllSlots && row.occupantItems.empty()) {
@@ -65,7 +68,11 @@ bool Menu::DrawSlotTab() {
     rows.push_back(std::move(row));
   }
 
-  ImGui::Text("Results: %zu", rows.size());
+  const auto resultCount = rows.size();
+  const auto resultsLabel = std::vformat(
+      std::string(localization->Get("catalog.results")),
+      std::make_format_args(resultCount));
+  ImGui::TextUnformatted(resultsLabel.c_str());
   bool rowClicked = false;
 
   if (ImGui::BeginTable("##slot-table", 2,
@@ -73,11 +80,15 @@ bool Menu::DrawSlotTab() {
                             ImGuiTableFlags_Resizable |
                             ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY,
                         ImVec2(0.0f, 0.0f))) {
-    ImGui::TableSetupColumn("Slot",
+    const auto slotLabel = localization->Get("common.slot");
+    const auto occupiedLabel = localization->Get("slots.occupied");
+    const auto addWorkbenchLabel = localization->Get("workbench.add");
+    const auto emptyLabel = localization->Get("common.empty");
+    ImGui::TableSetupColumn(slotLabel.data(),
                             ImGuiTableColumnFlags_WidthStretch |
                                 ImGuiTableColumnFlags_DefaultSort,
                             0.68f, static_cast<ImGuiID>(SlotColumn::Slot));
-    ImGui::TableSetupColumn("Occupied", ImGuiTableColumnFlags_WidthStretch,
+    ImGui::TableSetupColumn(occupiedLabel.data(), ImGuiTableColumnFlags_WidthStretch,
                             1.00f, static_cast<ImGuiID>(SlotColumn::Occupied));
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableHeadersRow();
@@ -144,7 +155,7 @@ bool Menu::DrawSlotTab() {
         const bool rowHovered = ImGui::IsItemHovered();
         ImGui::PopStyleColor(3);
         if (ImGui::BeginPopupContextItem()) {
-          if (ImGui::MenuItem("Add to Workbench")) {
+          if (ImGui::MenuItem(addWorkbenchLabel.data())) {
             const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddSlotRow(row.slotItem.slotMask,
                                   ResolveNewWorkbenchRowConditionId(),
@@ -204,7 +215,7 @@ bool Menu::DrawSlotTab() {
           }
           ImGui::PopStyleVar();
         } else {
-          ImGui::TextDisabled("Empty");
+          ImGui::TextDisabled("%s", emptyLabel.data());
         }
       }
     }

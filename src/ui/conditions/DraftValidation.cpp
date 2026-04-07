@@ -1,10 +1,12 @@
 #include "ui/conditions/DraftValidation.h"
 
 #include "conditions/Validation.h"
+#include "ui/Localization.h"
 #include "ui/conditions/FunctionRegistry.h"
 #include "ui/conditions/ValueEditors.h"
 
 #include <algorithm>
+#include <format>
 
 namespace {
 using Clause = sosr::conditions::Clause;
@@ -23,6 +25,9 @@ bool IsBooleanComparator(const Comparator a_comparator) {
 std::string BuildSuggestedConditionName(
     const std::vector<Definition> &a_conditions, const int a_seed,
     const std::function<bool(std::string_view)> &a_extraConflict) {
+  const auto baseName =
+      std::string(sosr::ui::Localization::GetSingleton()->Get(
+          "conditions.default_name"));
   const auto conflicts = [&](std::string_view a_candidate) {
     if (FindConditionFunctionInfo(a_candidate) != nullptr ||
         sosr::conditions::FindDefinitionByName(a_conditions, a_candidate) !=
@@ -34,7 +39,7 @@ std::string BuildSuggestedConditionName(
   };
 
   for (int index = (std::max)(a_seed, 1);; ++index) {
-    const auto candidate = "Condition " + std::to_string(index);
+    const auto candidate = baseName + " " + std::to_string(index);
     if (!conflicts(candidate)) {
       return candidate;
     }
@@ -48,7 +53,8 @@ std::string BuildUniqueConditionName(
     const std::function<bool(std::string_view)> &a_reservedOrExtraConflict) {
   auto baseName = TrimText(a_baseName);
   if (baseName.empty()) {
-    baseName = "Condition";
+    baseName = std::string(
+        sosr::ui::Localization::GetSingleton()->Get("conditions.default_name"));
   }
 
   const auto conflicts = [&](std::string_view a_candidate) {
@@ -75,6 +81,7 @@ std::string BuildUniqueConditionName(
 std::string
 ValidateConditionDraft(const Definition &a_definition,
                        const std::vector<Definition> &a_conditions) {
+  auto *localization = sosr::ui::Localization::GetSingleton();
   if (const auto baseValidation =
           sosr::conditions::ValidateDefinitionNameAndGraph(
               a_definition, a_conditions,
@@ -87,36 +94,41 @@ ValidateConditionDraft(const Definition &a_definition,
 
   for (std::size_t index = 0; index < a_definition.clauses.size(); ++index) {
     const auto &clause = a_definition.clauses[index];
+    const auto clauseNumber = index + 1;
     std::optional<FunctionInfo> customFunctionInfo;
     const auto *functionInfo =
         ResolveConditionFunctionInfo(clause, a_conditions, customFunctionInfo);
     if (!functionInfo) {
-      return "Unknown or unsupported condition function in clause " +
-             std::to_string(index + 1) + ".";
+      return std::vformat(
+          std::string(localization->Get("conditions.validation.unknown_function")),
+          std::make_format_args(clauseNumber));
     }
     if (!clause.customConditionId.empty() &&
         clause.customConditionId == a_definition.id &&
         !a_definition.id.empty()) {
-      return "A condition cannot reference itself in clause " +
-             std::to_string(index + 1) + ".";
+      return std::vformat(
+          std::string(localization->Get("conditions.validation.self_reference")),
+          std::make_format_args(clauseNumber));
     }
 
     for (std::uint16_t paramIndex = 0;
          paramIndex < functionInfo->parameterCount && paramIndex < 2;
          ++paramIndex) {
       const auto argument = TrimText(clause.arguments[paramIndex]);
+      const auto &parameterLabel = functionInfo->parameterLabels[paramIndex];
       if (!functionInfo->parameterOptional[paramIndex] && argument.empty()) {
-        return functionInfo->parameterLabels[paramIndex] +
-               " is required in clause " + std::to_string(index + 1) + ".";
+        return std::vformat(
+            std::string(localization->Get("conditions.validation.parameter_required")),
+            std::make_format_args(parameterLabel, clauseNumber));
       }
 
       const auto editorKind = GetEditorKindForParamType(
           ResolveEditorParamType(functionInfo->name, paramIndex,
                                  functionInfo->parameterTypes[paramIndex]));
       if (editorKind == ValueEditorKind::Unsupported) {
-        return functionInfo->parameterLabels[paramIndex] +
-               " uses an unsupported parameter type in clause " +
-               std::to_string(index + 1) + ".";
+        return std::vformat(
+            std::string(localization->Get("conditions.validation.parameter_unsupported")),
+            std::make_format_args(parameterLabel, clauseNumber));
       }
 
       if ((editorKind == ValueEditorKind::Integer ||
@@ -129,11 +141,12 @@ ValidateConditionDraft(const Definition &a_definition,
             (void)std::stod(argument);
           }
         } catch (const std::exception &) {
-          return functionInfo->parameterLabels[paramIndex] +
-                 (editorKind == ValueEditorKind::Integer
-                      ? " must be an integer in clause "
-                      : " must be numeric in clause ") +
-                 std::to_string(index + 1) + ".";
+          return std::vformat(
+              std::string(localization->Get(
+                  editorKind == ValueEditorKind::Integer
+                      ? "conditions.validation.parameter_integer"
+                      : "conditions.validation.parameter_numeric")),
+              std::make_format_args(parameterLabel, clauseNumber));
         }
       }
     }
@@ -141,24 +154,28 @@ ValidateConditionDraft(const Definition &a_definition,
     const auto comparand = TrimText(clause.comparand);
     if (functionInfo->returnsBooleanResult) {
       if (!IsBooleanComparator(clause.comparator)) {
-        return "Boolean-return conditions only support == and != in clause " +
-               std::to_string(index + 1) + ".";
+        return std::vformat(
+            std::string(localization->Get("conditions.validation.boolean_comparator")),
+            std::make_format_args(clauseNumber));
       }
       if (!comparand.empty() && comparand != "0" && comparand != "1") {
-        return "Boolean comparison value must be 0 or 1 in clause " +
-               std::to_string(index + 1) + ".";
+        return std::vformat(
+            std::string(localization->Get("conditions.validation.boolean_value")),
+            std::make_format_args(clauseNumber));
       }
     } else {
       if (comparand.empty()) {
-        return "A comparison value is required in clause " +
-               std::to_string(index + 1) + ".";
+        return std::vformat(
+            std::string(localization->Get("conditions.validation.comparison_required")),
+            std::make_format_args(clauseNumber));
       }
 
       try {
         (void)std::stod(comparand);
       } catch (const std::exception &) {
-        return "Comparison value must be numeric in clause " +
-               std::to_string(index + 1) + ".";
+        return std::vformat(
+            std::string(localization->Get("conditions.validation.comparison_numeric")),
+            std::make_format_args(clauseNumber));
       }
     }
   }

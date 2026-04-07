@@ -4,6 +4,7 @@
 #include "StringUtils.h"
 #include "imgui_internal.h"
 #include "ui/InputWidgets.h"
+#include "ui/Localization.h"
 #include "ui/ThemeConfig.h"
 
 #include <algorithm>
@@ -357,7 +358,9 @@ bool DrawEditableDropdownIndexed(
       }
 
       if (!anyVisible) {
-        ImGui::TextDisabled("No matches");
+        ImGui::TextDisabled("%s",
+                            sosr::ui::Localization::GetSingleton()
+                                ->GetCStr("common.no_matches"));
       }
       ImGui::EndPopup();
     }

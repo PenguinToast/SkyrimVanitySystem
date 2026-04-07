@@ -3,6 +3,7 @@
 #include "ArmorUtils.h"
 #include "ConditionMaterializer.h"
 #include "StringUtils.h"
+#include "ui/Localization.h"
 #include "workbench/InitialFilterSelection.h"
 
 #include <algorithm>
@@ -21,9 +22,10 @@ bool AreWorkbenchFilterStatesEqual(const ui::workbench::FilterState &a_left,
 
 void Menu::BuildWorkbenchFilterOptions(
     std::vector<WorkbenchFilterOption> &a_options) {
+  auto *localization = ui::Localization::GetSingleton();
   a_options.clear();
 
-  a_options.push_back({.label = "Show All",
+  a_options.push_back({.label = std::string(localization->Get("workbench.filters.show_all")),
                        .isSection = false,
                        .kind = WorkbenchFilterKind::All,
                        .actorFormID = 0,
@@ -36,7 +38,8 @@ void Menu::BuildWorkbenchFilterOptions(
 
   const auto buildActorLabel = [&](const RE::FormID a_actorFormID) {
     if (playerFormID != 0 && a_actorFormID == playerFormID) {
-      return std::string("Player [") + armor::FormatFormID(a_actorFormID) + "]";
+      return std::string(localization->Get("workbench.filters.player_prefix")) +
+             armor::FormatFormID(a_actorFormID) + "]";
     }
 
     if (auto *actor = RE::TESForm::LookupByID<RE::Actor>(a_actorFormID);
@@ -57,11 +60,13 @@ void Menu::BuildWorkbenchFilterOptions(
       }
     }
 
-    return std::string("Actor [") + armor::FormatFormID(a_actorFormID) + "]";
+    return std::string(localization->Get("workbench.filters.actor_prefix")) +
+           armor::FormatFormID(a_actorFormID) + "]";
   };
 
   if (playerFormID != 0 && seenActorFormIDs.insert(playerFormID).second) {
-    actorOptions.push_back({.label = "Actor: " + buildActorLabel(playerFormID),
+    actorOptions.push_back({.label = std::string(localization->Get("workbench.filters.actor_item_prefix")) +
+                                     buildActorLabel(playerFormID),
                             .isSection = false,
                             .kind = WorkbenchFilterKind::ActorRef,
                             .actorFormID = playerFormID,
@@ -83,7 +88,8 @@ void Menu::BuildWorkbenchFilterOptions(
         continue;
       }
 
-      actorOptions.push_back({.label = "Actor: " + buildActorLabel(actorFormID),
+      actorOptions.push_back({.label = std::string(localization->Get("workbench.filters.actor_item_prefix")) +
+                                       buildActorLabel(actorFormID),
                               .isSection = false,
                               .kind = WorkbenchFilterKind::ActorRef,
                               .actorFormID = actorFormID,
@@ -92,7 +98,9 @@ void Menu::BuildWorkbenchFilterOptions(
   }
 
   if (!actorOptions.empty()) {
-    a_options.push_back({.label = "Actor Ref Filter", .isSection = true});
+    a_options.push_back(
+        {.label = std::string(localization->Get("workbench.filters.actor_section")),
+         .isSection = true});
 
     std::stable_sort(
         actorOptions.begin(), actorOptions.end(),
@@ -114,12 +122,15 @@ void Menu::BuildWorkbenchFilterOptions(
   }
 
   if (CountCatalogConditions() != 0) {
-    a_options.push_back({.label = "Condition Filter", .isSection = true});
+    a_options.push_back(
+        {.label = std::string(localization->Get("workbench.filters.condition_section")),
+         .isSection = true});
     for (const auto &condition : ConditionDefinitions()) {
       if (!IsWorkbenchSelectableCondition(condition)) {
         continue;
       }
-      a_options.push_back({.label = "Condition: " + condition.name,
+      a_options.push_back({.label = std::string(localization->Get("workbench.filters.condition_item_prefix")) +
+                                     condition.name,
                            .isSection = false,
                            .kind = WorkbenchFilterKind::Condition,
                            .actorFormID = 0,

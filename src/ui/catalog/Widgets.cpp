@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "integrations/DynamicArmorVariantsExtendedClient.h"
+#include "ui/Localization.h"
 #include "ui/ThemeConfig.h"
 #include "ui/components/CatalogCollectionTooltip.h"
 #include "ui/components/PinnableTooltip.h"
@@ -56,19 +57,27 @@ std::string TruncateTextToWidth(std::string_view a_text, const float a_width) {
 
 void DrawOutfitTooltip(const OutfitEntry &a_outfit,
                        const bool a_hoveredSource) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   std::vector<components::CatalogTooltipMetaRow> metaRows;
   if (!a_outfit.editorID.empty()) {
-    metaRows.push_back({kIconEditorId.data(), "Editor ID", a_outfit.editorID});
+    metaRows.push_back({kIconEditorId.data(),
+                        std::string(localization->Get("equipment.editor_id")),
+                        a_outfit.editorID});
   }
   if (!a_outfit.plugin.empty()) {
-    metaRows.push_back({kIconPlugin.data(), "Plugin", a_outfit.plugin});
+    metaRows.push_back({kIconPlugin.data(),
+                        std::string(localization->Get("common.plugin")),
+                        a_outfit.plugin});
   }
-  metaRows.push_back(
-      {kIconFormId.data(), "Form ID", armor::FormatFormID(a_outfit.formID)});
+  metaRows.push_back({kIconFormId.data(),
+                      std::string(localization->Get("equipment.form_id")),
+                      armor::FormatFormID(a_outfit.formID)});
   if (const auto *form = RE::TESForm::LookupByID(a_outfit.formID)) {
     if (const auto identifier = armor::GetFormIdentifier(form);
         !identifier.empty()) {
-      metaRows.push_back({kIconIdentifier.data(), "Identifier", identifier});
+      metaRows.push_back(
+          {kIconIdentifier.data(),
+           std::string(localization->Get("equipment.identifier")), identifier});
     }
   }
 
@@ -78,13 +87,21 @@ void DrawOutfitTooltip(const OutfitEntry &a_outfit,
 }
 
 void DrawKitTooltip(const KitEntry &a_kit, const bool a_hoveredSource) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   std::vector<components::CatalogTooltipMetaRow> metaRows;
-  metaRows.push_back({kIconCollection.data(), "Collection",
-                      a_kit.collection.empty() ? "Root" : a_kit.collection});
+  metaRows.push_back(
+      {kIconCollection.data(),
+       std::string(localization->Get("common.collection")),
+       a_kit.collection.empty() ? std::string(localization->Get("common.root"))
+                                : a_kit.collection});
   if (!a_kit.filepath.empty()) {
-    metaRows.push_back({kIconFile.data(), "File", a_kit.filepath});
+    metaRows.push_back(
+        {kIconFile.data(), std::string(localization->Get("common.file")),
+         a_kit.filepath});
   }
-  metaRows.push_back({kIconIdentifier.data(), "Identifier", a_kit.id});
+  metaRows.push_back({kIconIdentifier.data(),
+                      std::string(localization->Get("equipment.identifier")),
+                      a_kit.id});
 
   components::DrawCatalogCollectionTooltip("kit:" + a_kit.id, a_hoveredSource,
                                            a_kit.name, metaRows,

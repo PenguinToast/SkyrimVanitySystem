@@ -1,4 +1,5 @@
 #include "Keycode.h"
+#include "ui/Localization.h"
 
 #include <Windows.h>
 
@@ -18,7 +19,7 @@ bool IsValidHotkey(const std::uint32_t a_key) {
 
 std::string GetKeyName(const std::uint32_t a_scanCode) {
   if (a_scanCode == 0) {
-    return "None";
+    return std::string(ui::Localization::GetSingleton()->Get("common.none"));
   }
 
   LONG lParam = (static_cast<LONG>(a_scanCode & 0xFFU) << 16U);
@@ -33,6 +34,8 @@ std::string GetKeyName(const std::uint32_t a_scanCode) {
     return {keyName.data(), static_cast<std::size_t>(length)};
   }
 
-  return std::format("Scan {:X}", a_scanCode);
+  return std::vformat(
+      std::string(ui::Localization::GetSingleton()->Get("common.scan_code")),
+      std::make_format_args(a_scanCode));
 }
 } // namespace sosr::keycode

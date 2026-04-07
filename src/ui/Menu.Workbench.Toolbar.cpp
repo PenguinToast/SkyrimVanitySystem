@@ -1,6 +1,7 @@
 #include "Menu.h"
 
 #include "imgui_internal.h"
+#include "ui/Localization.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/workbench/Common.h"
 #include "ui/workbench/Tooltips.h"
@@ -11,7 +12,7 @@
 
 namespace {
 struct WorkbenchToolbarAction {
-  std::string_view label;
+  std::string label;
   bool enabled{true};
   std::function<void()> callback;
   std::function<void()> tooltip;
@@ -20,6 +21,7 @@ struct WorkbenchToolbarAction {
 
 namespace sosr {
 void Menu::DrawWorkbenchFilterBar() {
+  auto *localization = ui::Localization::GetSingleton();
   EnsureWorkbenchDerivedState();
   const auto &filterOptions = workbenchDerived_.filterOptions;
 
@@ -44,7 +46,7 @@ void Menu::DrawWorkbenchFilterBar() {
     return false;
   };
 
-  std::string selectedFilterLabel = "Show All";
+  std::string selectedFilterLabel(localization->Get("catalog.show_all"));
   int selectedFilterIndex = -1;
   if (const auto it = std::ranges::find_if(filterOptions, matchesCurrentFilter);
       it != filterOptions.end()) {
@@ -74,8 +76,12 @@ void Menu::DrawWorkbenchFilterBar() {
               ui::workbench::DrawWorkbenchFilterSectionTooltip(a_item.label);
             }
           };
+  const std::string filterPlaceholder(
+      localization->Get("workbench.filter.placeholder"));
   if (ui::components::DrawSearchableDropdown(
-          "##workbench-filter", "Filter workbench...", selectedFilterLabel,
+          "##workbench-filter",
+          filterPlaceholder.c_str(),
+          selectedFilterLabel,
           std::span<const ui::components::EditableDropdownItem<
               WorkbenchFilterOption>>(filterItems),
           ImGui::GetContentRegionAvail().x, &selectedFilterIndex,
@@ -91,6 +97,7 @@ void Menu::DrawWorkbenchFilterBar() {
 }
 
 void Menu::DrawWorkbenchToolbar() {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &visibleRowIndices = BuildVisibleWorkbenchRowIndices();
   const auto equippedKitFormIDs =
       workbench_.CollectEquippedArmorFormIDs(&visibleRowIndices);
@@ -100,9 +107,26 @@ void Menu::DrawWorkbenchToolbar() {
   const bool canCreateEquippedKit = !equippedKitFormIDs.empty();
   const bool canCreateOverrideKit = !overrideKitFormIDs.empty();
 
-  const std::array actions = {
+  const std::string resetEquippedLabel(
+      localization->Get("workbench.toolbar.reset_equipped"));
+  const std::string resetEquippedTooltip(
+      localization->Get("workbench.toolbar.reset_equipped.tooltip"));
+  const std::string resetAllLabel(
+      localization->Get("workbench.toolbar.reset_all"));
+  const std::string resetAllTooltip(
+      localization->Get("workbench.toolbar.reset_all.tooltip"));
+  const std::string kitFromEquippedLabel(
+      localization->Get("workbench.toolbar.kit_from_equipped"));
+  const std::string kitFromEquippedTooltip(
+      localization->Get("workbench.toolbar.kit_from_equipped.tooltip"));
+  const std::string kitFromOverridesLabel(
+      localization->Get("workbench.toolbar.kit_from_overrides"));
+  const std::string kitFromOverridesTooltip(
+      localization->Get("workbench.toolbar.kit_from_overrides.tooltip"));
+
+  const std::vector<WorkbenchToolbarAction> actions = {
       WorkbenchToolbarAction{
-          .label = "Reset Equipped",
+          .label = resetEquippedLabel,
           .callback =
               [&]() {
                 workbench_.ClearPreview();
@@ -112,13 +136,12 @@ void Menu::DrawWorkbenchToolbar() {
                 }
               },
           .tooltip =
-              []() {
-                ImGui::TextUnformatted(
-                    "Reset equipped rows visible in the current filter.");
+              [resetEquippedTooltip]() {
+                ImGui::TextUnformatted(resetEquippedTooltip.data());
               },
       },
       WorkbenchToolbarAction{
-          .label = "Reset All",
+          .label = resetAllLabel,
           .callback =
               [&]() {
                 workbench_.ClearPreview();
@@ -129,13 +152,12 @@ void Menu::DrawWorkbenchToolbar() {
                 }
               },
           .tooltip =
-              []() {
-                ImGui::TextUnformatted(
-                    "Reset all visible rows in the current filter.");
+              [resetAllTooltip]() {
+                ImGui::TextUnformatted(resetAllTooltip.data());
               },
       },
       WorkbenchToolbarAction{
-          .label = "Kit from Equipped",
+          .label = kitFromEquippedLabel,
           .enabled = canCreateEquippedKit,
           .callback =
               [&]() {
@@ -143,14 +165,12 @@ void Menu::DrawWorkbenchToolbar() {
                                     &visibleRowIndices);
               },
           .tooltip =
-              []() {
-                ImGui::TextUnformatted(
-                    "Create a Modex kit from equipped rows visible in the "
-                    "current filter.");
+              [kitFromEquippedTooltip]() {
+                ImGui::TextUnformatted(kitFromEquippedTooltip.data());
               },
       },
       WorkbenchToolbarAction{
-          .label = "Kit from Overrides",
+          .label = kitFromOverridesLabel,
           .enabled = canCreateOverrideKit,
           .callback =
               [&]() {
@@ -158,10 +178,8 @@ void Menu::DrawWorkbenchToolbar() {
                                     &visibleRowIndices);
               },
           .tooltip =
-              []() {
-                ImGui::TextUnformatted(
-                    "Create a Modex kit from overrides on visible equipped "
-                    "rows only.");
+              [kitFromOverridesTooltip]() {
+                ImGui::TextUnformatted(kitFromOverridesTooltip.data());
               },
       },
   };
@@ -281,12 +299,23 @@ void Menu::DrawWorkbenchEmptyState(const char *a_tableId,
     return;
   }
 
-  ImGui::TableSetupColumn("Equipped", ImGuiTableColumnFlags_WidthStretch,
-                          0.80f);
-  ImGui::TableSetupColumn("Overrides", ImGuiTableColumnFlags_WidthStretch,
-                          1.05f);
+  const auto equippedLabel =
+      ui::Localization::GetSingleton()->Get("workbench.equipped");
+  const auto overridesLabel =
+      ui::Localization::GetSingleton()->Get("workbench.overrides");
+  const auto hideLabel =
+      ui::Localization::GetSingleton()->Get("workbench.hide");
+  const auto dropEquipmentMessage =
+      ui::Localization::GetSingleton()->Get("workbench.empty.drop_equipment");
+  const auto dropOverridesMessage =
+      ui::Localization::GetSingleton()->Get("workbench.empty.drop_overrides");
+  ImGui::TableSetupColumn(equippedLabel.data(),
+                          ImGuiTableColumnFlags_WidthStretch, 0.80f);
+  ImGui::TableSetupColumn(overridesLabel.data(),
+                          ImGuiTableColumnFlags_WidthStretch, 1.05f);
   ImGui::TableSetupColumn(
-      "Hide", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize,
+      hideLabel.data(),
+      ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize,
       72.0f);
   ImGui::TableHeadersRow();
   ImGui::TableNextRow(ImGuiTableRowFlags_None, 116.0f);
@@ -299,7 +328,7 @@ void Menu::DrawWorkbenchEmptyState(const char *a_tableId,
                leftCellRect.Min.y + ImGui::GetStyle().CellPadding.y));
     ImGui::PushTextWrapPos(leftCellRect.Max.x -
                            ImGui::GetStyle().CellPadding.x);
-    ImGui::TextDisabled("Drop equipment or equipment slots here.");
+    ImGui::TextDisabled("%s", dropEquipmentMessage.data());
     ImGui::PopTextWrapPos();
 
     if (ImGui::BeginDragDropTargetCustom(leftCellRect,
@@ -317,7 +346,7 @@ void Menu::DrawWorkbenchEmptyState(const char *a_tableId,
   }
 
   ImGui::TableSetColumnIndex(1);
-  ImGui::TextDisabled("Add a row first, then drop equipment overrides here.");
+  ImGui::TextDisabled("%s", dropOverridesMessage.data());
 
   ImGui::TableSetColumnIndex(2);
   ImGui::TextDisabled("-");

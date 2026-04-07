@@ -3,6 +3,7 @@
 #include "ConditionMaterializer.h"
 #include "conditions/Defaults.h"
 #include "imgui_internal.h"
+#include "ui/Localization.h"
 #include "ui/ConditionParamOptionCache.h"
 #include "ui/conditions/EditorSupport.h"
 #include "ui/conditions/Widgets.h"
@@ -28,6 +29,7 @@ void CopyTextToBuffer(const std::string &a_text, char *a_buffer,
 } // namespace
 
 void Menu::DrawConditionEditorDialog() {
+  auto *localization = ui::Localization::GetSingleton();
   ui::conditions::ConditionParamOptionCache::Get().Continue(16.0);
 
   for (auto &editor : ConditionEditors()) {
@@ -37,13 +39,14 @@ void Menu::DrawConditionEditorDialog() {
 
     const bool isLibraryEditor = editor.draft.IsLibrary();
     std::string title =
-        editor.isNew
-            ? (isLibraryEditor ? "New Library Condition" : "New Condition")
-            : editor.draft.name;
+        editor.isNew ? std::string(isLibraryEditor
+                                       ? localization->Get("conditions.editor.new_library")
+                                       : localization->Get("conditions.editor.new"))
+                     : editor.draft.name;
     if (title.empty()) {
-      title = "Untitled";
+      title = localization->Get("conditions.editor.untitled");
     }
-    title.insert(0, "Condition Editor [");
+    title.insert(0, std::string(localization->Get("conditions.editor.title_prefix")));
     title.push_back(']');
     title.append("###");
     title.append("condition-editor-");
@@ -84,26 +87,26 @@ void Menu::DrawConditionEditorDialog() {
       CopyTextToBuffer(editor.draft.name, nameBuffer, sizeof(nameBuffer));
       ImGui::SetNextItemWidth(
           (std::min)(420.0f, ImGui::GetContentRegionAvail().x));
-      if (ImGui::InputTextWithHint("##name", "Name", nameBuffer,
+      if (ImGui::InputTextWithHint("##name", localization->GetCStr("common.name"), nameBuffer,
                                    sizeof(nameBuffer))) {
         editor.draft.name = nameBuffer;
       }
       DrawHoverDescription("conditions:editor:name",
-                           "Friendly name shown in the Conditions catalog.");
+                           localization->Get("conditions.editor.name_help"));
 
       char descriptionBuffer[512];
       CopyTextToBuffer(editor.draft.description, descriptionBuffer,
                        sizeof(descriptionBuffer));
       ImGui::SetNextItemWidth(
           (std::min)(520.0f, ImGui::GetContentRegionAvail().x));
-      if (ImGui::InputTextWithHint("##description", "Description",
+      if (ImGui::InputTextWithHint("##description", localization->GetCStr("options.description"),
                                    descriptionBuffer,
                                    sizeof(descriptionBuffer))) {
         editor.draft.description = descriptionBuffer;
       }
       DrawHoverDescription(
           "conditions:editor:description",
-          "Optional description shown on the condition widget.");
+          localization->Get("conditions.editor.description_help"));
 
       if (!isLibraryEditor) {
         auto color = editor.draft.GetCatalog() != nullptr
@@ -118,18 +121,17 @@ void Menu::DrawConditionEditorDialog() {
         }
         DrawHoverDescription(
             "conditions:editor:color",
-            "Associated display color used by the Conditions catalog row.");
+            localization->Get("conditions.editor.color_help"));
       } else {
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::TextDisabled(
-            "Library conditions are reusable building blocks stored as JSON "
-            "files. They can be referenced by other conditions, but they are "
-            "never applied directly to workbench rows.");
+        ImGui::TextDisabled("%s",
+                            localization->Get("conditions.editor.library_note").data());
         ImGui::PopTextWrapPos();
       }
 
       ImGui::Spacing();
-      ImGui::TextUnformatted("Clauses");
+      ImGui::TextUnformatted(
+          localization->GetCStr("conditions.editor.clauses"));
       ImGui::Separator();
 
       const auto conditionFunctionItems = BuildConditionFunctionItems(
@@ -137,7 +139,8 @@ void Menu::DrawConditionEditorDialog() {
       const auto clausePaneHeight =
           (std::max)(220.0f, ImGui::GetContentRegionAvail().y);
       const auto editButtonWidth =
-          ImGui::CalcTextSize("Edit").x + style.FramePadding.x * 2.0f;
+          ImGui::CalcTextSize(localization->Get("common.edit").data()).x +
+          style.FramePadding.x * 2.0f;
       const auto deleteButtonWidth =
           ImGui::CalcTextSize("\xee\x86\x8c").x + style.FramePadding.x * 2.0f;
       const auto actionsColumnWidth = editButtonWidth + style.ItemSpacing.x +
@@ -158,7 +161,7 @@ void Menu::DrawConditionEditorDialog() {
     ImGui::EndChild();
 
     ImGui::BeginDisabled(!draftValidationError.empty());
-    if (ImGui::Button("Save")) {
+    if (ImGui::Button(localization->GetCStr("common.save"))) {
       if (SaveConditionEditor(editor)) {
         editor.open = false;
       } else if (!editor.error.empty()) {
@@ -173,7 +176,7 @@ void Menu::DrawConditionEditorDialog() {
                            ImGuiHoveredFlags_AllowWhenDisabled);
     }
     ImGui::SameLine();
-    if (ImGui::Button("Cancel")) {
+    if (ImGui::Button(localization->GetCStr("common.cancel"))) {
       editor.error.clear();
       editor.open = false;
     }
@@ -183,13 +186,15 @@ void Menu::DrawConditionEditorDialog() {
                             ImVec2(0.5f, 0.5f));
     if (ImGui::BeginPopupModal("##condition-save-error", nullptr,
                                ImGuiWindowFlags_AlwaysAutoResize)) {
-      ImGui::TextUnformatted("Condition could not be saved.");
+      ImGui::TextUnformatted(
+          localization->GetCStr("conditions.editor.save_failed"));
       ImGui::Spacing();
       ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 420.0f);
       ImGui::TextWrapped("%s", editor.error.c_str());
       ImGui::PopTextWrapPos();
       ImGui::Spacing();
-      if (ImGui::Button("OK", ImVec2(120.0f, 0.0f))) {
+      if (ImGui::Button(localization->GetCStr("common.ok"),
+                        ImVec2(120.0f, 0.0f))) {
         editor.error.clear();
         ImGui::CloseCurrentPopup();
       }

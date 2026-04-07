@@ -2,6 +2,7 @@
 
 #include "Keycode.h"
 #include "ThemeConfig.h"
+#include "ui/Localization.h"
 #include "backends/imgui_impl_dx11.h"
 #include "backends/imgui_impl_win32.h"
 
@@ -77,6 +78,7 @@ void Menu::LoadUserSettings() {
                                  kMinFontSizePixels, kMaxFontSizePixels);
     pendingFontSizePixels_ = fontSizePixels_;
     fontPath_ = json.value("fontPath", fontPath_);
+    localeId_ = json.value("locale", localeId_);
     pauseGameWhenOpen_ = json.value("pauseGameWhileOpen", pauseGameWhenOpen_);
     smoothScroll_ = json.value("smoothScroll", smoothScroll_);
     toggleKey_ = json.value("toggleKey", toggleKey_);
@@ -125,6 +127,7 @@ void Menu::SaveUserSettings() const {
   const nlohmann::json json = {
       {"fontSizePx", fontSizePixels_},
       {"fontPath", fontPath_},
+      {"locale", localeId_},
       {"pauseGameWhileOpen", pauseGameWhenOpen_},
       {"smoothScroll", smoothScroll_},
       {"toggleKey", toggleKey_},
@@ -215,6 +218,16 @@ void Menu::ApplyStyle() {
   ThemeConfig::GetSingleton()->ApplyToImGui();
 }
 
+void Menu::NormalizeSelectedLocaleId() {
+  if (localeId_.empty()) {
+    localeId_ = kDefaultLocaleId;
+  }
+
+  auto *localization = ui::Localization::GetSingleton();
+  localization->SelectLocale(localeId_);
+  localeId_ = localization->GetCurrentLocaleId();
+}
+
 void Menu::OpenToggleKeyCapture() {
   awaitingToggleKeyCapture_ = true;
   openToggleKeyPopup_ = true;
@@ -244,8 +257,8 @@ void Menu::HandleToggleKeyCapture(const std::uint32_t a_scanCode,
 
   if (!keycode::IsValidHotkey(a_scanCode) ||
       keycode::IsKeyModifier(a_scanCode)) {
-    toggleKeyCaptureError_ =
-        "Choose a non-modifier key. Hold Shift, Ctrl, or Alt for a modifier.";
+    toggleKeyCaptureError_ = std::string(
+        ui::Localization::GetSingleton()->Get("options.toggle_capture.invalid"));
     return;
   }
 
@@ -288,8 +301,10 @@ void Menu::Init(IDXGISwapChain *a_swapChain, ID3D11Device *a_device,
   favoritesPath_ =
       (std::filesystem::path(settingsDirectory_) / kFavoritesFilename).string();
   RefreshAvailableFonts();
+  ui::Localization::GetSingleton()->RefreshAvailableLocales(kLocaleDirectory);
   LoadUserSettings();
   NormalizeSelectedFontPath();
+  NormalizeSelectedLocaleId();
   LoadFavorites();
 
   IMGUI_CHECKVERSION();

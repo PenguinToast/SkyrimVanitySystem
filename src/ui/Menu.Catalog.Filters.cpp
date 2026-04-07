@@ -5,12 +5,14 @@
 #include "PlayerInventory.h"
 #include "ThemeConfig.h"
 #include "ui/InputWidgets.h"
+#include "ui/Localization.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/conditions/EditorSupport.h"
 
 #include <algorithm>
 #include <cfloat>
 #include <charconv>
+#include <format>
 #include <unordered_set>
 
 namespace sosr {
@@ -27,10 +29,6 @@ int CompareCatalogText(const std::string_view a_left,
 }
 
 std::uint64_t GetCatalogSlotFilterMask(const std::string_view a_label) {
-  if (a_label == "None") {
-    return 0;
-  }
-
   const auto delimiter = a_label.find(' ');
   const auto numberText = a_label.substr(0, delimiter);
   std::uint32_t slotNumber = 0;
@@ -163,10 +161,11 @@ bool Menu::MatchesSelectedSlotsAnd(const std::uint64_t a_slotMask) const {
 }
 
 std::string Menu::BuildSelectedSlotPreview() const {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &slotOptions = EquipmentCatalog::Get().GetGearSlots();
   const auto &selectedSlotFilters = CatalogBrowserState().selectedSlotFilters;
   std::size_t selectedCount = 0;
-  std::string_view selectedLabel = "Any slot";
+  std::string_view selectedLabel = localization->Get("catalog.filters.any_slot");
 
   for (std::size_t index = 0; index < selectedSlotFilters.size(); ++index) {
     if (!selectedSlotFilters[index]) {
@@ -177,12 +176,13 @@ std::string Menu::BuildSelectedSlotPreview() const {
   }
 
   if (selectedCount == 0) {
-    return "Any slot";
+    return std::string(localization->Get("catalog.filters.any_slot"));
   }
   if (selectedCount == 1) {
     return std::string(selectedLabel);
   }
-  return std::to_string(selectedCount) + " slots";
+  return std::vformat(std::string(localization->Get("catalog.filters.slot_count")),
+                      std::make_format_args(selectedCount));
 }
 
 std::vector<const GearEntry *> Menu::BuildFilteredGear() const {
@@ -498,6 +498,7 @@ void Menu::DrawCatalogFilters() {
   }
 
   const auto &catalog = EquipmentCatalog::Get();
+  auto *localization = ui::Localization::GetSingleton();
   SyncSelectedSlotFilters();
   const auto itemSpacingX = ImGui::GetStyle().ItemSpacing.x;
   const auto filterBarWidth = ImGui::GetContentRegionAvail().x;
@@ -530,7 +531,7 @@ void Menu::DrawCatalogFilters() {
     const auto preview = BuildSelectedSlotPreview();
     if (ImGui::BeginCombo("##slot-filter", preview.c_str())) {
       const auto anySelected = !HasAnySelectedSlotFilter();
-      if (ImGui::Selectable("Any slot", anySelected,
+      if (ImGui::Selectable(localization->Get("catalog.filters.any_slot").data(), anySelected,
                             ImGuiSelectableFlags_DontClosePopups)) {
         std::fill(browser.selectedSlotFilters.begin(),
                   browser.selectedSlotFilters.end(), false);
@@ -556,28 +557,28 @@ void Menu::DrawCatalogFilters() {
   if (filterBarWidth < 560.0f) {
     if (browser.activeTab == ui::catalog::BrowserTab::Gear) {
       drawSearchField(browser.gearSearch, -FLT_MIN, "##gear-search",
-                      "Search installed armor");
+                      localization->GetCStr("catalog.filters.search_armor"));
     } else if (browser.activeTab == ui::catalog::BrowserTab::Outfits) {
       drawSearchField(browser.outfitSearch, -FLT_MIN, "##outfit-search",
-                      "Search installed outfits");
+                      localization->GetCStr("catalog.filters.search_outfits"));
     } else {
       drawSearchField(browser.kitSearch, -FLT_MIN, "##kit-search",
-                      "Search Modex kits");
+                      localization->GetCStr("catalog.filters.search_kits"));
     }
 
     const auto halfWidth = (filterBarWidth - itemSpacingX) * 0.5f;
     ImGui::SetNextItemWidth(halfWidth);
     if (browser.activeTab == ui::catalog::BrowserTab::Gear) {
       ui::components::DrawSearchableStringCombo(
-          "##gear-plugin", "All plugins", catalog.GetGearPlugins(),
+          "##gear-plugin", localization->GetCStr("catalog.filters.all_plugins"), catalog.GetGearPlugins(),
           browser.gearPluginIndex, browser.gearPluginFilter);
     } else if (browser.activeTab == ui::catalog::BrowserTab::Outfits) {
       ui::components::DrawSearchableStringCombo(
-          "##outfit-plugin", "All plugins", catalog.GetOutfitPlugins(),
+          "##outfit-plugin", localization->GetCStr("catalog.filters.all_plugins"), catalog.GetOutfitPlugins(),
           browser.outfitPluginIndex, browser.outfitPluginFilter);
     } else {
       ui::components::DrawSearchableStringCombo(
-          "##kit-collection", "All collections", catalog.GetKitCollections(),
+          "##kit-collection", localization->GetCStr("catalog.filters.all_collections"), catalog.GetKitCollections(),
           browser.kitCollectionIndex, browser.kitCollectionFilter);
     }
 
@@ -592,28 +593,28 @@ void Menu::DrawCatalogFilters() {
 
     if (browser.activeTab == ui::catalog::BrowserTab::Gear) {
       drawSearchField(browser.gearSearch, searchWidth, "##gear-search",
-                      "Search installed armor");
+                      localization->GetCStr("catalog.filters.search_armor"));
     } else if (browser.activeTab == ui::catalog::BrowserTab::Outfits) {
       drawSearchField(browser.outfitSearch, searchWidth, "##outfit-search",
-                      "Search installed outfits");
+                      localization->GetCStr("catalog.filters.search_outfits"));
     } else {
       drawSearchField(browser.kitSearch, searchWidth, "##kit-search",
-                      "Search Modex kits");
+                      localization->GetCStr("catalog.filters.search_kits"));
     }
     ImGui::SameLine();
 
     ImGui::SetNextItemWidth(pluginWidth);
     if (browser.activeTab == ui::catalog::BrowserTab::Gear) {
       ui::components::DrawSearchableStringCombo(
-          "##gear-plugin", "All plugins", catalog.GetGearPlugins(),
+          "##gear-plugin", localization->GetCStr("catalog.filters.all_plugins"), catalog.GetGearPlugins(),
           browser.gearPluginIndex, browser.gearPluginFilter);
     } else if (browser.activeTab == ui::catalog::BrowserTab::Outfits) {
       ui::components::DrawSearchableStringCombo(
-          "##outfit-plugin", "All plugins", catalog.GetOutfitPlugins(),
+          "##outfit-plugin", localization->GetCStr("catalog.filters.all_plugins"), catalog.GetOutfitPlugins(),
           browser.outfitPluginIndex, browser.outfitPluginFilter);
     } else {
       ui::components::DrawSearchableStringCombo(
-          "##kit-collection", "All collections", catalog.GetKitCollections(),
+          "##kit-collection", localization->GetCStr("catalog.filters.all_collections"), catalog.GetKitCollections(),
           browser.kitCollectionIndex, browser.kitCollectionFilter);
     }
 

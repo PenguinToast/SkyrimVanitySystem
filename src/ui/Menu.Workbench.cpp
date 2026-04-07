@@ -1,5 +1,6 @@
 #include "Menu.h"
 
+#include "ui/Localization.h"
 #include "ui/workbench/Common.h"
 
 #include <cstring>
@@ -122,6 +123,7 @@ void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
 }
 
 void Menu::DrawVariantWorkbenchPane() {
+  auto *localization = ui::Localization::GetSingleton();
   EnsureWorkbenchDerivedState();
   if (!IsWorkbenchFilterSelectionValid()) {
     workbenchFilter_ = {};
@@ -136,16 +138,14 @@ void Menu::DrawVariantWorkbenchPane() {
   if (rows.empty()) {
     DrawWorkbenchEmptyState(
         "##variant-workbench-empty", "##empty-workbench-row-target",
-        "No workbench rows yet. Drag equipment or slot entries to the "
-        "Equipped column to create one.");
+        localization->GetCStr("workbench.empty.no_rows"));
     return;
   }
 
   if (visibleRowIndices.empty()) {
     DrawWorkbenchEmptyState(
         "##variant-workbench-filter-empty", "##filtered-workbench-row-target",
-        "No workbench rows match the current filter. Drag equipment or "
-        "equipment slots here to create one.");
+        localization->GetCStr("workbench.empty.no_filtered_rows"));
     return;
   }
   DrawWorkbenchTable(visibleRowIndices);

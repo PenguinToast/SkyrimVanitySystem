@@ -1,7 +1,9 @@
 #include "ArmorUtils.h"
+#include "ui/Localization.h"
 
 #include <algorithm>
 #include <cstdio>
+#include <format>
 #include <windows.h>
 
 namespace {
@@ -98,8 +100,9 @@ std::string FormatFormID(RE::FormID a_formID) {
 }
 
 std::string GetDisplayName(const RE::TESForm *a_form) {
+  const auto *localization = ui::Localization::GetSingleton();
   if (!a_form) {
-    return "Unknown";
+    return std::string(localization->Get("common.unknown"));
   }
 
   auto name = CopyCString(a_form->GetName());
@@ -112,7 +115,9 @@ std::string GetDisplayName(const RE::TESForm *a_form) {
     return editorID;
   }
 
-  return "Form " + FormatFormID(a_form->GetFormID());
+  const auto formID = FormatFormID(a_form->GetFormID());
+  return std::vformat(std::string(localization->Get("common.form_fallback")),
+                      std::make_format_args(formID));
 }
 
 std::string GetEditorID(const RE::TESForm *a_form) {
@@ -148,7 +153,7 @@ std::vector<std::string> GetArmorSlotLabels(std::uint64_t a_slotMask) {
   }
 
   if (labels.empty()) {
-    labels.emplace_back("None");
+    labels.emplace_back(ui::Localization::GetSingleton()->Get("common.none"));
   }
 
   return labels;

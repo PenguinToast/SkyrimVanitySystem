@@ -2,10 +2,12 @@
 #include "catalog/KitLayoutMetadata.h"
 
 #include "ArmorUtils.h"
+#include "ui/Localization.h"
 
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <format>
 #include <nlohmann/json.hpp>
 #include <unordered_set>
 
@@ -41,12 +43,15 @@ std::string GetName(const RE::TESForm *a_form) {
 }
 
 std::string BuildEntryID(const RE::TESForm *a_form) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   if (!a_form) {
-    return "unknown|00000000";
+    return std::string(localization->Get("catalog.entry.unknown_id"));
   }
 
   const auto plugin = sosr::armor::GetPluginName(a_form);
-  return (plugin.empty() ? std::string{"Unknown"} : plugin) + "|" +
+  return (plugin.empty() ? std::string(localization->Get("common.unknown"))
+                         : plugin) +
+         "|" +
          sosr::armor::FormatFormID(a_form->GetLocalFormID());
 }
 
@@ -96,7 +101,10 @@ const sosr::ArmorMetadata &GetOrBuildArmorMetadata(
 
 std::string GetPrimaryArmorSlot(const RE::TESObjectARMO *a_armor) {
   auto slots = GetArmorSlots(a_armor);
-  return slots.empty() ? std::string{"None"} : std::move(slots.front());
+  return slots.empty()
+             ? std::string(
+                   sosr::ui::Localization::GetSingleton()->Get("common.none"))
+             : std::move(slots.front());
 }
 
 sosr::CatalogCollectionItemNode BuildCachedCollectionNode(
@@ -417,25 +425,31 @@ std::shared_ptr<const sosr::CatalogResolvedData> FinalizeResolvedData(
 }
 
 std::string BuildOutfitSummary(const OutfitDescription &a_description) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   const auto totalPieces = a_description.pieces.size();
   if (totalPieces == 0) {
-    return "Empty outfit.";
-  }
-
-  std::string summary = "Contains " + std::to_string(totalPieces) + " item";
-  if (totalPieces != 1) {
-    summary.push_back('s');
+    return std::string(localization->Get("catalog.outfit.empty_summary"));
   }
 
   if (a_description.armorCount > 0) {
-    summary.append(": ");
-    summary.append(std::to_string(a_description.armorCount));
-    summary.append(" armor");
-  } else {
-    summary.push_back('.');
+    return totalPieces == 1
+               ? std::vformat(
+                     std::string(localization->Get(
+                         "catalog.outfit.summary_single_with_armor")),
+                     std::make_format_args(a_description.armorCount))
+               : std::vformat(
+                     std::string(localization->Get(
+                         "catalog.outfit.summary_multiple_with_armor")),
+                     std::make_format_args(totalPieces,
+                                           a_description.armorCount));
   }
 
-  return summary;
+  return totalPieces == 1
+             ? std::string(localization->Get("catalog.outfit.summary_single"))
+             : std::vformat(
+                   std::string(
+                       localization->Get("catalog.outfit.summary_multiple")),
+                   std::make_format_args(totalPieces));
 }
 
 nlohmann::json OpenJsonFile(const std::filesystem::path &a_path) {
@@ -494,17 +508,17 @@ KitDescription DescribeKitItems(
 }
 
 std::string BuildKitSummary(const KitDescription &a_description) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   const auto armorCount = a_description.armorFormIDs.size();
   if (armorCount == 0) {
-    return "No armor items.";
+    return std::string(localization->Get("catalog.kit.empty_summary"));
   }
 
-  std::string summary =
-      "Contains " + std::to_string(armorCount) + " armor item";
-  if (armorCount != 1) {
-    summary.push_back('s');
-  }
-  return summary;
+  return armorCount == 1
+             ? std::string(localization->Get("catalog.kit.summary_single"))
+             : std::vformat(
+                   std::string(localization->Get("catalog.kit.summary_multiple")),
+                   std::make_format_args(armorCount));
 }
 } // namespace
 
@@ -574,7 +588,11 @@ std::optional<OutfitEntry> BuildOutfitEntry(
     displayName = editorID;
   }
   if (displayName.empty()) {
-    displayName = "Form " + sosr::armor::FormatFormID(a_outfit->GetFormID());
+    const auto formID = sosr::armor::FormatFormID(a_outfit->GetFormID());
+    displayName = std::vformat(
+        std::string(
+            sosr::ui::Localization::GetSingleton()->Get("common.form_fallback")),
+        std::make_format_args(formID));
   }
 
   OutfitEntry entry{};

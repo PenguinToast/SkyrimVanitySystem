@@ -1,8 +1,11 @@
 #include "Menu.h"
 
 #include "imgui_internal.h"
+#include "ui/Localization.h"
 #include "ui/catalog/Widgets.h"
 #include "ui/components/PinnableTooltip.h"
+
+#include <format>
 
 namespace {
 enum class OutfitColumn : ImGuiID { Name = 1, Plugin, Pieces };
@@ -10,9 +13,14 @@ enum class OutfitColumn : ImGuiID { Name = 1, Plugin, Pieces };
 
 namespace sosr {
 bool Menu::DrawOutfitTab() {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &browser = CatalogBrowserState();
   const auto &rows = GetFilteredOutfitRows();
-  ImGui::Text("Results: %zu", rows.size());
+  const auto resultCount = rows.size();
+  const auto resultsLabel = std::vformat(
+      std::string(localization->Get("catalog.results")),
+      std::make_format_args(resultCount));
+  ImGui::TextUnformatted(resultsLabel.c_str());
   bool rowClicked = false;
 
   const auto tableHeight = ImGui::GetContentRegionAvail().y;
@@ -21,11 +29,20 @@ bool Menu::DrawOutfitTab() {
                             ImGuiTableFlags_Resizable |
                             ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY,
                         ImVec2(0.0f, tableHeight))) {
-    ImGui::TableSetupColumn("Outfit", ImGuiTableColumnFlags_DefaultSort, 0.0f,
+    const auto outfitLabel = localization->Get("common.outfit");
+    const auto pluginLabel = localization->Get("common.plugin");
+    const auto piecesLabel = localization->Get("common.pieces");
+    const auto removeFavoriteLabel = localization->Get("favorites.remove");
+    const auto addFavoriteLabel = localization->Get("favorites.add");
+    const auto addWorkbenchLabel = localization->Get("workbench.add");
+    const auto addOverrideLabel = localization->Get("workbench.add_override");
+    const auto appendOverridesLabel =
+        localization->Get("workbench.append_overrides");
+    ImGui::TableSetupColumn(outfitLabel.data(), ImGuiTableColumnFlags_DefaultSort, 0.0f,
                             static_cast<ImGuiID>(OutfitColumn::Name));
-    ImGui::TableSetupColumn("Plugin", ImGuiTableColumnFlags_None, 0.0f,
+    ImGui::TableSetupColumn(pluginLabel.data(), ImGuiTableColumnFlags_None, 0.0f,
                             static_cast<ImGuiID>(OutfitColumn::Plugin));
-    ImGui::TableSetupColumn("Pieces",
+    ImGui::TableSetupColumn(piecesLabel.data(),
                             ImGuiTableColumnFlags_PreferSortDescending, 0.0f,
                             static_cast<ImGuiID>(OutfitColumn::Pieces));
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -62,22 +79,22 @@ bool Menu::DrawOutfitTab() {
         ImGui::PopStyleColor(3);
         if (ImGui::BeginPopupContextItem()) {
           const auto favoriteLabel =
-              favorite ? "Remove from Favorites" : "Add to Favorites";
+              favorite ? removeFavoriteLabel.data() : addFavoriteLabel.data();
           if (ImGui::MenuItem(favoriteLabel)) {
             SetFavorite(ui::catalog::BrowserTab::Outfits, outfit.id, !favorite);
           }
           ImGui::Separator();
-          if (ImGui::MenuItem("Add to Workbench")) {
+          if (ImGui::MenuItem(addWorkbenchLabel.data())) {
             const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
                 outfit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId(),
                 &initialEquippedState);
           }
           ImGui::Separator();
-          if (ImGui::MenuItem("Add Override")) {
+          if (ImGui::MenuItem(addOverrideLabel.data())) {
             AddOutfitEntryToWorkbench(outfit, true);
           }
-          if (ImGui::MenuItem("Append Overrides")) {
+          if (ImGui::MenuItem(appendOverridesLabel.data())) {
             AddOutfitEntryToWorkbench(outfit, false);
           }
           ImGui::EndPopup();

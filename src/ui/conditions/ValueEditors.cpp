@@ -1,6 +1,7 @@
 #include "ui/conditions/ValueEditors.h"
 
 #include "ui/ConditionParamOptionCache.h"
+#include "ui/Localization.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/conditions/FunctionRegistry.h"
 
@@ -54,7 +55,10 @@ bool DrawNumericClauseValueEditorImpl(const char *a_id, std::string &a_value,
       a_kind == ValueEditorKind::CachedOption) {
     ImGui::BeginDisabled();
     ImGui::SetNextItemWidth(a_width);
-    char buffer[32] = "Unsupported";
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%s",
+                  sosr::ui::Localization::GetSingleton()->GetCStr(
+                      "conditions.unsupported"));
     ImGui::InputText(a_id, buffer, sizeof(buffer),
                      ImGuiInputTextFlags_ReadOnly);
     ImGui::EndDisabled();
@@ -149,7 +153,9 @@ bool DrawConditionParamEditor(const char *a_id, std::string &a_value,
           optionItems.push_back({.label = option, .value = option});
         }
         return sosr::ui::components::DrawSearchableDropdown(
-            a_id, "Select value", a_value,
+            a_id, sosr::ui::Localization::GetSingleton()->GetCStr(
+                      "conditions.select_value"),
+            a_value,
             std::span<
                 const sosr::ui::components::EditableDropdownItem<std::string>>(
                 optionItems),
@@ -168,7 +174,10 @@ bool DrawConditionParamEditor(const char *a_id, std::string &a_value,
 
   ImGui::BeginDisabled();
   ImGui::SetNextItemWidth(a_width);
-  char buffer[32] = "Unsupported";
+  char buffer[32];
+  std::snprintf(buffer, sizeof(buffer), "%s",
+                sosr::ui::Localization::GetSingleton()->GetCStr(
+                    "conditions.unsupported"));
   ImGui::InputText(a_id, buffer, sizeof(buffer), ImGuiInputTextFlags_ReadOnly);
   ImGui::EndDisabled();
   return false;

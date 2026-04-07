@@ -1,10 +1,12 @@
 #include "conditions/Library.h"
 
 #include "conditions/Validation.h"
+#include "ui/Localization.h"
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <format>
 #include <nlohmann/json.hpp>
 #include <unordered_set>
 
@@ -88,9 +90,11 @@ SerializeDefinition(const sosr::conditions::Definition &a_definition) {
 
 bool WriteLibraryJson(const std::filesystem::path &a_path,
                       const nlohmann::json &a_root, std::string &a_error) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   std::ofstream output(a_path);
   if (!output.is_open()) {
-    a_error = "Failed to open library file for writing.";
+    a_error = std::string(
+        localization->Get("conditions.library.error.open_write"));
     return false;
   }
   output << a_root.dump(2);
@@ -101,12 +105,16 @@ bool WriteLibraryJson(const std::filesystem::path &a_path,
 bool PersistLibraryDefinitions(
     std::vector<sosr::conditions::Definition> &a_definitions,
     std::string &a_error) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   a_error.clear();
   const auto directory = BuildLibraryDirectory();
   std::error_code error;
   std::filesystem::create_directories(directory, error);
   if (error) {
-    a_error = "Failed to create library directory: " + error.message();
+    auto message = error.message();
+    a_error = std::vformat(std::string(localization->Get(
+                               "conditions.library.error.create_directory")),
+                           std::make_format_args(message));
     return false;
   }
 
@@ -115,8 +123,11 @@ bool PersistLibraryDefinitions(
   error.clear();
   std::filesystem::create_directories(tempDirectory, error);
   if (error) {
-    a_error =
-        "Failed to create temporary library directory: " + error.message();
+    auto message = error.message();
+    a_error = std::vformat(
+        std::string(
+            localization->Get("conditions.library.error.create_temp_directory")),
+        std::make_format_args(message));
     return false;
   }
 
@@ -140,7 +151,11 @@ bool PersistLibraryDefinitions(
   for (const auto &entry :
        std::filesystem::directory_iterator(directory, error)) {
     if (error) {
-      a_error = "Failed to enumerate library directory: " + error.message();
+      auto message = error.message();
+      a_error = std::vformat(
+          std::string(localization->Get(
+              "conditions.library.error.enumerate_directory")),
+          std::make_format_args(message));
       std::filesystem::remove_all(tempDirectory, error);
       return false;
     }
@@ -160,7 +175,11 @@ bool PersistLibraryDefinitions(
         stagedPath, finalPath,
         std::filesystem::copy_options::overwrite_existing, error);
     if (error) {
-      a_error = "Failed to commit library file: " + error.message();
+      auto message = error.message();
+      a_error = std::vformat(
+          std::string(
+              localization->Get("conditions.library.error.commit_file")),
+          std::make_format_args(message));
       std::filesystem::remove_all(tempDirectory, error);
       return false;
     }
@@ -169,7 +188,11 @@ bool PersistLibraryDefinitions(
   for (const auto &stalePath : stalePaths) {
     std::filesystem::remove(stalePath, error);
     if (error) {
-      a_error = "Failed to remove stale library file: " + error.message();
+      auto message = error.message();
+      a_error = std::vformat(
+          std::string(
+              localization->Get("conditions.library.error.remove_stale")),
+          std::make_format_args(message));
       std::filesystem::remove_all(tempDirectory, error);
       return false;
     }
@@ -249,6 +272,7 @@ bool CommitLibraryConditionEdit(const std::vector<Definition> &a_definitions,
                                 const Definition &a_draft,
                                 LibraryChangeResult &a_result,
                                 std::string &a_error) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   a_result = {};
   a_error.clear();
 
@@ -263,7 +287,8 @@ bool CommitLibraryConditionEdit(const std::vector<Definition> &a_definitions,
     updatedDefinitions.push_back(updatedDraft);
   } else {
     if (existingIt == updatedDefinitions.end()) {
-      a_error = "Condition no longer exists.";
+      a_error = std::string(
+          localization->Get("conditions.validation.no_longer_exists"));
       return false;
     }
     const auto previousId = existingIt->id;
@@ -287,6 +312,7 @@ bool CommitLibraryConditionDelete(const std::vector<Definition> &a_definitions,
                                   std::string_view a_conditionId,
                                   LibraryChangeResult &a_result,
                                   std::string &a_error) {
+  const auto *localization = sosr::ui::Localization::GetSingleton();
   a_result = {};
   a_error.clear();
 
@@ -294,7 +320,8 @@ bool CommitLibraryConditionDelete(const std::vector<Definition> &a_definitions,
   const auto it =
       std::ranges::find(updatedDefinitions, a_conditionId, &Definition::id);
   if (it == updatedDefinitions.end() || !it->IsLibrary()) {
-    a_error = "Library condition no longer exists.";
+    a_error = std::string(
+        localization->Get("conditions.library.error.no_longer_exists"));
     return false;
   }
   updatedDefinitions.erase(it);

@@ -1,5 +1,7 @@
 #include "ui/WorkbenchConflicts.h"
 
+#include "ui/Localization.h"
+
 #include <algorithm>
 
 namespace {
@@ -30,9 +32,12 @@ bool IsVariantSelectionConflictPair(
 std::string
 DescribeRowSelectionReason(const sosr::workbench::VariantWorkbenchRow &a_row) {
   if (a_row.hideEquipped) {
-    return "hide equipped";
+    return std::string(sosr::ui::Localization::GetSingleton()->Get(
+        "workbench.conflict.hide_equipped"));
   }
-  return a_row.IsSlotRow() ? "slot override" : "item override";
+  return std::string(sosr::ui::Localization::GetSingleton()->Get(
+      a_row.IsSlotRow() ? "workbench.conflict.slot_override"
+                        : "workbench.conflict.item_override"));
 }
 
 template <class TConflictInfo>

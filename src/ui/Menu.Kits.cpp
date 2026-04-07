@@ -4,6 +4,7 @@
 #include "StringUtils.h"
 #include "catalog/KitLayoutMetadata.h"
 #include "imgui_internal.h"
+#include "ui/Localization.h"
 #include "ui/catalog/Widgets.h"
 #include "ui/components/EditableCombo.h"
 #include "ui/components/PinnableTooltip.h"
@@ -13,6 +14,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <format>
 #include <nlohmann/json.hpp>
 
 namespace {
@@ -35,9 +37,14 @@ std::string NormalizeKitCollection(std::string_view a_collection) {
 
 namespace sosr {
 bool Menu::DrawKitTab() {
+  auto *localization = ui::Localization::GetSingleton();
   const auto &browser = CatalogBrowserState();
   const auto &rows = GetFilteredKitRows();
-  ImGui::Text("Results: %zu", rows.size());
+  const auto resultCount = rows.size();
+  const auto resultsLabel = std::vformat(
+      std::string(localization->Get("catalog.results")),
+      std::make_format_args(resultCount));
+  ImGui::TextUnformatted(resultsLabel.c_str());
   bool rowClicked = false;
 
   const auto tableHeight = ImGui::GetContentRegionAvail().y;
@@ -46,11 +53,22 @@ bool Menu::DrawKitTab() {
                             ImGuiTableFlags_Resizable |
                             ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY,
                         ImVec2(0.0f, tableHeight))) {
-    ImGui::TableSetupColumn("Kit", ImGuiTableColumnFlags_DefaultSort, 0.0f,
+    const auto kitLabel = localization->Get("common.kit");
+    const auto collectionLabel = localization->Get("common.collection");
+    const auto piecesLabel = localization->Get("common.pieces");
+    const auto removeFavoriteLabel = localization->Get("favorites.remove");
+    const auto addFavoriteLabel = localization->Get("favorites.add");
+    const auto addWorkbenchLabel = localization->Get("workbench.add");
+    const auto addOverrideLabel = localization->Get("workbench.add_override");
+    const auto appendOverridesLabel =
+        localization->Get("workbench.append_overrides");
+    const auto deleteKitLabel = localization->Get("kits.delete");
+    const auto rootLabel = localization->Get("common.root");
+    ImGui::TableSetupColumn(kitLabel.data(), ImGuiTableColumnFlags_DefaultSort, 0.0f,
                             static_cast<ImGuiID>(KitColumn::Name));
-    ImGui::TableSetupColumn("Collection", ImGuiTableColumnFlags_None, 0.0f,
+    ImGui::TableSetupColumn(collectionLabel.data(), ImGuiTableColumnFlags_None, 0.0f,
                             static_cast<ImGuiID>(KitColumn::Collection));
-    ImGui::TableSetupColumn("Pieces",
+    ImGui::TableSetupColumn(piecesLabel.data(),
                             ImGuiTableColumnFlags_PreferSortDescending, 0.0f,
                             static_cast<ImGuiID>(KitColumn::Pieces));
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -86,22 +104,22 @@ bool Menu::DrawKitTab() {
         ImGui::PopStyleColor(3);
         if (ImGui::BeginPopupContextItem()) {
           const auto favoriteLabel =
-              favorite ? "Remove from Favorites" : "Add to Favorites";
+              favorite ? removeFavoriteLabel.data() : addFavoriteLabel.data();
           if (ImGui::MenuItem(favoriteLabel)) {
             SetFavorite(ui::catalog::BrowserTab::Kits, kit.id, !favorite);
           }
           ImGui::Separator();
-          if (ImGui::MenuItem("Add to Workbench")) {
+          if (ImGui::MenuItem(addWorkbenchLabel.data())) {
             const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
             workbench_.AddCatalogSelectionAsRows(
                 kit.GetArmorFormIDs(), ResolveNewWorkbenchRowConditionId(),
                 &initialEquippedState);
           }
           ImGui::Separator();
-          if (ImGui::MenuItem("Add Override")) {
+          if (ImGui::MenuItem(addOverrideLabel.data())) {
             AddKitEntryToWorkbench(kit, true);
           }
-          if (ImGui::MenuItem("Append Overrides")) {
+          if (ImGui::MenuItem(appendOverridesLabel.data())) {
             AddKitEntryToWorkbench(kit, false);
           }
           ImGui::Separator();
@@ -109,7 +127,7 @@ bool Menu::DrawKitTab() {
               ImGuiCol_Text,
               ImGui::ColorConvertU32ToFloat4(
                   ThemeConfig::GetSingleton()->GetColorU32("DECLINE")));
-          if (ImGui::MenuItem("Delete Kit")) {
+          if (ImGui::MenuItem(deleteKitLabel.data())) {
             OpenDeleteKitDialog(kit);
           }
           ImGui::PopStyleColor();
@@ -157,7 +175,7 @@ bool Menu::DrawKitTab() {
         ImGui::TextUnformatted(displayName.c_str());
 
         ImGui::TableSetColumnIndex(1);
-        ImGui::TextUnformatted(kit.collection.empty() ? "Root"
+        ImGui::TextUnformatted(kit.collection.empty() ? rootLabel.data()
                                                       : kit.collection.c_str());
 
         ImGui::TableSetColumnIndex(2);
@@ -232,25 +250,30 @@ void Menu::OpenDeleteKitDialog(const KitEntry &a_entry) {
 }
 
 bool Menu::SavePendingKit() {
+  const auto *localization = ui::Localization::GetSingleton();
   auto &createDialog = CreateKitDialogState();
   const auto name = sosr::strings::TrimText(createDialog.pendingName.data());
   if (name.empty()) {
-    createDialog.error = "Kit name is required.";
+    createDialog.error =
+        std::string(localization->Get("kits.create_error.name_required"));
     return false;
   }
   if (name.find_first_of("\"'") != std::string::npos) {
-    createDialog.error = "Kit name cannot contain quotes.";
+    createDialog.error =
+        std::string(localization->Get("kits.create_error.name_quotes"));
     return false;
   }
   if (name.find_first_of("/\\") != std::string::npos) {
-    createDialog.error = "Kit name cannot contain path separators.";
+    createDialog.error =
+        std::string(localization->Get("kits.create_error.name_path"));
     return false;
   }
 
   auto collection =
       NormalizeKitCollection(createDialog.pendingCollection.data());
   if (collection.find_first_of("\"'") != std::string::npos) {
-    createDialog.error = "Collection cannot contain quotes.";
+    createDialog.error =
+        std::string(localization->Get("kits.create_error.collection_quotes"));
     return false;
   }
 
@@ -263,9 +286,10 @@ bool Menu::SavePendingKit() {
 
     const auto editorID = armor::GetEditorID(armorForm);
     if (editorID.empty()) {
-      createDialog.error = "Cannot save kit because '" +
-                           armor::GetDisplayName(armorForm) +
-                           "' has no editor ID.";
+      auto displayName = armor::GetDisplayName(armorForm);
+      createDialog.error = std::vformat(
+          std::string(localization->Get("kits.create_error.no_editor_id")),
+          std::make_format_args(displayName));
       return false;
     }
 
@@ -276,7 +300,8 @@ bool Menu::SavePendingKit() {
   }
 
   if (items.empty() && !createDialog.pendingLayout) {
-    createDialog.error = "No valid armor items were available to save.";
+    createDialog.error =
+        std::string(localization->Get("kits.create_error.no_valid_items"));
     return false;
   }
 
@@ -300,8 +325,10 @@ bool Menu::SavePendingKit() {
   try {
     std::filesystem::create_directories(fullPath.parent_path());
   } catch (const std::exception &exception) {
-    createDialog.error =
-        "Failed to create kit directory: " + std::string(exception.what());
+    const auto message = std::string(exception.what());
+    createDialog.error = std::vformat(
+        std::string(localization->Get("kits.create_error.create_directory")),
+        std::make_format_args(message));
     return false;
   }
 
@@ -317,7 +344,8 @@ bool Menu::SavePendingKit() {
 
   std::ofstream file(fullPath, std::ios::trunc);
   if (!file.is_open()) {
-    createDialog.error = "Failed to open kit file for writing.";
+    createDialog.error =
+        std::string(localization->Get("kits.create_error.open_write"));
     return false;
   }
 
@@ -337,9 +365,11 @@ bool Menu::SavePendingKit() {
 }
 
 bool Menu::DeletePendingKit() {
+  const auto *localization = ui::Localization::GetSingleton();
   auto &deleteDialog = DeleteKitDialogState();
   if (deleteDialog.pendingKitPath.empty()) {
-    deleteDialog.error = "Kit file path is unavailable.";
+    deleteDialog.error =
+        std::string(localization->Get("kits.delete_error.path_unavailable"));
     return false;
   }
 
@@ -347,11 +377,15 @@ bool Menu::DeletePendingKit() {
   const auto removed = std::filesystem::remove(
       std::filesystem::path(deleteDialog.pendingKitPath), error);
   if (error) {
-    deleteDialog.error = "Failed to delete kit file: " + error.message();
+    auto message = error.message();
+    deleteDialog.error = std::vformat(
+        std::string(localization->Get("kits.delete_error.failed")),
+        std::make_format_args(message));
     return false;
   }
   if (!removed) {
-    deleteDialog.error = "Kit file no longer exists.";
+    deleteDialog.error =
+        std::string(localization->Get("kits.delete_error.missing"));
     return false;
   }
 
@@ -388,9 +422,11 @@ void Menu::PreviewKitEntry(const KitEntry &a_entry) {
 
 void Menu::DrawCreateKitDialog() {
   constexpr float kCreateDialogWidth = 400.0f;
+  const auto *localization = ui::Localization::GetSingleton();
   auto &createDialog = CreateKitDialogState();
+  const auto createDialogTitle = localization->Get("kits.create_title");
   if (createDialog.openRequested) {
-    ImGui::OpenPopup("Create Modex Kit");
+    ImGui::OpenPopup(createDialogTitle.data());
     createDialog.openRequested = false;
   }
 
@@ -425,27 +461,30 @@ void Menu::DrawCreateKitDialog() {
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing,
                             ImVec2(0.5f, 0.5f));
   }
-  if (ImGui::BeginPopupModal("Create Modex Kit", nullptr,
+  if (ImGui::BeginPopupModal(createDialogTitle.data(), nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize |
                                  ImGuiWindowFlags_NoSavedSettings)) {
     createDialog.open = true;
     ImGui::TextWrapped(
         "%s",
         createDialog.source == KitCreationSource::Equipped
-            ? "Create a Modex kit from the player's currently equipped armor."
-            : "Create a Modex kit from overrides on currently equipped armor "
-              "only.");
+            ? localization->GetCStr("kits.create_help.equipped")
+            : localization->GetCStr("kits.create_help.overrides"));
     ImGui::Separator();
-    ImGui::Text("Items: %zu", createDialog.pendingFormIDs.size());
+    const auto itemCount = createDialog.pendingFormIDs.size();
+    const auto itemsText = std::vformat(
+        std::string(localization->Get("kits.create_items")),
+        std::make_format_args(itemCount));
+    ImGui::TextUnformatted(itemsText.c_str());
 
     constexpr float fieldWidth = 360.0f;
     std::optional<std::string> selectedName;
-    ImGui::TextUnformatted("Name");
+    ImGui::TextUnformatted(localization->GetCStr("common.name"));
     if (ImGui::IsWindowAppearing()) {
       ImGui::SetKeyboardFocusHere();
     }
     if (ui::components::DrawEditableStringDropdown(
-            "kit-name", "New or existing kit name",
+            "kit-name", localization->GetCStr("kits.name_hint"),
             createDialog.pendingName.data(), createDialog.pendingName.size(),
             std::span<const ui::components::EditableDropdownItem<std::string>>(
                 existingNameItems),
@@ -464,10 +503,10 @@ void Menu::DrawCreateKitDialog() {
     }
 
     ImGui::Spacing();
-    ImGui::TextUnformatted("Collection");
+    ImGui::TextUnformatted(localization->GetCStr("common.collection"));
     std::optional<std::string> selectedCollection;
     ui::components::DrawEditableStringDropdown(
-        "kit-collection", "Collection (optional)",
+        "kit-collection", localization->GetCStr("kits.collection_optional"),
         createDialog.pendingCollection.data(),
         createDialog.pendingCollection.size(),
         std::span<const ui::components::EditableDropdownItem<std::string>>(
@@ -485,13 +524,16 @@ void Menu::DrawCreateKitDialog() {
     const bool requestClose =
         createDialog.cancelRequested ||
         ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused);
-    if (ImGui::Button("Save", ImVec2(120.0f, 0.0f))) {
+    if (ImGui::Button(localization->GetCStr("common.save"),
+                      ImVec2(120.0f, 0.0f))) {
       if (SavePendingKit()) {
         ImGui::CloseCurrentPopup();
       }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f)) || requestClose) {
+    if (ImGui::Button(localization->GetCStr("common.cancel"),
+                      ImVec2(120.0f, 0.0f)) ||
+        requestClose) {
       createDialog.error.clear();
       createDialog.pendingFormIDs.clear();
       createDialog.pendingLayout.reset();
@@ -511,10 +553,12 @@ void Menu::DrawCreateKitDialog() {
 
 void Menu::DrawDeleteKitDialog() {
   constexpr float kDeleteDialogWidth = 460.0f;
+  const auto *localization = ui::Localization::GetSingleton();
   auto &deleteDialog = DeleteKitDialogState();
+  const auto deleteDialogTitle = localization->Get("kits.delete_title");
 
   if (deleteDialog.openRequested) {
-    ImGui::OpenPopup("Delete Modex Kit");
+    ImGui::OpenPopup(deleteDialogTitle.data());
     deleteDialog.openRequested = false;
   }
 
@@ -535,21 +579,19 @@ void Menu::DrawDeleteKitDialog() {
     ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing,
                             ImVec2(0.5f, 0.5f));
   }
-  if (ImGui::BeginPopupModal("Delete Modex Kit", nullptr,
+  if (ImGui::BeginPopupModal(deleteDialogTitle.data(), nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
     deleteDialog.open = true;
 
-    ImGui::TextWrapped("%s",
-                       "Are you sure you want to delete this kit? This will "
-                       "permanently remove the kit JSON file.");
+    ImGui::TextWrapped("%s", localization->GetCStr("kits.delete_confirm"));
     ImGui::Spacing();
     ImGui::Separator();
 
-    ImGui::TextUnformatted("Name");
+    ImGui::TextUnformatted(localization->GetCStr("common.name"));
     ImGui::TextWrapped("%s", deleteDialog.pendingKitName.c_str());
     if (!deleteDialog.pendingKitPath.empty()) {
       ImGui::Spacing();
-      ImGui::TextUnformatted("File");
+      ImGui::TextUnformatted(localization->GetCStr("common.file"));
       ImGui::TextWrapped("%s", deleteDialog.pendingKitPath.c_str());
     }
 
@@ -574,7 +616,8 @@ void Menu::DrawDeleteKitDialog() {
     ImGui::PushStyleColor(
         ImGuiCol_ButtonActive,
         ThemeConfig::GetSingleton()->GetColorU32("DECLINE", 0.80f));
-    if (ImGui::Button("Delete", ImVec2(120.0f, 0.0f))) {
+    if (ImGui::Button(localization->GetCStr("common.delete"),
+                      ImVec2(120.0f, 0.0f))) {
       if (DeletePendingKit()) {
         closeDialog();
       }
@@ -582,7 +625,9 @@ void Menu::DrawDeleteKitDialog() {
     ImGui::PopStyleColor(3);
 
     ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(120.0f, 0.0f)) || requestClose) {
+    if (ImGui::Button(localization->GetCStr("common.cancel"),
+                      ImVec2(120.0f, 0.0f)) ||
+        requestClose) {
       closeDialog();
     }
 

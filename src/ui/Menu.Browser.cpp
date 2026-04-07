@@ -1,7 +1,10 @@
 #include "Menu.h"
 
 #include "PlayerInventory.h"
+#include "ui/Localization.h"
 #include "ui/catalog/Widgets.h"
+
+#include <format>
 
 namespace {
 constexpr std::string_view kFavoritePrefix = "\xEE\x83\xB5 ";
@@ -163,11 +166,16 @@ void Menu::PreviewOutfitEntry(const OutfitEntry &a_entry) {
 
 void Menu::DrawCatalogHostControls(const bool) {
   auto &browser = CatalogBrowserState();
+  auto *localization = ui::Localization::GetSingleton();
+  const auto browserLabel = localization->Get("nav.browser");
+  const auto optionsLabel = localization->Get("nav.options");
   const auto &style = ImGui::GetStyle();
   const auto optionsButtonWidth =
-      ImGui::CalcTextSize("Options").x + (style.FramePadding.x * 2.0f);
+      ImGui::CalcTextSize(optionsLabel.data()).x +
+      (style.FramePadding.x * 2.0f);
   const auto browserButtonWidth =
-      ImGui::CalcTextSize("Browser").x + (style.FramePadding.x * 2.0f);
+      ImGui::CalcTextSize(browserLabel.data()).x +
+      (style.FramePadding.x * 2.0f);
   const auto browserOptionsWidth =
       browserButtonWidth + optionsButtonWidth + style.ItemSpacing.x;
   const auto browserOptionsStartX =
@@ -178,14 +186,14 @@ void Menu::DrawCatalogHostControls(const bool) {
     ImGui::SameLine();
   }
 
-  if (ImGui::Selectable("Browser",
+  if (ImGui::Selectable(browserLabel.data(),
                         browser.activeTab != ui::catalog::BrowserTab::Options,
                         0, ImVec2(browserButtonWidth, 0.0f)) &&
       browser.activeTab == ui::catalog::BrowserTab::Options) {
     browser.activeTab = ui::catalog::BrowserTab::Gear;
   }
   ImGui::SameLine();
-  if (ImGui::Selectable("Options",
+  if (ImGui::Selectable(optionsLabel.data(),
                         browser.activeTab == ui::catalog::BrowserTab::Options,
                         0, ImVec2(optionsButtonWidth, 0.0f))) {
     browser.activeTab = ui::catalog::BrowserTab::Options;
@@ -272,15 +280,25 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         catalogPane_.hostMode == ui::catalog::HostMode::Popout;
     const char *hostToggleIcon =
         inPopout ? kIconPanelRightClose : kIconPanelRightOpen;
+    auto *localization = ui::Localization::GetSingleton();
+    const auto gearTabLabel = localization->Get("tabs.gear");
+    const auto outfitsTabLabel = localization->Get("tabs.outfits");
+    const auto kitsTabLabel = localization->Get("tabs.kits");
+    const auto slotsTabLabel = localization->Get("tabs.equipment_slots");
+    const auto conditionsTabLabel = localization->Get("tabs.conditions");
+    const auto favoritesOnlyLabel = localization->Get("catalog.favorites_only");
+    const auto inventoryOnlyLabel = localization->Get("catalog.inventory_only");
+    const auto hideUnnamedLabel = localization->Get("catalog.hide_unnamed");
+    const auto showAllLabel = localization->Get("catalog.show_all");
+    const auto previewSelectedLabel =
+        localization->Get("catalog.preview_selected");
     if (ImGui::BeginTabBar("##catalog-tabs")) {
-      const bool gearTabOpen = ImGui::BeginTabItem("Gear");
+      const bool gearTabOpen = ImGui::BeginTabItem(gearTabLabel.data());
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:gear-tab", ui::catalog::IsDelayedHover(),
-          {"Use this tab to override a specific equipped gear piece.",
-           "Browse individual armor pieces from the equipment catalog.",
-           "Double-click to add an override using Skyrim Vanity System's "
-           "default target selection, or use the context menu to add a new "
-           "workbench row instead."});
+          {localization->Get("help.gear.1").data(),
+           localization->Get("help.gear.2").data(),
+           localization->Get("help.gear.3").data()});
       if (gearTabOpen) {
         if (browser.activeTab != ui::catalog::BrowserTab::Gear) {
           ClearCatalogSelection();
@@ -289,13 +307,11 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         ImGui::EndTabItem();
       }
 
-      const bool outfitsTabOpen = ImGui::BeginTabItem("Outfits");
+      const bool outfitsTabOpen = ImGui::BeginTabItem(outfitsTabLabel.data());
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:outfits-tab", ui::catalog::IsDelayedHover(),
-          {"Browse full outfits from plugins in the catalog.",
-           "Double-click to replace matching row overrides so the result "
-           "matches the preview. The context menu also offers the old append "
-           "behavior, or you can add the outfit as workbench rows instead."});
+          {localization->Get("help.outfits.1").data(),
+           localization->Get("help.outfits.2").data()});
       if (outfitsTabOpen) {
         if (browser.activeTab != ui::catalog::BrowserTab::Outfits) {
           ClearCatalogSelection();
@@ -304,16 +320,12 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         ImGui::EndTabItem();
       }
 
-      const bool kitsTabOpen = ImGui::BeginTabItem("Kits");
+      const bool kitsTabOpen = ImGui::BeginTabItem(kitsTabLabel.data());
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:kits-tab", ui::catalog::IsDelayedHover(),
-          {"Browse Mod Explorer kits loaded from "
-           "data/interface/modex/user/kits.",
-           "Kits behave like outfits: double-click replaces matching row "
-           "overrides so the result matches the preview. The context menu also "
-           "offers the old append behavior, can add rows to the workbench, "
-           "and can delete kits.",
-           "Kits that refer to non-existent items are not shown."});
+          {localization->Get("help.kits.1").data(),
+           localization->Get("help.kits.2").data(),
+           localization->Get("help.kits.3").data()});
       if (kitsTabOpen) {
         if (browser.activeTab != ui::catalog::BrowserTab::Kits) {
           ClearCatalogSelection();
@@ -322,19 +334,13 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         ImGui::EndTabItem();
       }
 
-      const bool slotsTabOpen = ImGui::BeginTabItem("Equipment Slots");
+      const bool slotsTabOpen = ImGui::BeginTabItem(slotsTabLabel.data());
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:slots-tab", ui::catalog::IsDelayedHover(),
-          {"Use this tab to override a specific equipment slot no matter "
-           "which armor you have equipped there, as long as something is "
-           "equipped in that slot.",
-           "Browse slot-based overrides that target armor addon slots.",
-           "Armor addons are sub-components of an armor, and Dynamic Armor "
-           "Variants Extended resolves slot overrides against the union of "
-           "those addon slots rather than only the slots declared on the "
-           "armor form itself.",
-           "Double-click to add a slot row to the workbench, or use the "
-           "context menu to add it manually."});
+          {localization->Get("help.slots.1").data(),
+           localization->Get("help.slots.2").data(),
+           localization->Get("help.slots.3").data(),
+           localization->Get("help.slots.4").data()});
       if (slotsTabOpen) {
         if (browser.activeTab != ui::catalog::BrowserTab::Slots) {
           ClearCatalogSelection();
@@ -343,16 +349,12 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
         ImGui::EndTabItem();
       }
 
-      const bool conditionsTabOpen = ImGui::BeginTabItem("Conditions");
+      const bool conditionsTabOpen = ImGui::BeginTabItem(conditionsTabLabel.data());
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:conditions-tab", ui::catalog::IsDelayedHover(),
-          {"Use this tab to define reusable condition sets for Dynamic Armor "
-           "Variants Extended.",
-           "Conditions are built from condition functions joined by AND and "
-           "OR operators, plus a shared display color so you can recognize "
-           "them later.",
-           "Double-click a condition to edit it, or use Add New to create a "
-           "fresh one."});
+          {localization->Get("help.conditions.1").data(),
+           localization->Get("help.conditions.2").data(),
+           localization->Get("help.conditions.3").data()});
       if (conditionsTabOpen) {
         if (browser.activeTab != ui::catalog::BrowserTab::Conditions) {
           ClearCatalogSelection();
@@ -365,8 +367,8 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
           ImGui::TabItemButton(hostToggleIcon, ImGuiTabItemFlags_Trailing);
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:host-toggle", ImGui::IsItemHovered(),
-          {inPopout ? "Pop the catalog back into the main window."
-                    : "Pop the catalog out into its own window."});
+          {inPopout ? localization->Get("help.host_toggle.docked").data()
+                    : localization->Get("help.host_toggle.popout").data()});
       if (hostToggleHovered) {
         if (inPopout) {
           catalogPane_.hostMode = ui::catalog::HostMode::Docked;
@@ -385,7 +387,7 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
     DrawCatalogFilters();
     if (browser.activeTab != ui::catalog::BrowserTab::Slots &&
         browser.activeTab != ui::catalog::BrowserTab::Conditions) {
-      if (ImGui::Checkbox("Favorites Only", &browser.favoritesOnly)) {
+      if (ImGui::Checkbox(favoritesOnlyLabel.data(), &browser.favoritesOnly)) {
         if (browser.favoritesOnly && !browser.selectedKey.empty() &&
             !IsFavorite(browser.activeTab, browser.selectedKey)) {
           ClearCatalogSelection();
@@ -395,7 +397,7 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
     }
     if (browser.activeTab == ui::catalog::BrowserTab::Gear) {
       ImGui::SameLine();
-      if (ImGui::Checkbox("Inventory Only", &browser.inventoryOnly) &&
+      if (ImGui::Checkbox(inventoryOnlyLabel.data(), &browser.inventoryOnly) &&
           browser.inventoryOnly && !browser.selectedKey.empty()) {
         const auto &catalog = EquipmentCatalog::Get().GetGear();
         const auto selectedIt =
@@ -410,7 +412,7 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
       }
 
       ImGui::SameLine();
-      if (ImGui::Checkbox("Hide unnamed", &browser.hideUnnamedGear) &&
+      if (ImGui::Checkbox(hideUnnamedLabel.data(), &browser.hideUnnamedGear) &&
           browser.hideUnnamedGear && !browser.selectedKey.empty()) {
         const auto &catalog = EquipmentCatalog::Get().GetGear();
         const auto selectedIt =
@@ -422,20 +424,18 @@ void Menu::DrawCatalogHostBody(const bool a_drawBodyChild) {
       }
     }
     if (browser.activeTab == ui::catalog::BrowserTab::Slots) {
-      if (ImGui::Checkbox("Show all", &browser.showAllSlots)) {
+      if (ImGui::Checkbox(showAllLabel.data(), &browser.showAllSlots)) {
         SaveUserSettings();
       }
       ui::catalog::DrawCatalogTabHelpTooltip(
           "catalog:slots-show-all", ui::catalog::IsDelayedHover(0.55f),
-          {"When unchecked, only slots that currently have equipped items are "
-           "shown.",
-           "Enable this to browse every supported equipment slot, including "
-           "slots that are currently empty."});
+          {localization->Get("help.show_all_slots.1").data(),
+           localization->Get("help.show_all_slots.2").data()});
     }
     if (browser.activeTab != ui::catalog::BrowserTab::Slots &&
         browser.activeTab != ui::catalog::BrowserTab::Conditions) {
       ImGui::SameLine();
-      if (ImGui::Checkbox("Preview Selected", &browser.previewSelected)) {
+      if (ImGui::Checkbox(previewSelectedLabel.data(), &browser.previewSelected)) {
         if (!browser.previewSelected) {
           workbench_.ClearPreview();
         } else {
@@ -459,6 +459,9 @@ void Menu::DrawCatalogWindow() {
   if (catalogPane_.hostMode != ui::catalog::HostMode::Popout) {
     return;
   }
+  auto *localization = ui::Localization::GetSingleton();
+  const auto catalogWindowTitle =
+      localization->Get("window.catalog");
 
   auto &io = ImGui::GetIO();
   ImGui::SetNextWindowSize(
@@ -469,7 +472,7 @@ void Menu::DrawCatalogWindow() {
       ImGuiCond_FirstUseEver, ImVec2(0.50f, 0.50f));
 
   bool popoutOpen = catalogPane_.popoutOpen;
-  if (!ImGui::Begin("Skyrim Vanity System Catalog", &popoutOpen,
+  if (!ImGui::Begin(catalogWindowTitle.data(), &popoutOpen,
                     ImGuiWindowFlags_NoCollapse)) {
     ImGui::End();
     catalogPane_.popoutOpen = popoutOpen;
@@ -491,6 +494,15 @@ void Menu::DrawCatalogWindow() {
 }
 
 void Menu::DrawWindow() {
+  auto *localization = ui::Localization::GetSingleton();
+  const auto windowTitle = localization->Get("window.main");
+  const auto browserTitle = localization->Get("window.browser_title");
+  const auto toggleKeyLabel = GetToggleKeyLabel();
+  const auto toggleHint = std::vformat(
+      std::string(localization->Get("window.toggle_hint")),
+      std::make_format_args(toggleKeyLabel));
+  const auto catalogColumn = localization->Get("window.catalog_column");
+  const auto variantsColumn = localization->Get("window.variants_column");
   auto &io = ImGui::GetIO();
   ImGui::SetNextWindowSize(
       ImVec2(io.DisplaySize.x * 0.50f, io.DisplaySize.y * 0.50f),
@@ -501,7 +513,7 @@ void Menu::DrawWindow() {
 
   bool open = enabled_;
   ImGui::PushStyleVar(ImGuiStyleVar_Alpha, windowAlpha_);
-  if (!ImGui::Begin("Skyrim Vanity System", &open,
+  if (!ImGui::Begin(windowTitle.data(), &open,
                     ImGuiWindowFlags_NoCollapse)) {
     ImGui::End();
     DrawCatalogWindow();
@@ -515,9 +527,9 @@ void Menu::DrawWindow() {
     return;
   }
 
-  ImGui::TextUnformatted("Vanity outfit browser");
+  ImGui::TextUnformatted(browserTitle.data());
   ImGui::SameLine();
-  ImGui::TextDisabled("| %s toggles visibility", GetToggleKeyLabel().c_str());
+  ImGui::TextDisabled("%s", toggleHint.c_str());
   DrawCatalogHostControls(false);
   ImGui::Separator();
   DrawCatalogWindow();
@@ -536,9 +548,9 @@ void Menu::DrawWindow() {
                             ImGuiTableFlags_Resizable |
                                 ImGuiTableFlags_SizingStretchProp,
                             ImVec2(0.0f, ImGui::GetContentRegionAvail().y))) {
-        ImGui::TableSetupColumn("Catalog", ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn(catalogColumn.data(), ImGuiTableColumnFlags_WidthStretch,
                                 1.20f);
-        ImGui::TableSetupColumn("Variants", ImGuiTableColumnFlags_WidthStretch,
+        ImGui::TableSetupColumn(variantsColumn.data(), ImGuiTableColumnFlags_WidthStretch,
                                 0.95f);
         ImGui::TableNextRow();
 

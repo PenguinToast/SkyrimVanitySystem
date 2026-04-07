@@ -3,6 +3,7 @@
 #include "conditions/Validation.h"
 #include "imgui_internal.h"
 #include "ui/TableReorder.h"
+#include "ui/Localization.h"
 #include "ui/WorkbenchConflicts.h"
 #include "ui/components/EquipmentWidget.h"
 #include "ui/workbench/Common.h"
@@ -16,6 +17,7 @@
 
 namespace sosr {
 void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
+  auto *localization = ui::Localization::GetSingleton();
   EnsureWorkbenchDerivedState();
   const auto &rows = workbench_.GetRows();
   const auto &rowConditionStates = workbenchDerived_.rowConditionStates;
@@ -31,11 +33,11 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                               ImGuiTableFlags_Resizable |
                               ImGuiTableFlags_ScrollY,
                           ImVec2(0.0f, 0.0f))) {
-      ImGui::TableSetupColumn("Equipped", ImGuiTableColumnFlags_WidthStretch,
-                              0.80f);
-      ImGui::TableSetupColumn("Overrides", ImGuiTableColumnFlags_WidthStretch,
-                              1.05f);
-      ImGui::TableSetupColumn("Hide",
+      ImGui::TableSetupColumn(localization->Get("workbench.equipped").data(),
+                              ImGuiTableColumnFlags_WidthStretch, 0.80f);
+      ImGui::TableSetupColumn(localization->Get("workbench.overrides").data(),
+                              ImGuiTableColumnFlags_WidthStretch, 1.05f);
+      ImGui::TableSetupColumn(localization->Get("workbench.hide").data(),
                               ImGuiTableColumnFlags_WidthFixed |
                                   ImGuiTableColumnFlags_NoResize,
                               72.0f);
@@ -133,7 +135,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                              rowConditionStates[static_cast<std::size_t>(
                                  rowIndex)];
                          ImGui::Separator();
-                         ImGui::TextDisabled("Condition");
+                         ImGui::TextDisabled(
+                             "%s", localization->Get("conditions.common.condition").data());
                          if (tooltipState.color.has_value()) {
                            ImGui::SameLine(0.0f, 8.0f);
                            ImGui::ColorButton(
@@ -161,7 +164,7 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                          }
 
                          ui::workbench::DrawConflictTooltipSection(
-                             "Warning: Variant selection conflict.",
+                             localization->Get("workbench.conflict.variant_selection").data(),
                              [&](const ThemeConfig *a_theme) {
                                for (const auto &description :
                                     conflictIt->second.targetDescriptions) {
@@ -199,7 +202,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                              rowConditionStates[static_cast<std::size_t>(
                                  rowIndex)];
                          ImGui::Separator();
-                         ImGui::TextDisabled("Condition");
+                         ImGui::TextDisabled(
+                             "%s", localization->Get("conditions.common.condition").data());
                          if (tooltipState.color.has_value()) {
                            ImGui::SameLine(0.0f, 8.0f);
                            ImGui::ColorButton(
@@ -225,9 +229,10 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                    rows[static_cast<std::size_t>(rowIndex)];
                const auto &contextConditionState =
                    rowConditionStates[static_cast<std::size_t>(rowIndex)];
-               if (ImGui::BeginMenu(contextConditionState.disabled
-                                        ? "Enable Condition"
-                                        : "Set Condition")) {
+               if (ImGui::BeginMenu(
+                       contextConditionState.disabled
+                           ? localization->Get("conditions.enable").data()
+                           : localization->Get("conditions.set").data())) {
                  for (const auto &condition : ConditionDefinitions()) {
                    if (!IsWorkbenchSelectableCondition(condition)) {
                      continue;
@@ -317,17 +322,19 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                                              overrideCellContentOffsetY));
 
         if (overrideCount == 0) {
+          const auto dropOverridesHere =
+              localization->Get("workbench.drop_overrides_here");
           const auto wrappedWidth = (overrideCellRect.Max.x - cellPadding.x) -
                                     (overrideCellRect.Min.x + cellPadding.x);
           const auto textSize = ImGui::CalcTextSize(
-              "Drop equipment overrides here.", nullptr, false, wrappedWidth);
+              dropOverridesHere.data(), nullptr, false, wrappedWidth);
           ImGui::SetCursorScreenPos(
               ImVec2(overrideCellRect.Min.x + cellPadding.x,
                      overrideCellRect.Min.y + cellPadding.y +
                          overrideCellContentOffsetY +
                          ((dropZoneHeight - textSize.y) * 0.5f)));
           ImGui::PushTextWrapPos(overrideCellRect.Max.x - cellPadding.x);
-          ImGui::TextWrapped("Drop equipment overrides here.");
+          ImGui::TextWrapped("%s", dropOverridesHere.data());
           ImGui::PopTextWrapPos();
         } else {
           const auto oldItemSpacing = ImGui::GetStyle().ItemSpacing;
@@ -351,7 +358,7 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                      overrideConflicts.contains(widgetId)
                          ? std::function<void()>{[&, widgetId]() {
                              ui::workbench::DrawConflictTooltipSection(
-                                 "Warning: Conflicting visuals.",
+                                 localization->Get("workbench.conflict.visuals").data(),
                                  [&](const ThemeConfig *a_theme) {
                                    for (const auto &description :
                                         overrideConflicts.at(widgetId)

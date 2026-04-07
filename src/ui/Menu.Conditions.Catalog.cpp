@@ -10,6 +10,7 @@
 #include "conditions/Status.h"
 #include "imgui_internal.h"
 #include "ui/InputWidgets.h"
+#include "ui/Localization.h"
 #include "ui/TableReorder.h"
 #include "ui/catalog/Widgets.h"
 #include "ui/components/PinnableTooltip.h"
@@ -100,13 +101,15 @@ struct ConditionDeleteUsage {
     }
 
     if (referencingConditionCount != 0 && appliedRowCount != 0) {
-      return "Condition is in use by other conditions and applied to one or "
-             "more workbench rows.";
+      return std::string(ui::Localization::GetSingleton()->Get(
+          "conditions.catalog.delete_reason_both"));
     }
     if (referencingConditionCount != 0) {
-      return "Condition is in use by other conditions.";
+      return std::string(ui::Localization::GetSingleton()->Get(
+          "conditions.catalog.delete_reason_referenced"));
     }
-    return "Condition is applied to one or more workbench rows.";
+    return std::string(ui::Localization::GetSingleton()->Get(
+        "conditions.catalog.delete_reason_applied"));
   }
 };
 
@@ -119,7 +122,8 @@ struct ConditionMoveToLibraryUsage {
     if (CanMove()) {
       return {};
     }
-    return "Condition is applied to one or more workbench rows.";
+    return std::string(ui::Localization::GetSingleton()->Get(
+        "conditions.catalog.move_reason_applied"));
   }
 };
 
@@ -168,9 +172,11 @@ std::vector<ui::conditions::Color> CollectCatalogColorsForNewCondition(
 }
 
 std::string BuildActorTargetLabel(const RE::FormID a_formID) {
+  auto *localization = ui::Localization::GetSingleton();
   auto *actor = RE::TESForm::LookupByID<RE::Actor>(a_formID);
   if (!actor) {
-    return "Actor " + armor::FormatFormID(a_formID);
+    return std::string(localization->Get("conditions.catalog.actor_label")) +
+           armor::FormatFormID(a_formID);
   }
 
   std::string label;
@@ -195,7 +201,8 @@ std::string BuildActorTargetLabel(const RE::FormID a_formID) {
     if (!editorId.empty()) {
       return editorId;
     }
-    return "Actor " + armor::FormatFormID(a_formID);
+    return std::string(localization->Get("conditions.catalog.actor_label")) +
+           armor::FormatFormID(a_formID);
   }
 
   if (!editorId.empty() && editorId != label) {
@@ -279,6 +286,7 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
       ImVec2(tooltipWidth + ImGui::GetStyle().WindowPadding.x * 2.0f, 0.0f),
       ImGuiCond_Always);
   ui::components::DrawPinnableTooltip(tooltipId, a_hoveredSource, [&]() {
+    auto *localization = ui::Localization::GetSingleton();
     DrawConditionTooltipHeader(
         a_condition.name, [&]() -> std::optional<ui::conditions::Color> {
           if (const auto *catalog = a_condition.GetCatalog();
@@ -296,7 +304,8 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
     }
 
     if (!conditionStatus.missingDependencyChains.empty()) {
-      DrawConditionTooltipSectionHeader("Missing References");
+      DrawConditionTooltipSectionHeader(
+          localization->GetCStr("conditions.catalog.missing_references"));
       for (const auto &missingChain : conditionStatus.missingDependencyChains) {
         const auto label =
             conditions::FormatMissingDependencyChain(missingChain, 1);
@@ -306,9 +315,11 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
     }
 
     if (a_showActorRefs) {
-      DrawConditionTooltipSectionHeader("Targeted Actor Refs");
+      DrawConditionTooltipSectionHeader(
+          localization->GetCStr("conditions.catalog.targeted_actor_refs"));
       if (!materialized.has_value()) {
-        DrawConditionTooltipBulletLine("Condition could not be materialized.");
+        DrawConditionTooltipBulletLine(localization->Get(
+            "conditions.catalog.materialize_unavailable"));
       } else if (!materialized->refreshTargets.actorFormIDs.empty()) {
         for (const auto actorFormID :
              materialized->refreshTargets.actorFormIDs) {
@@ -316,17 +327,21 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
           DrawConditionTooltipBulletLine(label);
         }
       } else {
-        DrawConditionTooltipBulletLine("No explicit actor refs targeted.");
+        DrawConditionTooltipBulletLine(localization->Get(
+            "conditions.catalog.no_explicit_actor_refs"));
       }
       if (materialized.has_value() &&
           materialized->refreshTargets.useNearbyFallback) {
-        DrawConditionTooltipBulletLine("Nearby actors within 2048 units.");
+        DrawConditionTooltipBulletLine(
+            localization->Get("conditions.catalog.nearby_actor_refs"));
       }
       ImGui::Spacing();
     }
-    DrawConditionTooltipSectionHeader("Expanded Form");
+    DrawConditionTooltipSectionHeader(
+        localization->GetCStr("conditions.catalog.expanded_form"));
     if (!materialized.has_value() || materialized->displayCnf.empty()) {
-      ImGui::TextDisabled("Unavailable");
+      ImGui::TextDisabled(
+          "%s", localization->GetCStr("conditions.catalog.unavailable"));
       return;
     }
 
@@ -334,7 +349,9 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
                           ImGuiTableFlags_BordersInnerV |
                               ImGuiTableFlags_RowBg |
                               ImGuiTableFlags_SizingStretchProp)) {
-      ImGui::TableSetupColumn("Expression", ImGuiTableColumnFlags_WidthStretch);
+      ImGui::TableSetupColumn(
+          localization->Get("conditions.catalog.expression").data(),
+          ImGuiTableColumnFlags_WidthStretch);
       ImGui::TableSetupColumn("##operator", ImGuiTableColumnFlags_WidthFixed,
                               44.0f);
       std::vector<TooltipOrGroupVisual> orGroupVisuals;
@@ -405,6 +422,7 @@ void DrawConditionTooltip(const ConditionDefinition &a_condition,
 } // namespace
 
 bool Menu::DrawConditionTab() {
+  auto *localization = ui::Localization::GetSingleton();
   EnsureDefaultConditions();
 
   auto &paneState = ConditionsPaneState();
@@ -469,7 +487,7 @@ bool Menu::DrawConditionTab() {
 
   if (ImGui::BeginChild("##conditions-library-pane", ImVec2(0.0f, 0.0f),
                         ImGuiChildFlags_None)) {
-    ImGui::TextUnformatted("Condition Library");
+    ImGui::TextUnformatted(localization->GetCStr("conditions.library.title"));
     ImGui::SameLine();
     ImGui::TextColored(ThemeConfig::GetSingleton()->GetColor("TEXT_DISABLED"),
                        "%s", kIconCircleHelp);
@@ -479,9 +497,8 @@ bool Menu::DrawConditionTab() {
     ImGui::InvisibleButton("##conditions-library-help", helpSize);
     ui::catalog::DrawCatalogTabHelpTooltip(
         "conditions:library:help", ImGui::IsItemHovered(),
-        {"Reusable conditions stored as JSON files.",
-         "Library conditions can be composed into other conditions, but "
-         "cannot be applied directly to workbench rows."});
+        {localization->Get("conditions.library.help.1").data(),
+         localization->Get("conditions.library.help.2").data()});
     ImGui::Spacing();
     DrawConditionLibraryTable();
   }
@@ -504,8 +521,13 @@ bool Menu::DrawConditionCatalogTable() {
     return false;
   }
 
-  ImGui::TableSetupColumn("Condition", ImGuiTableColumnFlags_WidthStretch);
-  ImGui::TableSetupColumn("Disable", ImGuiTableColumnFlags_WidthFixed, 72.0f);
+  auto *localization = ui::Localization::GetSingleton();
+  ImGui::TableSetupColumn(
+      localization->GetCStr("conditions.catalog.condition"),
+      ImGuiTableColumnFlags_WidthStretch);
+  ImGui::TableSetupColumn(
+      localization->GetCStr("conditions.catalog.disable"),
+      ImGuiTableColumnFlags_WidthFixed, 72.0f);
   ImGui::TableHeadersRow();
   bool rowClicked = false;
   std::optional<std::size_t> pendingDeleteIndex;
@@ -695,16 +717,18 @@ bool Menu::DrawConditionCatalogTable() {
 
     if (!deleteHovered &&
         ImGui::BeginPopupContextItem("##condition-row-context")) {
-      if (ImGui::MenuItem("Edit")) {
+      if (ImGui::MenuItem(localization->GetCStr("common.edit"))) {
         OpenConditionEditorDialog(index);
       }
-      if (ImGui::MenuItem("Copy")) {
+      if (ImGui::MenuItem(localization->GetCStr("common.copy"))) {
         pendingCopyIndex = index;
       }
-      if (ImGui::MenuItem("Copy to library")) {
+      if (ImGui::MenuItem(
+              localization->GetCStr("conditions.copy_to_library"))) {
         pendingCopyToLibraryIndex = index;
       }
-      if (ImGui::MenuItem("Move to library", nullptr, false,
+      if (ImGui::MenuItem(localization->GetCStr("conditions.move_to_library"),
+                          nullptr, false,
                           moveToLibraryEnabled)) {
         pendingMoveToLibraryIndex = index;
       }
@@ -718,7 +742,8 @@ bool Menu::DrawConditionCatalogTable() {
           ImGuiCol_Text,
           ImGui::ColorConvertU32ToFloat4(
               ThemeConfig::GetSingleton()->GetColorU32("DECLINE")));
-      if (ImGui::MenuItem("Delete", nullptr, false, deleteEnabled)) {
+      if (ImGui::MenuItem(localization->GetCStr("common.delete"),
+                          nullptr, false, deleteEnabled)) {
         pendingDeleteIndex = index;
       }
       ImGui::PopStyleColor();
@@ -768,8 +793,7 @@ bool Menu::DrawConditionCatalogTable() {
     if (broken) {
       ui::condition_widgets::DrawHoverDescription(
           "conditions:broken:" + condition.id,
-          "This condition references missing conditions and is forced "
-          "inactive until the missing reference is fixed.",
+          localization->Get("conditions.broken_tooltip"),
           0.2f, ImGuiHoveredFlags_AllowWhenDisabled);
     }
     if (const auto *rowTable = ImGui::GetCurrentTable(); rowTable != nullptr) {
@@ -780,7 +804,7 @@ bool Menu::DrawConditionCatalogTable() {
 
   ImGui::TableNextRow();
   ImGui::TableSetColumnIndex(0);
-  if (ImGui::Button("Add New",
+  if (ImGui::Button(localization->GetCStr("common.add_new"),
                     ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
     OpenNewConditionDialog();
   }
@@ -934,6 +958,7 @@ bool Menu::DrawConditionCatalogTable() {
 }
 
 void Menu::DrawConditionLibraryTable() {
+  auto *localization = ui::Localization::GetSingleton();
   auto libraryIndices = BuildConditionIndicesByKind(
       ConditionDefinitions(), conditions::DefinitionKind::Library);
   SortConditionIndicesByName(ConditionDefinitions(), libraryIndices);
@@ -946,8 +971,11 @@ void Menu::DrawConditionLibraryTable() {
     return;
   }
 
-  ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthFixed, 130.0f);
-  ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch);
+  ImGui::TableSetupColumn(localization->GetCStr("common.name"),
+                          ImGuiTableColumnFlags_WidthFixed, 130.0f);
+  ImGui::TableSetupColumn(
+      localization->GetCStr("options.description"),
+      ImGuiTableColumnFlags_WidthStretch);
   ImGui::TableHeadersRow();
 
   std::optional<std::size_t> pendingDeleteIndex;
@@ -991,7 +1019,7 @@ void Menu::DrawConditionLibraryTable() {
     }
     DrawConditionTooltip(condition, rowHovered, ConditionDefinitions(), false);
     if (ImGui::BeginPopupContextItem("##library-row-context")) {
-      if (ImGui::MenuItem("Edit")) {
+      if (ImGui::MenuItem(localization->GetCStr("common.edit"))) {
         OpenConditionEditorDialog(index);
       }
       ImGui::Separator();
@@ -999,7 +1027,8 @@ void Menu::DrawConditionLibraryTable() {
           ImGuiCol_Text,
           ImGui::ColorConvertU32ToFloat4(
               ThemeConfig::GetSingleton()->GetColorU32("DECLINE")));
-      if (ImGui::MenuItem("Delete", nullptr, false, deleteEnabled)) {
+      if (ImGui::MenuItem(localization->GetCStr("common.delete"),
+                          nullptr, false, deleteEnabled)) {
         pendingDeleteIndex = index;
       }
       ImGui::PopStyleColor();
@@ -1013,7 +1042,8 @@ void Menu::DrawConditionLibraryTable() {
 
     ImGui::TableSetColumnIndex(1);
     if (condition.description.empty()) {
-      ImGui::TextDisabled("No description.");
+      ImGui::TextDisabled(
+          "%s", localization->GetCStr("conditions.no_description"));
     } else {
       const auto *table = ImGui::GetCurrentTable();
       if (table != nullptr) {
@@ -1052,7 +1082,7 @@ void Menu::DrawConditionLibraryTable() {
 
   ImGui::TableNextRow();
   ImGui::TableSetColumnIndex(0);
-  if (ImGui::Button("Add New",
+  if (ImGui::Button(localization->GetCStr("common.add_new"),
                     ImVec2(ImGui::GetContentRegionAvail().x, 0.0f))) {
     OpenNewLibraryConditionDialog();
   }
