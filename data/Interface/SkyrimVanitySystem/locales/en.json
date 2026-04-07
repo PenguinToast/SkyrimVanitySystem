@@ -149,7 +149,6 @@
     "kits.create_error.name_quotes": "Kit name cannot contain quotes.",
     "kits.create_error.name_path": "Kit name cannot contain path separators.",
     "kits.create_error.collection_quotes": "Collection cannot contain quotes.",
-    "kits.create_error.no_editor_id": "Cannot save kit because '{}' has no editor ID.",
     "kits.create_error.no_valid_items": "No valid armor items were available to save.",
     "kits.create_error.create_directory": "Failed to create kit directory: {}",
     "kits.create_error.open_write": "Failed to open kit file for writing.",

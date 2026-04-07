@@ -497,6 +497,14 @@ bool VariantWorkbench::CanAcceptOverride(int a_targetRowIndex,
     return false;
   }
 
+  if (!a_item.IsSlot()) {
+    const auto *armorForm =
+        RE::TESForm::LookupByID<RE::TESObjectARMO>(a_item.formID);
+    if (!armorForm || armor::GetFormIdentifier(armorForm).empty()) {
+      return false;
+    }
+  }
+
   const auto &row = rows_[static_cast<std::size_t>(a_targetRowIndex)];
   for (int itemIndex = 0; itemIndex < static_cast<int>(row.overrides.size());
        ++itemIndex) {
