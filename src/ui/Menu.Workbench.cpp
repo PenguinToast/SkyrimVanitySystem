@@ -32,7 +32,9 @@ bool Menu::ApplyWorkbenchRowDrop(const DraggedEquipmentPayload &a_dragPayload,
   const auto initialEquippedState = BuildWorkbenchInitialEquippedState();
   if (a_targetRowIndex < 0) {
     if (a_dragPayload.sourceKind ==
-        static_cast<std::uint32_t>(DragSourceKind::Catalog)) {
+            static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
+        a_dragPayload.sourceKind ==
+            static_cast<std::uint32_t>(DragSourceKind::Override)) {
       return workbench_.AddCatalogSelectionAsRows(
           std::vector<RE::FormID>{a_dragPayload.formID},
           ResolveNewWorkbenchRowConditionId(), &initialEquippedState);
@@ -58,7 +60,9 @@ void Menu::ApplyRowReorder(const DraggedEquipmentPayload &a_dragPayload,
     workbench_.ApplyRowReorder(a_dragPayload.rowIndex, a_targetRowIndex,
                                a_insertAfter);
   } else if (a_dragPayload.sourceKind ==
-             static_cast<std::uint32_t>(DragSourceKind::Catalog)) {
+                 static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
+             a_dragPayload.sourceKind ==
+                 static_cast<std::uint32_t>(DragSourceKind::Override)) {
     workbench_.InsertCatalogRow(a_dragPayload.formID, a_targetRowIndex,
                                 a_insertAfter, ResolveNewWorkbenchRowConditionId(),
                                 &initialEquippedState);

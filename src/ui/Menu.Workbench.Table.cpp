@@ -53,6 +53,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                    a_payload->sourceKind ==
                        static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
                    a_payload->sourceKind ==
+                       static_cast<std::uint32_t>(DragSourceKind::Override) ||
+                   a_payload->sourceKind ==
                        static_cast<std::uint32_t>(DragSourceKind::SlotCatalog);
           })(static_cast<const DraggedEquipmentPayload *>(activePayload->Data));
       std::optional<DraggedEquipmentPayload> acceptedRowReorderPayload;
@@ -489,6 +491,8 @@ void Menu::DrawWorkbenchTable(const std::vector<int> &a_visibleRowIndices) {
                   static_cast<std::uint32_t>(DragSourceKind::Row) ||
               dragPayload.sourceKind ==
                   static_cast<std::uint32_t>(DragSourceKind::Catalog) ||
+              dragPayload.sourceKind ==
+                  static_cast<std::uint32_t>(DragSourceKind::Override) ||
               dragPayload.sourceKind ==
                   static_cast<std::uint32_t>(DragSourceKind::SlotCatalog)) {
             acceptedRowReorderPayload = dragPayload;
