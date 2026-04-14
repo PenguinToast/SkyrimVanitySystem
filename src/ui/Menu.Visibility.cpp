@@ -355,7 +355,8 @@ void Menu::ApplySmoothScroll() {
 }
 
 void Menu::SyncAllowTextInput() {
-  const bool currentWantTextInput = ImGui::GetIO().WantTextInput;
+  const auto &io = ImGui::GetIO();
+  const bool currentWantTextInput = io.WantTextInput;
 
   if (!wantTextInput_ && currentWantTextInput) {
     if (auto *controlMap = RE::ControlMap::GetSingleton();
@@ -391,6 +392,7 @@ void Menu::Draw() {
   SyncAllowTextInput();
 
   DrawWindow();
+  SyncAllowTextInput();
   ui::components::EndPinnableTooltipFrame();
   ApplySmoothScroll();
   UpdateVisibilityAnimation(ImGui::GetIO().DeltaTime);

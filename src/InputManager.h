@@ -1,10 +1,7 @@
 #pragma once
 
-#include <array>
 #include <mutex>
 #include <vector>
-
-#include "imgui.h"
 
 namespace sosr {
 class InputManager {
@@ -22,7 +19,6 @@ public:
 private:
   std::mutex inputLock_;
   std::vector<RE::InputEvent *> inputQueue_;
-  std::array<bool, ImGuiKey_COUNT> imguiKeyDown_{};
   bool toggleKeyDown_{false};
   std::uint8_t modifierSidesDown_{0};
 };

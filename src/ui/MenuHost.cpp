@@ -113,8 +113,9 @@ void OnKeyEvent(const RE::GFxEvent *a_event, bool a_down) {
 
 void OnCharEvent(const RE::GFxEvent *a_event) {
   const auto *charEvent = reinterpret_cast<const RE::GFxCharEvent *>(a_event);
-  if (IsTextInputCharacter(charEvent->wcharCode)) {
-    ImGui::GetIO().AddInputCharacter(charEvent->wcharCode);
+  auto &io = ImGui::GetIO();
+  if (io.WantTextInput && IsTextInputCharacter(charEvent->wcharCode)) {
+    io.AddInputCharacter(charEvent->wcharCode);
   }
 }
 
@@ -123,7 +124,6 @@ void ProcessScaleformEvent(const RE::BSUIScaleformData *a_data) {
     return;
   }
 
-  const bool wantsTextInput = sosr::Menu::GetSingleton()->WantsTextInput();
   switch (const auto *event = a_data->scaleformEvent; event->type.get()) {
   case RE::GFxEvent::EventType::kMouseDown:
     OnMouseEvent(event, true);
@@ -135,14 +135,10 @@ void ProcessScaleformEvent(const RE::BSUIScaleformData *a_data) {
     OnMouseWheelEvent(event);
     break;
   case RE::GFxEvent::EventType::kKeyDown:
-    if (!wantsTextInput) {
-      OnKeyEvent(event, true);
-    }
+    OnKeyEvent(event, true);
     break;
   case RE::GFxEvent::EventType::kKeyUp:
-    if (!wantsTextInput) {
-      OnKeyEvent(event, false);
-    }
+    OnKeyEvent(event, false);
     break;
   case RE::GFxEvent::EventType::kCharEvent:
     OnCharEvent(event);
