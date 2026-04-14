@@ -2,6 +2,7 @@
 #include "catalog/KitLayoutMetadata.h"
 
 #include "ArmorUtils.h"
+#include "Utf8Path.h"
 #include "ui/Localization.h"
 
 #include <cstdio>
@@ -458,7 +459,7 @@ nlohmann::json OpenJsonFile(const std::filesystem::path &a_path) {
   }
 
   try {
-    std::ifstream file(a_path);
+    std::ifstream file(a_path, std::ios::binary);
     if (!file.is_open()) {
       return nlohmann::json::object();
     }
@@ -618,7 +619,8 @@ std::optional<KitEntry> BuildKitEntry(
   }
 
   const auto relativePath = a_path.lexically_relative(kModexKitPath);
-  if (relativePath.string().starts_with("..")) {
+  const auto relativePathText = utf8::PathToUtf8GenericString(relativePath);
+  if (relativePathText.starts_with("..")) {
     return std::nullopt;
   }
 
@@ -653,15 +655,15 @@ std::optional<KitEntry> BuildKitEntry(
 
   auto name = kitItem.key();
   if (name.empty()) {
-    name = a_path.stem().string();
+    name = utf8::PathToUtf8String(a_path.stem());
   }
 
   KitEntry entry{};
-  entry.id = "kit:" + relativePath.generic_string();
-  entry.key = relativePath.generic_string();
+  entry.id = "kit:" + relativePathText;
+  entry.key = relativePathText;
   entry.name = std::move(name);
-  entry.collection = relativePath.parent_path().generic_string();
-  entry.filepath = a_path.string();
+  entry.collection = utf8::PathToUtf8GenericString(relativePath.parent_path());
+  entry.filepath = utf8::PathToUtf8String(a_path);
   entry.summary = BuildKitSummary(description);
   entry.resolved = FinalizeResolvedData(
       std::move(description.armorFormIDs), std::move(description.itemTree),

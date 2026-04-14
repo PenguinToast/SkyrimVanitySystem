@@ -2,6 +2,7 @@
 
 #include "ArmorUtils.h"
 #include "StringUtils.h"
+#include "Utf8Path.h"
 #include "catalog/KitLayoutMetadata.h"
 #include "imgui_internal.h"
 #include "ui/Localization.h"
@@ -312,11 +313,12 @@ bool Menu::SavePendingKit() {
   std::filesystem::path relativePath;
   std::filesystem::path fullPath;
   if (existingIt != kits.end()) {
-    relativePath = existingIt->key;
-    fullPath = existingIt->filepath;
+    relativePath = utf8::PathFromUtf8(existingIt->key);
+    fullPath = utf8::PathFromUtf8(existingIt->filepath);
     collection = existingIt->collection;
   } else {
-    relativePath = std::filesystem::path(collection) / (name + ".json");
+    relativePath =
+        utf8::PathFromUtf8(collection) / utf8::PathFromUtf8(name + ".json");
     fullPath = std::filesystem::path(kModexKitDirectory) / relativePath;
   }
 
@@ -340,7 +342,7 @@ bool Menu::SavePendingKit() {
         catalog::SerializeKitLayout(*createDialog.pendingLayout);
   }
 
-  std::ofstream file(fullPath, std::ios::trunc);
+  std::ofstream file(fullPath, std::ios::binary | std::ios::trunc);
   if (!file.is_open()) {
     createDialog.error =
         std::string(localization->Get("kits.create_error.open_write"));
@@ -351,7 +353,7 @@ bool Menu::SavePendingKit() {
   file.close();
 
   CatalogBrowserState().pendingSelectionAfterRefresh =
-      "kit:" + relativePath.generic_string();
+      "kit:" + utf8::PathToUtf8GenericString(relativePath);
   QueueCatalogRefresh(ui::catalog::RefreshMode::KitsOnly);
   CatalogBrowserState().selectedKey.clear();
   CatalogBrowserState().activeTab = ui::catalog::BrowserTab::Kits;
@@ -373,7 +375,7 @@ bool Menu::DeletePendingKit() {
 
   std::error_code error;
   const auto removed = std::filesystem::remove(
-      std::filesystem::path(deleteDialog.pendingKitPath), error);
+      utf8::PathFromUtf8(deleteDialog.pendingKitPath), error);
   if (error) {
     auto message = error.message();
     deleteDialog.error = std::vformat(
