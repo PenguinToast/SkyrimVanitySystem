@@ -529,7 +529,18 @@ void Menu::DrawCatalogFilters() {
   };
   const auto drawSlotMultiCombo = [&]() {
     const auto preview = BuildSelectedSlotPreview();
+    auto &pane = catalogPane_;
     if (ImGui::BeginCombo("##slot-filter", preview.c_str())) {
+      pane.activeTransientPopup = ui::catalog::TransientPopup::SlotFilter;
+      if (pane.closeActiveTransientPopupRequested ||
+          ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteFocused)) {
+        pane.closeActiveTransientPopupRequested = false;
+        pane.activeTransientPopup = ui::catalog::TransientPopup::None;
+        ImGui::CloseCurrentPopup();
+        ImGui::EndCombo();
+        return;
+      }
+
       const auto anySelected = !HasAnySelectedSlotFilter();
       if (ImGui::Selectable(localization->Get("catalog.filters.any_slot").data(), anySelected,
                             ImGuiSelectableFlags_DontClosePopups)) {
@@ -551,6 +562,9 @@ void Menu::DrawCatalogFilters() {
         }
       }
       ImGui::EndCombo();
+    } else {
+      pane.activeTransientPopup = ui::catalog::TransientPopup::None;
+      pane.closeActiveTransientPopupRequested = false;
     }
   };
 

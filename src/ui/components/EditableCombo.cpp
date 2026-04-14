@@ -118,6 +118,13 @@ bool DrawEditableDropdownIndexed(
     const std::function<void(int)> *a_drawItemTooltip) {
   bool changed = false;
   const bool acceptAutocompleteOnEnter = !a_allowCustomInput;
+  const auto trimmedBuffer = sosr::strings::TrimText(a_buffer);
+  const auto *topAutocompleteOption =
+      FindTopAutocompleteOption(a_options, trimmedBuffer);
+  const bool allowTabAutocomplete =
+      topAutocompleteOption != nullptr &&
+      !sosr::strings::EqualsInsensitive(topAutocompleteOption->label,
+                                        trimmedBuffer);
   const auto popupId = std::string(a_label) + "##popup";
   const auto openId = std::string(a_label) + "##open";
   const auto highlightId = std::string(a_label) + "##highlight";
@@ -125,8 +132,10 @@ bool DrawEditableDropdownIndexed(
   const auto arrowAreaWidth = ImGui::GetFrameHeight();
   const auto inputWidth = (std::max)(1.0f, a_width - arrowAreaWidth);
   EditableDropdownAutocompleteData autocompleteData{a_options};
-  ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_AutoSelectAll |
-                                   ImGuiInputTextFlags_CallbackCompletion;
+  ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_AutoSelectAll;
+  if (allowTabAutocomplete) {
+    inputFlags |= ImGuiInputTextFlags_CallbackCompletion;
+  }
   if (acceptAutocompleteOnEnter) {
     inputFlags |= ImGuiInputTextFlags_EnterReturnsTrue;
   }

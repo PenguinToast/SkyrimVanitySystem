@@ -76,6 +76,9 @@ void Menu::Close() {
 }
 
 void Menu::NotifyWindowShutdown() {
+  catalogPane_.activeTransientPopup = ui::catalog::TransientPopup::None;
+  catalogPane_.closeActiveTransientPopupRequested = false;
+
   if (auto *controlMap = RE::ControlMap::GetSingleton();
       controlMap != nullptr && wantTextInput_) {
     AllowTextInput(controlMap, false);
@@ -120,6 +123,8 @@ void Menu::OnMenuShow() {
   io.MouseDrawCursor = false;
   io.ClearInputKeys();
   io.ClearEventsQueue();
+  catalogPane_.activeTransientPopup = ui::catalog::TransientPopup::None;
+  catalogPane_.closeActiveTransientPopupRequested = false;
   visibilityState_ = VisibilityState::Opening;
   windowAlpha_ = 0.0f;
   hideMessageQueued_ = false;
@@ -153,6 +158,8 @@ void Menu::OnMenuHide() {
   io.MouseDrawCursor = false;
   io.ClearInputKeys();
   io.ClearEventsQueue();
+  catalogPane_.activeTransientPopup = ui::catalog::TransientPopup::None;
+  catalogPane_.closeActiveTransientPopupRequested = false;
   pendingSmoothWheelDelta_ = 0.0f;
   smoothScrollWindowId_ = 0;
   smoothScrollTargetY_ = 0.0f;
@@ -172,6 +179,11 @@ void Menu::HandleCancel() {
   auto &createDialog = CreateKitDialogState();
   if (createDialog.open) {
     createDialog.cancelRequested = true;
+    return;
+  }
+
+  if (catalogPane_.activeTransientPopup != ui::catalog::TransientPopup::None) {
+    catalogPane_.closeActiveTransientPopupRequested = true;
     return;
   }
 
