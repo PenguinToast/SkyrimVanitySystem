@@ -13,7 +13,8 @@ bool IsKeyModifier(const std::uint32_t a_key) {
 }
 
 bool IsValidHotkey(const std::uint32_t a_key) {
-  return a_key != 0x01 && a_key != 0x0F && a_key != 0x00 && a_key != 0x1C &&
+  return a_key != 0x01 && a_key != kTabScanCode && a_key != 0x00 &&
+         a_key != 0x1C &&
          a_key != 0x39 && a_key != 0x14;
 }
 

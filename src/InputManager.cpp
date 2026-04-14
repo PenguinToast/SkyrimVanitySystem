@@ -168,7 +168,9 @@ void InputManager::ProcessInputEvents() {
           break;
         }
 
-        if (!inputSinkState.enabled) {
+        if (scanCode == keycode::kTabScanCode &&
+            (keyWentDown || buttonEvent->IsUp())) {
+          io.AddKeyEvent(ImGuiKey_Tab, keyIsDown);
           break;
         }
 

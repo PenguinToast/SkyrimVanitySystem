@@ -1,6 +1,7 @@
 #include "Hooks.h"
 
 #include "InputManager.h"
+#include "Keycode.h"
 #include "ui/Menu.h"
 #include "ui/MenuHost.h"
 
@@ -29,35 +30,19 @@ auto GetOriginalWndProc(HWND a_hwnd) -> WNDPROC {
   return nullptr;
 }
 
-[[nodiscard]] bool
-ShouldBlockKeyboardInputEvent(const RE::InputEvent *a_event) {
-  if (a_event == nullptr) {
+[[nodiscard]] bool ShouldBlockMenuInputEvent(const RE::InputEvent *a_event) {
+  if (a_event == nullptr || !sosr::Menu::GetSingleton()->IsEnabled()) {
     return false;
   }
 
-  const auto *menu = sosr::Menu::GetSingleton();
-  if (!menu->IsEnabled()) {
+  if (a_event->GetEventType() != RE::INPUT_EVENT_TYPE::kButton ||
+      a_event->GetDevice() != RE::INPUT_DEVICE::kKeyboard) {
     return false;
   }
 
-  switch (a_event->GetEventType()) {
-  case RE::INPUT_EVENT_TYPE::kChar:
-    return menu->WantsTextInput();
-  case RE::INPUT_EVENT_TYPE::kButton: {
-    const auto *buttonEvent = static_cast<const RE::ButtonEvent *>(a_event);
-    if (buttonEvent->device != RE::INPUT_DEVICE::kKeyboard) {
-      return false;
-    }
-
-    if (buttonEvent->GetIDCode() == 0x0F) {
-      return true;
-    }
-
-    return menu->WantsTextInput();
-  }
-  default:
-    return false;
-  }
+  const auto *buttonEvent = a_event->AsButtonEvent();
+  return buttonEvent != nullptr &&
+         buttonEvent->GetIDCode() == sosr::keycode::kTabScanCode;
 }
 
 void FilterBlockedInputEvents(RE::InputEvent **a_events) {
@@ -65,21 +50,15 @@ void FilterBlockedInputEvents(RE::InputEvent **a_events) {
     return;
   }
 
-  RE::InputEvent *previous = nullptr;
-  RE::InputEvent *event = *a_events;
-  while (event != nullptr) {
-    RE::InputEvent *next = event->next;
-    if (ShouldBlockKeyboardInputEvent(event)) {
-      if (previous != nullptr) {
-        previous->next = next;
-      } else {
-        *a_events = next;
-      }
-      event->next = nullptr;
-    } else {
-      previous = event;
+  auto **link = a_events;
+  while (*link != nullptr) {
+    auto *event = *link;
+    if (ShouldBlockMenuInputEvent(event)) {
+      *link = event->next;
+      continue;
     }
-    event = next;
+
+    link = &event->next;
   }
 }
 
@@ -139,10 +118,7 @@ struct WndProcHook {
       return DefWindowProcA(a_hwnd, a_msg, a_wParam, a_lParam);
     }
 
-    const auto result =
-        CallWindowProcA(originalWndProc, a_hwnd, a_msg, a_wParam, a_lParam);
-
-    return result;
+    return CallWindowProcA(originalWndProc, a_hwnd, a_msg, a_wParam, a_lParam);
   }
 };
 
