@@ -70,6 +70,9 @@ To build a release mod archive:
 ./scripts/build-package.sh
 ```
 
+For the full WSL build, deploy, packaging, tag, and GitHub release workflow, see
+`docs/Build-Deploy-Release.md`.
+
 This writes a zip under `dist/` named like:
 `Skyrim Vanity System v1.1.1.zip`
 
