@@ -7,6 +7,7 @@
 #include "integrations/DynamicArmorVariantsExtendedClient.h"
 
 #include <nlohmann/json.hpp>
+#include <algorithm>
 #include <unordered_set>
 
 namespace {
@@ -335,64 +336,41 @@ bool VariantWorkbench::PreviewKitLayout(
   }
 
   std::unordered_map<std::string, std::string> desiredPreviewVariants;
-  const auto candidateRowIndices =
-      BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
-  const auto priorityCount = rows_.size() + a_layout.rows.size();
+  const auto resolveOverrideArmorsFromItems =
+      [](const std::vector<EquipmentWidgetItem> &a_overrides) {
+        std::vector<const RE::TESObjectARMO *> overrideArmors;
+        overrideArmors.reserve(a_overrides.size());
+        for (const auto &overrideItem : a_overrides) {
+          if (const auto *overrideArmor =
+                  RE::TESForm::LookupByID<RE::TESObjectARMO>(
+                      overrideItem.formID)) {
+            overrideArmors.push_back(overrideArmor);
+          }
+        }
+        return overrideArmors;
+      };
 
-  for (std::size_t layoutIndex = 0; layoutIndex < a_layout.rows.size();
-       ++layoutIndex) {
-    const auto &layoutRow = a_layout.rows[layoutIndex];
-    std::vector<const RE::TESObjectARMO *> overrideArmors;
-    overrideArmors.reserve(layoutRow.overrideIdentifiers.size());
-    for (const auto &identifier : layoutRow.overrideIdentifiers) {
-      if (const auto *overrideArmor =
-              armor::LookupByIdentifier<RE::TESObjectARMO>(identifier);
-          overrideArmor != nullptr) {
-        overrideArmors.push_back(overrideArmor);
-      }
-    }
+  const auto projection = ProjectKitLayoutRows(
+      a_layout, a_candidateRowIndices, KitLayoutFallbackMode::SlotTargetsOnly,
+      std::nullopt, true);
+  std::size_t priorityCount = rows_.size();
+  for (const auto &projectedRow : projection.rows) {
+    priorityCount =
+        (std::max)(priorityCount, projectedRow.priorityRowIndex + 1);
+  }
 
-    const auto priority = BuildDavVariantPriority(layoutIndex, priorityCount);
-    if (layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot) {
-      const auto variantJson =
-          BuildDavSlotVariantJson(layoutRow.targetSlotMask, overrideArmors,
-                                  layoutRow.hideEquipped, priority);
-      if (variantJson.empty()) {
-        continue;
-      }
-
-      desiredPreviewVariants.emplace(
-          BuildPreviewVariantName(
-              "kit-slot:" + std::to_string(layoutRow.targetSlotMask) + ":" +
-              std::to_string(layoutIndex)),
-          variantJson);
+  for (const auto &projectedRow : projection.rows) {
+    const auto &row = projectedRow.row;
+    const auto overrideArmors = resolveOverrideArmorsFromItems(row.overrides);
+    const auto descriptor = BuildDavVariantDescriptor(
+        row, overrideArmors, BuildDavVariantPriority(
+                                 projectedRow.priorityRowIndex, priorityCount));
+    if (!descriptor.has_value()) {
       continue;
     }
 
-    const auto targetRowIndex = FindBestItemTargetRowIndexBySlotMask(
-        layoutRow.targetSlotMask, false, nullptr, nullptr,
-        &candidateRowIndices);
-    if (targetRowIndex < 0) {
-      continue;
-    }
-
-    const auto &targetRow = rows_[static_cast<std::size_t>(targetRowIndex)];
-    const auto *sourceArmor =
-        RE::TESForm::LookupByID<RE::TESObjectARMO>(targetRow.equipped.formID);
-    if (!sourceArmor) {
-      continue;
-    }
-
-    const auto variantJson = BuildDavVariantJson(
-        sourceArmor, overrideArmors, layoutRow.hideEquipped, priority);
-    if (variantJson.empty()) {
-      continue;
-    }
-
-    desiredPreviewVariants.emplace(
-        BuildPreviewVariantName(targetRow.key +
-                                "|kit:" + std::to_string(layoutIndex)),
-        variantJson);
+    desiredPreviewVariants.emplace(BuildPreviewVariantName(descriptor->name),
+                                   descriptor->json);
   }
 
   if (desiredPreviewVariants.empty()) {

@@ -519,6 +519,7 @@ void Menu::DrawWindow() {
     DrawCatalogWindow();
     DrawCreateKitDialog();
     DrawDeleteKitDialog();
+    DrawApplyWithConditionOverridesDialog();
     DrawConditionEditorDialog();
     ImGui::PopStyleVar();
     if (!open) {
@@ -591,6 +592,7 @@ void Menu::DrawWindow() {
 
   DrawCreateKitDialog();
   DrawDeleteKitDialog();
+  DrawApplyWithConditionOverridesDialog();
   DrawConditionEditorDialog();
 
   ImGui::End();

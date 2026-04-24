@@ -347,6 +347,23 @@ std::optional<std::string> Menu::ResolveNewWorkbenchRowConditionId() {
   return std::string(ui::conditions::kDefaultConditionId);
 }
 
+RE::Actor *Menu::ResolveSingleActorForConditionFilter() {
+  if (workbenchFilter_.kind != WorkbenchFilterKind::Condition ||
+      workbenchFilter_.conditionId.empty()) {
+    return nullptr;
+  }
+
+  const auto materialized = conditions::MaterializeConditionById(
+      workbenchFilter_.conditionId, ConditionDefinitions());
+  if (!materialized.has_value() ||
+      materialized->refreshTargets.actorFormIDs.size() != 1) {
+    return nullptr;
+  }
+
+  return RE::TESForm::LookupByID<RE::Actor>(
+      materialized->refreshTargets.actorFormIDs.front());
+}
+
 RE::Actor *Menu::ResolveWorkbenchPreviewActor() {
   ValidateWorkbenchFilterSelection();
 
@@ -358,12 +375,23 @@ RE::Actor *Menu::ResolveWorkbenchPreviewActor() {
       return actor;
     }
   }
+  if (auto *actor = ResolveSingleActorForConditionFilter();
+      actor != nullptr) {
+    return actor;
+  }
 
   return RE::PlayerCharacter::GetSingleton();
 }
 
 workbench::VariantWorkbench::InitialEquippedState
 Menu::BuildWorkbenchInitialEquippedState() {
+  ValidateWorkbenchFilterSelection();
+  if (workbenchFilter_.kind == WorkbenchFilterKind::Condition &&
+      !workbenchFilter_.conditionId.empty()) {
+    return workbench::VariantWorkbench::BuildInitialEquippedState(
+        ResolveSingleActorForConditionFilter());
+  }
+
   return workbench::VariantWorkbench::BuildInitialEquippedState(
       ResolveWorkbenchPreviewActor());
 }
@@ -383,6 +411,14 @@ void Menu::SyncWorkbenchRowsForCurrentFilter() {
                                               workbenchFilter_.actorFormID));
       return;
     }
+  }
+  if (workbenchFilter_.kind == WorkbenchFilterKind::Condition &&
+      !workbenchFilter_.conditionId.empty()) {
+    if (auto *actor = ResolveSingleActorForConditionFilter();
+        actor != nullptr) {
+      workbench_.SyncRowsFromActor(actor, workbenchFilter_.conditionId);
+    }
+    return;
   }
 
   workbench_.SyncRowsFromPlayer(

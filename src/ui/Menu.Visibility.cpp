@@ -187,6 +187,11 @@ void Menu::HandleCancel() {
     return;
   }
 
+  if (applyWithConditionOverridesDialog_.open) {
+    applyWithConditionOverridesDialog_.cancelRequested = true;
+    return;
+  }
+
   if (awaitingToggleKeyCapture_ || openToggleKeyPopup_) {
     CloseToggleKeyCapture();
     return;

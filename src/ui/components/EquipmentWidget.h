@@ -12,6 +12,7 @@ enum class EquipmentWidgetConflictStyle { None, Warning, Error };
 struct EquipmentWidgetOptions {
   bool showDeleteButton{false};
   bool disabledAppearance{false};
+  bool interactive{true};
   std::optional<ImVec4> accentColor;
   EquipmentWidgetConflictStyle conflictStyle{
       EquipmentWidgetConflictStyle::None};

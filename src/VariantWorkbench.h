@@ -51,6 +51,28 @@ public:
     std::unordered_set<RE::FormID> wornArmorForms;
     std::uint64_t occupiedSlotMask{0};
   };
+  enum class ConditionOverrideSourceKind : std::uint8_t {
+    ActorSource,
+    SlotFallback
+  };
+  struct ConditionOverrideApplicationPlan {
+    ConditionOverrideSourceKind sourceKind{
+        ConditionOverrideSourceKind::SlotFallback};
+    int sourceRowCount{0};
+    int slotRowCount{0};
+    int overrideCount{0};
+    int skippedCount{0};
+    std::vector<VariantWorkbenchRow> previewRows;
+
+    [[nodiscard]] bool CanApply() const {
+      for (const auto &row : previewRows) {
+        if (row.HasOverridesOrHideState()) {
+          return true;
+        }
+      }
+      return false;
+    }
+  };
 
   [[nodiscard]] static InitialEquippedState
   BuildInitialEquippedState(RE::Actor *a_actor);
@@ -77,6 +99,18 @@ public:
   bool AddSlotRow(std::uint64_t a_slotMask,
                   std::optional<std::string> a_conditionId,
                   const InitialEquippedState *a_initialEquippedState = nullptr);
+  [[nodiscard]] ConditionOverrideApplicationPlan
+  PlanConditionOverrideApplication(const std::vector<RE::FormID> &a_formIDs,
+                                   std::string_view a_conditionId,
+                                   RE::Actor *a_sourceActor) const;
+  [[nodiscard]] ConditionOverrideApplicationPlan
+  PlanConditionOverrideApplication(const KitEntry::Layout &a_layout,
+                                   std::string_view a_conditionId,
+                                   RE::Actor *a_sourceActor) const;
+  bool ApplyConditionOverridePlan(
+      const ConditionOverrideApplicationPlan &a_plan,
+      std::string_view a_conditionId,
+      const InitialEquippedState *a_initialEquippedState = nullptr);
   bool
   ApplyCatalogPreview(std::string_view a_selectionKey,
                       const std::vector<RE::FormID> &a_formIDs,
@@ -151,6 +185,22 @@ private:
     int rowIndex{-1};
     RE::FormID armorFormID{0};
   };
+  struct PlannedSlotFallbackAssignment {
+    std::uint64_t slotMask{0};
+    RE::FormID armorFormID{0};
+  };
+  enum class KitLayoutFallbackMode : std::uint8_t {
+    None,
+    SlotTargetsOnly,
+    AnyTargetSlot
+  };
+  struct ProjectedKitLayoutRow {
+    VariantWorkbenchRow row;
+    std::size_t priorityRowIndex{0};
+  };
+  struct KitLayoutProjection {
+    std::vector<ProjectedKitLayoutRow> rows;
+  };
 
   [[nodiscard]] static std::vector<int>
   BuildCandidateRowIndices(const std::vector<int> *a_candidateRowIndices,
@@ -174,6 +224,32 @@ private:
   PlanCatalogAssignments(const std::vector<RE::FormID> &a_formIDs,
                          std::vector<PlannedCatalogAssignment> &a_assignments,
                          const std::vector<int> *a_candidateRowIndices) const;
+  [[nodiscard]] std::vector<int>
+  CollectConditionSourceRowIndices(std::string_view a_conditionId) const;
+  [[nodiscard]] bool PlanSlotFallbackAssignments(
+      const std::vector<RE::FormID> &a_formIDs,
+      std::vector<PlannedSlotFallbackAssignment> &a_assignments,
+      int &a_skippedCount) const;
+  [[nodiscard]] VariantWorkbench BuildPlanningWorkbench() const;
+  [[nodiscard]] static std::vector<const RE::TESObjectARMO *>
+  ResolveKitLayoutOverrideArmors(const KitEntry::LayoutRow &a_layoutRow);
+  [[nodiscard]] int
+  FindKitLayoutTargetRowIndex(const KitEntry::LayoutRow &a_layoutRow,
+                              const std::vector<int> &a_candidateRowIndices)
+      const;
+  [[nodiscard]] KitLayoutProjection ProjectKitLayoutRows(
+      const KitEntry::Layout &a_layout,
+      const std::vector<int> *a_candidateRowIndices,
+      KitLayoutFallbackMode a_fallbackMode,
+      std::optional<std::string> a_fallbackConditionId,
+      bool a_replaceExisting) const;
+  static void AppendOverrideItem(std::vector<EquipmentWidgetItem> &a_overrides,
+                                 const RE::TESObjectARMO *a_overrideArmor);
+  [[nodiscard]] ConditionOverrideApplicationPlan
+  PlanKitLayoutConditionOverrideApplication(
+      const KitEntry::Layout &a_layout, std::string_view a_conditionId,
+      const std::vector<int> *a_candidateRowIndices,
+      bool a_allowSlotFallback) const;
   [[nodiscard]] std::vector<VariantWorkbenchRow>
   BuildCatalogRows(const std::vector<RE::FormID> &a_formIDs,
                    std::optional<std::string> a_conditionId,

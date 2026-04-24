@@ -184,6 +184,7 @@ template <class F> void VisitDistinctWornArmorItems(RE::Actor *a_actor, F &&a_vi
     a_visit(armor, equipped);
   }
 }
+
 } // namespace
 
 VariantWorkbench::InitialEquippedState
@@ -1065,60 +1066,48 @@ bool VariantWorkbench::ApplyKitLayout(
   auto candidateRowIndices =
       BuildCandidateRowIndices(a_candidateRowIndices, rows_.size());
 
+  bool changed = false;
+  bool directlyChanged = false;
   if (a_replaceExisting) {
-    ResetAllRows(&candidateRowIndices);
+    changed |= ResetAllRows(&candidateRowIndices);
   }
 
-  bool changed = false;
-  for (const auto &layoutRow : a_layout.rows) {
-    int targetRowIndex = -1;
-    if (layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot) {
-      for (const auto rowIndex : candidateRowIndices) {
-        if (!IsValidRowIndex(rowIndex, rows_.size())) {
-          continue;
-        }
+  const auto projection = ProjectKitLayoutRows(
+      a_layout, &candidateRowIndices,
+      a_newSlotRowConditionId.has_value()
+          ? KitLayoutFallbackMode::SlotTargetsOnly
+          : KitLayoutFallbackMode::None,
+      a_newSlotRowConditionId, a_replaceExisting);
 
-        const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
-        if (row.IsSlotRow() &&
-            row.equipped.slotMask == layoutRow.targetSlotMask) {
-          targetRowIndex = rowIndex;
-          break;
-        }
-      }
-    } else {
-      targetRowIndex = FindBestItemTargetRowIndexBySlotMask(
-          layoutRow.targetSlotMask, false, nullptr, nullptr,
-          &candidateRowIndices);
-    }
-
-    if (targetRowIndex < 0 &&
-        layoutRow.targetKind == KitEntry::LayoutTargetKind::Slot &&
+  for (const auto &projectedRow : projection.rows) {
+    const auto &row = projectedRow.row;
+    auto rowIt = std::ranges::find(rows_, row.key, &VariantWorkbenchRow::key);
+    if (rowIt == rows_.end() && row.IsSlotRow() &&
         a_newSlotRowConditionId.has_value()) {
-      if (AddSlotRow(layoutRow.targetSlotMask, a_newSlotRowConditionId,
-                     a_initialEquippedState)) {
-        targetRowIndex = static_cast<int>(rows_.size()) - 1;
-        candidateRowIndices.push_back(targetRowIndex);
-        changed = true;
-      }
+      const auto added =
+          AddSlotRow(row.equipped.slotMask, a_newSlotRowConditionId,
+                     a_initialEquippedState);
+      changed |= added;
+      rowIt = std::ranges::find(rows_, row.key, &VariantWorkbenchRow::key);
     }
-
-    if (!IsValidRowIndex(targetRowIndex, rows_.size())) {
+    if (rowIt == rows_.end()) {
       continue;
     }
 
-    for (const auto &identifier : layoutRow.overrideIdentifiers) {
-      if (const auto *overrideArmor =
-              armor::LookupByIdentifier<RE::TESObjectARMO>(identifier);
-          overrideArmor != nullptr) {
-        changed |=
-            AddCatalogOverride(targetRowIndex, overrideArmor->GetFormID());
-      }
+    if (rowIt->overrides == row.overrides &&
+        rowIt->hideEquipped == row.hideEquipped) {
+      continue;
     }
 
-    changed |= SetHideEquipped(targetRowIndex, layoutRow.hideEquipped);
+    rowIt->overrides = row.overrides;
+    rowIt->hideEquipped = row.hideEquipped;
+    directlyChanged = true;
   }
 
-  return changed;
+  if (directlyChanged) {
+    MarkChanged();
+  }
+  return changed || directlyChanged;
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

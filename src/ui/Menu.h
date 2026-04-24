@@ -128,6 +128,15 @@ private:
   using WorkbenchFilterState = ui::workbench::FilterState;
   using WorkbenchFilterOption = ui::workbench::FilterOption;
   using WorkbenchFilterKind = ui::workbench::FilterKind;
+  struct ConditionOverrideApplicationSource {
+    std::string name;
+    std::vector<RE::FormID> formIDs;
+    std::optional<KitEntry::Layout> layout;
+
+    [[nodiscard]] bool HasPayload() const {
+      return layout.has_value() || !formIDs.empty();
+    }
+  };
 
   Menu() = default;
   friend class MenuHost;
@@ -177,6 +186,7 @@ private:
   void DrawConditionLibraryTable();
   void DrawOptionsTab();
   void DrawConditionEditorDialog();
+  void DrawApplyWithConditionOverridesDialog();
   [[nodiscard]] bool ExportSaveDataJson(std::string_view a_path,
                                         std::string &a_error) const;
   [[nodiscard]] bool ImportSaveDataJson(std::string_view a_path,
@@ -220,6 +230,15 @@ private:
                                  bool a_replaceExisting = true);
   void AddKitEntryToWorkbench(const KitEntry &a_entry,
                               bool a_replaceExisting = true);
+  void DrawApplyWithConditionMenu(
+      const ConditionOverrideApplicationSource &a_source);
+  void OpenApplyWithConditionOverridesDialog(
+      const ConditionOverrideApplicationSource &a_source,
+      const ui::conditions::Definition &a_condition);
+  [[nodiscard]] RE::Actor *ResolveApplyWithConditionActor(
+      std::string_view a_conditionId,
+      const ConditionOverrideApplicationSource &a_source,
+      workbench::VariantWorkbench::ConditionOverrideApplicationPlan &a_plan);
   void
   OpenCreateKitDialog(KitCreationSource a_source,
                       const std::vector<int> *a_candidateRowIndices = nullptr);
@@ -244,6 +263,7 @@ private:
   [[nodiscard]] std::optional<std::string>
   ResolveFirstConditionForActorFilter(RE::FormID a_actorFormID);
   [[nodiscard]] std::optional<std::string> ResolveNewWorkbenchRowConditionId();
+  [[nodiscard]] RE::Actor *ResolveSingleActorForConditionFilter();
   [[nodiscard]] RE::Actor *ResolveWorkbenchPreviewActor();
   [[nodiscard]] workbench::VariantWorkbench::InitialEquippedState
   BuildWorkbenchInitialEquippedState();
@@ -364,6 +384,17 @@ private:
   std::string saveDataStatus_;
   bool saveDataStatusIsError_{false};
   bool openSaveDataErrorPopup_{false};
+  struct ApplyWithConditionOverridesDialogState {
+    bool openRequested{false};
+    bool cancelRequested{false};
+    bool open{false};
+    std::string conditionId;
+    std::string conditionName;
+    ConditionOverrideApplicationSource source;
+    RE::FormID actorFormID{0};
+    workbench::VariantWorkbench::ConditionOverrideApplicationPlan plan;
+  };
+  ApplyWithConditionOverridesDialogState applyWithConditionOverridesDialog_;
   std::vector<FontOption> bundledFontOptions_;
   std::vector<FontOption> systemFontOptions_;
   workbench::VariantWorkbench workbench_;

@@ -17,6 +17,9 @@ struct EquipmentWidgetItem {
   std::uint64_t slotMask{0};
   bool hasArmorAddons{true};
 
+  [[nodiscard]] bool
+  operator==(const EquipmentWidgetItem &a_other) const = default;
+
   [[nodiscard]] bool IsSlot() const {
     return kind == EquipmentWidgetItemKind::Slot;
   }

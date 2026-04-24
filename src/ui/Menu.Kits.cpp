@@ -123,6 +123,13 @@ bool Menu::DrawKitTab() {
           if (ImGui::MenuItem(appendOverridesLabel.data())) {
             AddKitEntryToWorkbench(kit, false);
           }
+          ConditionOverrideApplicationSource source{
+              .name = kit.name,
+              .formIDs = kit.GetArmorFormIDs(),
+              .layout = kit.GetLayout() != nullptr
+                            ? std::optional<KitEntry::Layout>(*kit.GetLayout())
+                            : std::nullopt};
+          DrawApplyWithConditionMenu(source);
           ImGui::Separator();
           ImGui::PushStyleColor(
               ImGuiCol_Text,

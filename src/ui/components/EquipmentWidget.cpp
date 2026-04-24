@@ -259,10 +259,12 @@ DrawEquipmentWidget(const char *a_id,
 
   EquipmentWidgetResult result{};
   result.hovered = ImGui::IsItemHovered();
-  result.active = ImGui::IsItemActive();
-  result.clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
-  result.doubleClicked =
-      result.hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+  if (a_options.interactive) {
+    result.active = ImGui::IsItemActive();
+    result.clicked = ImGui::IsItemClicked(ImGuiMouseButton_Left);
+    result.doubleClicked =
+        result.hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+  }
 
   const auto rectMin = ImGui::GetItemRectMin();
   const auto rectMax = ImGui::GetItemRectMax();
@@ -287,6 +289,7 @@ DrawEquipmentWidget(const char *a_id,
     fillColor = theme->GetColorU32("ERROR", 0.45f);
     borderColor = theme->GetColorU32("ERROR");
   }
+  const bool useHoverAppearance = a_options.interactive && result.hovered;
   if (result.active) {
     if (hasWarningConflict) {
       fillColor = theme->GetColorU32("WARN", 0.48f);
@@ -298,7 +301,7 @@ DrawEquipmentWidget(const char *a_id,
       fillColor = theme->GetColorU32("PRIMARY", 0.80f);
       borderColor = theme->GetColorU32("PRIMARY");
     }
-  } else if (result.hovered) {
+  } else if (useHoverAppearance) {
     if (hasWarningConflict) {
       fillColor = theme->GetColorU32("WARN", 0.38f);
       borderColor = theme->GetColorU32("WARN");
@@ -333,7 +336,7 @@ DrawEquipmentWidget(const char *a_id,
   const auto buttonMin = ImVec2(rectMax.x - deletePaneWidth, rectMin.y);
   const auto buttonMax = rectMax;
   bool deleteHeld = false;
-  if (a_options.showDeleteButton) {
+  if (a_options.showDeleteButton && a_options.interactive) {
     const auto deleteState = ui::input_widgets::EvaluateRectClickTarget(
         ImGui::GetID("##equipment-widget-delete"), buttonMin, buttonMax);
     result.deleteHovered = deleteState.hovered;
@@ -387,8 +390,9 @@ DrawEquipmentWidget(const char *a_id,
   }
 
   const bool hasContextMenuEntries =
-      static_cast<bool>(a_options.drawContextMenuEntries) ||
-      a_options.showDeleteButton;
+      a_options.interactive &&
+      (static_cast<bool>(a_options.drawContextMenuEntries) ||
+       a_options.showDeleteButton);
   if (hasContextMenuEntries &&
       ImGui::BeginPopupContextItem("##equipment-widget-context")) {
     bool drewCustomEntries = false;

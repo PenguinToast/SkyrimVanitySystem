@@ -97,6 +97,8 @@ bool Menu::DrawOutfitTab() {
           if (ImGui::MenuItem(appendOverridesLabel.data())) {
             AddOutfitEntryToWorkbench(outfit, false);
           }
+          DrawApplyWithConditionMenu({.name = outfit.name,
+                                      .formIDs = outfit.GetArmorFormIDs()});
           ImGui::EndPopup();
         }
         ImGui::SetCursorScreenPos(rowContentPos);
