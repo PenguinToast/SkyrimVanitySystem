@@ -1,0 +1,23 @@
+{
+  "description": "Applies while in a player home location.",
+  "clauses": [
+    {
+      "function": "IsInInterior",
+      "customConditionId": "",
+      "arg1": "",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "AND"
+    },
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypePlayerHouse",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "AND"
+    }
+  ]
+}

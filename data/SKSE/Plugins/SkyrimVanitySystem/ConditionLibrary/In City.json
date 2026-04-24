@@ -1,0 +1,14 @@
+{
+  "description": "Applies while in a city location.",
+  "clauses": [
+    {
+      "function": "LocationHasKeyword",
+      "customConditionId": "",
+      "arg1": "LocTypeCity",
+      "arg2": "",
+      "comparator": "==",
+      "value": "1",
+      "join": "AND"
+    }
+  ]
+}
