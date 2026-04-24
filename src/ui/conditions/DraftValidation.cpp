@@ -49,8 +49,7 @@ std::string BuildSuggestedConditionName(
 std::string BuildUniqueConditionName(
     const std::string_view a_baseName,
     const std::vector<Definition> &a_conditions,
-    const std::string_view a_excludedId,
-    const std::function<bool(std::string_view)> &a_reservedOrExtraConflict) {
+    const std::function<bool(std::string_view)> &a_extraConflict) {
   auto baseName = TrimText(a_baseName);
   if (baseName.empty()) {
     baseName = std::string(
@@ -59,11 +58,11 @@ std::string BuildUniqueConditionName(
 
   const auto conflicts = [&](std::string_view a_candidate) {
     if (FindConditionFunctionInfo(a_candidate) != nullptr ||
-        sosr::conditions::FindDefinitionByName(a_conditions, a_candidate,
-                                               a_excludedId) != nullptr) {
+        sosr::conditions::FindDefinitionByName(a_conditions, a_candidate) !=
+            nullptr) {
       return true;
     }
-    return a_reservedOrExtraConflict && a_reservedOrExtraConflict(a_candidate);
+    return a_extraConflict && a_extraConflict(a_candidate);
   };
 
   if (!conflicts(baseName)) {

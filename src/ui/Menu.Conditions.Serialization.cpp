@@ -168,7 +168,7 @@ bool DeserializeConditionStore(const nlohmann::json &a_root,
                 nullptr) {
           condition.name =
               sosr::ui::condition_editor::BuildUniqueConditionName(
-                  condition.name, parsedStore.definitions, condition.id);
+                  condition.name, parsedStore.definitions);
         }
         if (condition.id.rfind("condition-", 0) == 0) {
           const auto idSuffix = std::string_view(condition.id)

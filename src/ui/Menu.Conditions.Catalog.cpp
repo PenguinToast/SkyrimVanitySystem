@@ -879,8 +879,7 @@ bool Menu::DrawConditionCatalogTable() {
     auto copy = source;
     copy.id = conditions::BuildConditionId(NextConditionId()++);
     copy.name = ui::condition_editor::BuildUniqueConditionName(
-        source.name, ConditionDefinitions(), source.id,
-        buildExtraNameConflict());
+        source.name, ConditionDefinitions(), buildExtraNameConflict());
     if (auto *catalog = copy.GetCatalog(); catalog != nullptr) {
       const auto existingColors = CollectCatalogColorsForNewCondition(
           ConditionDefinitions(), ConditionEditors());
@@ -899,8 +898,7 @@ bool Menu::DrawConditionCatalogTable() {
     auto libraryCopy = source;
     libraryCopy.EnsureLibrary();
     libraryCopy.name = ui::condition_editor::BuildUniqueConditionName(
-        source.name, ConditionDefinitions(), source.id,
-        buildExtraNameConflict());
+        source.name, ConditionDefinitions(), buildExtraNameConflict());
     libraryCopy.id = libraryCopy.name;
 
     conditions::LibraryChangeResult saveResult;
