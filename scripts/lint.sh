@@ -7,6 +7,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 MODE="releasedbg"
 declare -a TARGETS=()
+PROJECT_SOURCE_DIRS=("src")
 
 while (($#)); do
     case "$1" in
@@ -63,14 +64,43 @@ to_tool_path() {
 }
 
 collect_default_targets() {
-    find "${REPO_ROOT}/src" -type f -name '*.cpp' -print0
+    local source_dir
+    for source_dir in "${PROJECT_SOURCE_DIRS[@]}"; do
+        local abs="${REPO_ROOT}/${source_dir}"
+        [[ -d "$abs" ]] || continue
+        find "$abs" -type f -name '*.cpp' -print0
+    done
+}
+
+is_project_path() {
+    local abs="$1"
+    local source_dir
+    for source_dir in "${PROJECT_SOURCE_DIRS[@]}"; do
+        local root="${REPO_ROOT}/${source_dir}"
+        [[ -d "$root" ]] || continue
+        root="$(realpath "$root")"
+        if [[ "$abs" == "$root" || "$abs" == "$root"/* ]]; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 collect_explicit_targets() {
     local target
     for target in "${TARGETS[@]}"; do
         local abs
-        abs="$(realpath "${REPO_ROOT}/${target}")"
+        if [[ "$target" == /* ]]; then
+            abs="$(realpath "$target")"
+        else
+            abs="$(realpath "${REPO_ROOT}/${target}")"
+        fi
+        if ! is_project_path "$abs"; then
+            echo "Refusing to lint outside project source roots: ${target}" >&2
+            echo "Allowed roots: ${PROJECT_SOURCE_DIRS[*]}" >&2
+            exit 1
+        fi
         if [[ -d "$abs" ]]; then
             find "$abs" -type f -name '*.cpp' -print0
         elif [[ -f "$abs" ]]; then
@@ -81,6 +111,42 @@ collect_explicit_targets() {
         fi
     done
 }
+
+regex_escape() {
+    sed -e 's/[.[\*^$()+?{}|]/\\&/g' -e 's/\\/\\\\/g' <<<"$1"
+}
+
+build_header_filter() {
+    local -a roots=()
+    local source_dir
+    for source_dir in "${PROJECT_SOURCE_DIRS[@]}"; do
+        local abs="${REPO_ROOT}/${source_dir}"
+        [[ -d "$abs" ]] || continue
+        roots+=("$(regex_escape "$(to_tool_path "$CLANG_TIDY" "$abs")")([\\\\/].*)?")
+    done
+
+    local IFS='|'
+    printf '^(%s)$' "${roots[*]}"
+}
+
+declare -a FILES=()
+TARGET_LIST="$(mktemp)"
+trap 'rm -f "$TARGET_LIST"' EXIT
+
+if ((${#TARGETS[@]})); then
+    collect_explicit_targets >"$TARGET_LIST"
+else
+    collect_default_targets >"$TARGET_LIST"
+fi
+
+while IFS= read -r -d '' file; do
+    FILES+=("$file")
+done <"$TARGET_LIST"
+
+if ((${#FILES[@]} == 0)); then
+    echo "No source files found." >&2
+    exit 1
+fi
 
 WIN_REPO_ROOT="$(wslpath -w "$REPO_ROOT")"
 POWERSHELL_CMD="
@@ -93,29 +159,14 @@ xmake project -k compile_commands
 powershell.exe -NoProfile -Command "$POWERSHELL_CMD" >/dev/null
 
 CLANG_TIDY="$(find_clang_tidy)"
-declare -a FILES=()
-
-if ((${#TARGETS[@]})); then
-    while IFS= read -r -d '' file; do
-        FILES+=("$file")
-    done < <(collect_explicit_targets)
-else
-    while IFS= read -r -d '' file; do
-        FILES+=("$file")
-    done < <(collect_default_targets)
-fi
-
-if ((${#FILES[@]} == 0)); then
-    echo "No source files found." >&2
-    exit 1
-fi
-
 PROJECT_PATH="$(to_tool_path "$CLANG_TIDY" "$REPO_ROOT")"
+HEADER_FILTER="$(build_header_filter)"
 for file in "${FILES[@]}"; do
     tool_file="$(to_tool_path "$CLANG_TIDY" "$file")"
     "$CLANG_TIDY" \
+        --quiet \
         -p "$PROJECT_PATH" \
-        --header-filter='^(src|include)/' \
+        --header-filter="$HEADER_FILTER" \
         --extra-arg-before=/Y- \
         "$tool_file"
 done
