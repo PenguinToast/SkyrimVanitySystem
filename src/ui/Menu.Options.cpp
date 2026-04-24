@@ -246,9 +246,9 @@ void Menu::DrawOptionsTab() {
   const auto fontSizeLabel = localization->Get("options.font_size");
   const auto minFontSize = kMinFontSizePixels;
   const auto maxFontSize = kMaxFontSizePixels;
-  const auto fontSizeRangeLabel = std::vformat(
-      std::string(localization->Get("options.font_size.range")),
-      std::make_format_args(minFontSize, maxFontSize));
+  const auto fontSizeRangeLabel =
+      std::vformat(std::string(localization->Get("options.font_size.range")),
+                   std::make_format_args(minFontSize, maxFontSize));
   const auto resetToDefaultLabel = localization->Get("options.reset_default");
   const auto toggleUIButtonLabel =
       localization->Get("options.toggle_ui_button");
@@ -256,6 +256,13 @@ void Menu::DrawOptionsTab() {
       localization->Get("options.pause_game_while_open");
   const auto smoothScrollingLabel =
       localization->Get("options.smooth_scrolling");
+  const auto saveDataLabel = localization->Get("options.save_data");
+  const auto saveDataPathHint =
+      localization->Get("options.save_data.path_hint");
+  const auto exportJsonLabel = localization->Get("options.export_json");
+  const auto importJsonLabel = localization->Get("options.import_json");
+  const auto importJsonErrorTitle =
+      localization->Get("options.import_json.error_title");
   const auto toggleCaptureTitle =
       localization->Get("options.toggle_capture.title");
   const auto toggleCaptureBody =
@@ -274,10 +281,10 @@ void Menu::DrawOptionsTab() {
     if (ImGui::BeginTable("##options-layout", 2,
                           ImGuiTableFlags_SizingStretchProp,
                           ImVec2(0.0f, 0.0f))) {
-      ImGui::TableSetupColumn(descriptionLabel.data(), ImGuiTableColumnFlags_WidthStretch,
-                              1.15f);
-      ImGui::TableSetupColumn(controlsLabel.data(), ImGuiTableColumnFlags_WidthStretch,
-                              0.85f);
+      ImGui::TableSetupColumn(descriptionLabel.data(),
+                              ImGuiTableColumnFlags_WidthStretch, 1.15f);
+      ImGui::TableSetupColumn(controlsLabel.data(),
+                              ImGuiTableColumnFlags_WidthStretch, 0.85f);
       ImGui::TableNextRow();
 
       ImGui::TableSetColumnIndex(0);
@@ -413,9 +420,74 @@ void Menu::DrawOptionsTab() {
         SaveUserSettings();
       }
 
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextUnformatted(saveDataLabel.data());
+
+      ImGui::TableSetColumnIndex(1);
+      if (saveDataPath_[0] == '\0') {
+        ResetSaveDataPath();
+      }
+      ImGui::SetNextItemWidth(-FLT_MIN);
+      ImGui::InputTextWithHint("##save-data-path", saveDataPathHint.data(),
+                               saveDataPath_.data(), saveDataPath_.size());
+      if (ImGui::Button(exportJsonLabel.data())) {
+        std::string error;
+        if (ExportSaveDataJson(saveDataPath_.data(), error)) {
+          const std::string pathText(saveDataPath_.data());
+          saveDataStatus_ = std::vformat(
+              std::string(localization->Get("options.export_json.success")),
+              std::make_format_args(pathText));
+          saveDataStatusIsError_ = false;
+        } else {
+          saveDataStatus_ = std::move(error);
+          saveDataStatusIsError_ = true;
+        }
+      }
+      ImGui::SameLine();
+      if (ImGui::Button(importJsonLabel.data())) {
+        std::string error;
+        if (ImportSaveDataJson(saveDataPath_.data(), error)) {
+          const std::string pathText(saveDataPath_.data());
+          saveDataStatus_ = std::vformat(
+              std::string(localization->Get("options.import_json.success")),
+              std::make_format_args(pathText));
+          saveDataStatusIsError_ = false;
+        } else {
+          saveDataStatus_ = std::move(error);
+          saveDataStatusIsError_ = true;
+          openSaveDataErrorPopup_ = true;
+        }
+      }
+      if (!saveDataStatus_.empty()) {
+        const auto color = ThemeConfig::GetSingleton()->GetColor(
+            saveDataStatusIsError_ ? "ERROR" : "SUCCESS");
+        ImGui::TextColored(color, "%s", saveDataStatus_.c_str());
+      }
+
       ImGui::EndTable();
     }
     ImGui::EndChild();
+  }
+
+  if (openSaveDataErrorPopup_) {
+    ImGui::OpenPopup("##save-data-error");
+    openSaveDataErrorPopup_ = false;
+  }
+
+  ImGui::SetNextWindowSize(ImVec2(460.0f, 0.0f), ImGuiCond_Appearing);
+  if (ImGui::BeginPopupModal("##save-data-error", nullptr,
+                             ImGuiWindowFlags_NoResize |
+                                 ImGuiWindowFlags_NoMove)) {
+    ImGui::TextUnformatted(importJsonErrorTitle.data());
+    ImGui::Separator();
+    ImGui::TextWrapped("%s", saveDataStatus_.c_str());
+    ImGui::Spacing();
+    if (ImGui::Button(localization->GetCStr("common.ok"),
+                      ImVec2(-FLT_MIN, 0.0f))) {
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
   }
 
   if (openToggleKeyPopup_) {

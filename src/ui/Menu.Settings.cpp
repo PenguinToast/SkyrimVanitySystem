@@ -6,6 +6,7 @@
 #include "backends/imgui_impl_dx11.h"
 #include "backends/imgui_impl_win32.h"
 
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -240,6 +241,7 @@ void Menu::CloseToggleKeyCapture() {
   toggleKeyCaptureError_.clear();
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void Menu::HandleToggleKeyCapture(const std::uint32_t a_scanCode,
                                   const std::uint32_t a_modifierScanCode) {
   if (a_scanCode == 0x01) {
@@ -300,6 +302,7 @@ void Menu::Init(IDXGISwapChain *a_swapChain, ID3D11Device *a_device,
           .string();
   favoritesPath_ =
       (std::filesystem::path(settingsDirectory_) / kFavoritesFilename).string();
+  ResetSaveDataPath();
   RefreshAvailableFonts();
   ui::Localization::GetSingleton()->RefreshAvailableLocales(kLocaleDirectory);
   LoadUserSettings();

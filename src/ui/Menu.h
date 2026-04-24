@@ -21,6 +21,7 @@
 
 #include <array>
 #include <limits>
+#include <nlohmann/json_fwd.hpp>
 #include <optional>
 #include <unordered_set>
 #include <vector>
@@ -81,6 +82,9 @@ public:
   GetConditions() const {
     return ConditionDefinitions();
   }
+  [[nodiscard]] nlohmann::json SerializeConditionState() const;
+  [[nodiscard]] bool DeserializeConditionState(const nlohmann::json &a_root,
+                                               std::string *a_error = nullptr);
   void SerializeConditions(SKSE::SerializationInterface *a_skse) const;
   void DeserializeConditions(SKSE::SerializationInterface *a_skse);
   void RevertConditions();
@@ -173,6 +177,11 @@ private:
   void DrawConditionLibraryTable();
   void DrawOptionsTab();
   void DrawConditionEditorDialog();
+  [[nodiscard]] bool ExportSaveDataJson(std::string_view a_path,
+                                        std::string &a_error) const;
+  [[nodiscard]] bool ImportSaveDataJson(std::string_view a_path,
+                                        std::string &a_error);
+  void ResetSaveDataPath();
   [[nodiscard]] bool DrawConditionEditorClauseTable(
       ConditionEditorState &a_editor,
       const std::vector<ui::components::EditableDropdownItem<std::string>>
@@ -351,6 +360,10 @@ private:
   std::string imguiIniPath_;
   std::string userSettingsPath_;
   std::string favoritesPath_;
+  std::array<char, 512> saveDataPath_{};
+  std::string saveDataStatus_;
+  bool saveDataStatusIsError_{false};
+  bool openSaveDataErrorPopup_{false};
   std::vector<FontOption> bundledFontOptions_;
   std::vector<FontOption> systemFontOptions_;
   workbench::VariantWorkbench workbench_;

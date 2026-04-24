@@ -77,7 +77,7 @@ bool DeserializeRowSource(const nlohmann::json &a_serializedRow,
 } // namespace
 
 namespace sosr::workbench {
-void VariantWorkbench::Serialize(SKSE::SerializationInterface *a_skse) const {
+nlohmann::json VariantWorkbench::SerializeState() const {
   nlohmann::json root;
   root["rows"] = nlohmann::json::array();
 
@@ -108,6 +108,88 @@ void VariantWorkbench::Serialize(SKSE::SerializationInterface *a_skse) const {
     root["rows"].push_back(std::move(serializedRow));
   }
 
+  return root;
+}
+
+bool VariantWorkbench::DeserializeState(
+    const nlohmann::json &a_root,
+    const std::optional<std::string> &a_missingConditionId,
+    std::string *a_error) {
+  if (!a_root.is_object() || !a_root["rows"].is_array()) {
+    if (a_error) {
+      *a_error = "Workbench JSON is missing a rows array.";
+    }
+    return false;
+  }
+
+  Revert();
+
+  for (const auto &serializedRow : a_root["rows"]) {
+    if (!serializedRow.is_object()) {
+      continue;
+    }
+
+    VariantWorkbenchRow row{};
+    if (!DeserializeRowSource(serializedRow, row)) {
+      continue;
+    }
+    if (const auto conditionIt = serializedRow.find("conditionId");
+        conditionIt != serializedRow.end()) {
+      if (conditionIt->is_null()) {
+        row.conditionId = std::nullopt;
+      } else if (conditionIt->is_string()) {
+        const auto conditionId = conditionIt->get<std::string>();
+        row.conditionId = conditionId.empty()
+                              ? std::nullopt
+                              : std::optional<std::string>(conditionId);
+      } else {
+        row.conditionId = a_missingConditionId;
+      }
+    } else {
+      row.conditionId = a_missingConditionId;
+    }
+    UpdateRowIdentity(row);
+    row.hideEquipped = serializedRow.value("hideEquipped", false);
+
+    std::unordered_set<RE::FormID> seenOverrideForms;
+    if (const auto &serializedOverrides = serializedRow["overrides"];
+        serializedOverrides.is_array()) {
+      for (const auto &overrideValue : serializedOverrides) {
+        if (!overrideValue.is_string()) {
+          continue;
+        }
+
+        const auto *overrideForm = armor::LookupByIdentifier<RE::TESObjectARMO>(
+            overrideValue.get<std::string>());
+        EquipmentWidgetItem overrideItem{};
+        if (!overrideForm ||
+            !sosr::workbench::BuildCatalogItem(overrideForm->GetFormID(),
+                                               overrideItem) ||
+            !seenOverrideForms.insert(overrideForm->GetFormID()).second) {
+          continue;
+        }
+
+        row.overrides.push_back(std::move(overrideItem));
+      }
+    }
+
+    rows_.push_back(std::move(row));
+    rowOrder_.push_back(rows_.back().key);
+  }
+
+  MarkChanged();
+  return true;
+}
+
+void VariantWorkbench::ReplaceState(VariantWorkbench &&a_source) {
+  ClearPreview();
+  rows_ = std::move(a_source.rows_);
+  rowOrder_ = std::move(a_source.rowOrder_);
+  MarkChanged();
+}
+
+void VariantWorkbench::Serialize(SKSE::SerializationInterface *a_skse) const {
+  const auto root = SerializeState();
   const auto payload = root.dump();
   a_skse->WriteRecord(kSerializationType, kSerializationVersion, payload.data(),
                       static_cast<std::uint32_t>(payload.size()));
@@ -147,63 +229,33 @@ void VariantWorkbench::Deserialize(
     return;
   }
 
-  for (const auto &serializedRow : root["rows"]) {
-    if (!serializedRow.is_object()) {
-      continue;
-    }
-
-    VariantWorkbenchRow row{};
-    if (!DeserializeRowSource(serializedRow, row)) {
-      continue;
-    }
-    if (version >= 4) {
-      if (const auto conditionIt = serializedRow.find("conditionId");
-          conditionIt != serializedRow.end()) {
-        if (conditionIt->is_null()) {
-          row.conditionId = std::nullopt;
-        } else if (conditionIt->is_string()) {
-          const auto conditionId = conditionIt->get<std::string>();
-          row.conditionId = conditionId.empty()
-                                ? std::nullopt
-                                : std::optional<std::string>(conditionId);
-        } else {
-          row.conditionId = a_missingConditionId;
+  if (version < 4) {
+    auto migratedRoot = root;
+    try {
+      for (auto &serializedRow : migratedRoot["rows"]) {
+        if (serializedRow.is_object()) {
+          if (a_missingConditionId.has_value()) {
+            serializedRow["conditionId"] = *a_missingConditionId;
+          } else {
+            serializedRow["conditionId"] = nullptr;
+          }
         }
-      } else {
-        row.conditionId = a_missingConditionId;
       }
-    } else {
-      row.conditionId = a_missingConditionId;
+      static_cast<void>(DeserializeState(migratedRoot, a_missingConditionId));
+    } catch (const std::exception &exception) {
+      logger::error("Failed to load SOSR serialized workbench payload: {}",
+                    exception.what());
+      Revert();
     }
-    UpdateRowIdentity(row);
-    row.hideEquipped = serializedRow.value("hideEquipped", false);
-
-    std::unordered_set<RE::FormID> seenOverrideForms;
-    if (const auto &serializedOverrides = serializedRow["overrides"];
-        serializedOverrides.is_array()) {
-      for (const auto &overrideValue : serializedOverrides) {
-        if (!overrideValue.is_string()) {
-          continue;
-        }
-
-        const auto *overrideForm = armor::LookupByIdentifier<RE::TESObjectARMO>(
-            overrideValue.get<std::string>());
-        EquipmentWidgetItem overrideItem{};
-        if (!overrideForm ||
-            !sosr::workbench::BuildCatalogItem(overrideForm->GetFormID(),
-                                               overrideItem) ||
-            !seenOverrideForms.insert(overrideForm->GetFormID()).second) {
-          continue;
-        }
-
-        row.overrides.push_back(std::move(overrideItem));
-      }
-    }
-
-    rows_.push_back(std::move(row));
-    rowOrder_.push_back(rows_.back().key);
+    return;
   }
 
-  MarkChanged();
+  try {
+    static_cast<void>(DeserializeState(root, a_missingConditionId));
+  } catch (const std::exception &exception) {
+    logger::error("Failed to load SOSR serialized workbench payload: {}",
+                  exception.what());
+    Revert();
+  }
 }
 } // namespace sosr::workbench

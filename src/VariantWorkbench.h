@@ -8,6 +8,7 @@
 #include "conditions/Definition.h"
 #include "workbench/Items.h"
 
+#include <nlohmann/json_fwd.hpp>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -128,6 +129,12 @@ public:
                    const std::vector<int> *a_candidateRowIndices = nullptr);
   void SyncDynamicArmorVariantsExtended(
       std::vector<conditions::Definition> &a_conditions);
+  [[nodiscard]] nlohmann::json SerializeState() const;
+  [[nodiscard]] bool
+  DeserializeState(const nlohmann::json &a_root,
+                   const std::optional<std::string> &a_missingConditionId,
+                   std::string *a_error = nullptr);
+  void ReplaceState(VariantWorkbench &&a_source);
   void Serialize(SKSE::SerializationInterface *a_skse) const;
   void Deserialize(SKSE::SerializationInterface *a_skse,
                    std::optional<std::string> a_missingConditionId);
