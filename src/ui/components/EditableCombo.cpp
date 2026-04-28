@@ -461,6 +461,11 @@ bool DrawEditableDropdownIndexed(
                             sosr::ui::Localization::GetSingleton()->GetCStr(
                                 "common.no_matches"));
       }
+      if (!inputTextActive && !popupHovered &&
+          ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        dropdownOpen = false;
+        ImGui::CloseCurrentPopup();
+      }
       ImGui::EndPopup();
     }
 
