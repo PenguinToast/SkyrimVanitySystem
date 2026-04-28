@@ -61,22 +61,33 @@ build_variant() {
     local win_variant_build_dir
     win_variant_build_dir="$(wslpath -w "${variant_build_dir}")"
 
+    # xmake does not always regenerate CommonLib's generated version resources
+    # when only SVS_BUILD_VERSION changes. Remove the generated files so
+    # incremental builds pick up the version calculated above without a full
+    # clean build.
+    local generated_dir="${variant_build_dir}/.gens/${PLUGIN_NAME}/windows/x64/${MODE}"
+    rm -f "${generated_dir}/commonlib-plugin.rc" \
+          "${generated_dir}/commonlibsse-ng-plugin.cpp"
+
     local configure_cmd="
 \$ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath '$WIN_REPO_ROOT'
 \$env:SVS_BUILD_VERSION = '$SVS_BUILD_VERSION'
 \$env:SVS_BUILD_VERSION_STRING = '$SVS_BUILD_VERSION_STRING'
-xmake f -y --builddir='$win_variant_build_dir' --skyrim_se=${skyrim_se} --skyrim_ae=${skyrim_ae} --skyrim_vr=${skyrim_vr} -m '$MODE'
+xmake f -P '$WIN_REPO_ROOT' -y --builddir='$win_variant_build_dir' --skyrim_se=${skyrim_se} --skyrim_ae=${skyrim_ae} --skyrim_vr=${skyrim_vr} -m '$MODE'
+if (\$LASTEXITCODE -ne 0) {
+    exit \$LASTEXITCODE
+}
 "
     local parallel_build_cmd="
 \$ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath '$WIN_REPO_ROOT'
-xmake build -y
+xmake build -P '$WIN_REPO_ROOT' -y
 "
     local single_job_build_cmd="
 \$ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath '$WIN_REPO_ROOT'
-xmake build -y -j 1
+xmake build -P '$WIN_REPO_ROOT' -y -j 1
 "
     local build_log
     build_log="$(mktemp)"
@@ -104,6 +115,18 @@ xmake build -y -j 1
         echo "Build succeeded but ${plugin_src} was not found." >&2
         exit 1
     fi
+
+    local win_plugin_src
+    win_plugin_src="$(wslpath -w "${plugin_src}")"
+    local expected_dll_version="${SVS_BUILD_VERSION}.0"
+    local version_check_cmd="
+\$ErrorActionPreference = 'Stop'
+\$versionInfo = (Get-Item -LiteralPath '$win_plugin_src').VersionInfo
+if (\$versionInfo.FileVersion -ne '$expected_dll_version' -or \$versionInfo.ProductVersion -ne '$expected_dll_version') {
+    throw \"Built ${PLUGIN_NAME} ${variant_name} DLL version mismatch: expected $expected_dll_version, got FileVersion=\$(\$versionInfo.FileVersion), ProductVersion=\$(\$versionInfo.ProductVersion)\"
+}
+"
+    powershell.exe -NoProfile -Command "${version_check_cmd}"
 }
 
 case "$BUILD_TARGET" in
