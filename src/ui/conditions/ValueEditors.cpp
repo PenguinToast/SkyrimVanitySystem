@@ -146,20 +146,11 @@ bool DrawConditionParamEditor(const char *a_id, std::string &a_value,
         sosr::ui::conditions::ConditionParamOptionCache::State::Ready) {
       const auto *options = optionCache.GetOptions(a_type);
       if (options) {
-        std::vector<sosr::ui::components::EditableDropdownItem<std::string>>
-            optionItems;
-        optionItems.reserve(options->size());
-        for (const auto &option : *options) {
-          optionItems.push_back({.label = option, .value = option});
-        }
-        return sosr::ui::components::DrawSearchableDropdown(
-            a_id, sosr::ui::Localization::GetSingleton()->GetCStr(
-                      "conditions.select_value"),
-            a_value,
-            std::span<
-                const sosr::ui::components::EditableDropdownItem<std::string>>(
-                optionItems),
-            a_width);
+        return sosr::ui::components::DrawSearchableStringDropdown(
+            a_id,
+            sosr::ui::Localization::GetSingleton()->GetCStr(
+                "conditions.select_value"),
+            a_value, std::span<const std::string>(*options), a_width);
       }
     } else if (state == sosr::ui::conditions::ConditionParamOptionCache::State::
                             Loading) {

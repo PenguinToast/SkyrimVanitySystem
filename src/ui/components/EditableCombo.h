@@ -33,7 +33,8 @@ bool DrawEditableDropdownIndexed(
     std::span<const EditableDropdownOptionView> a_options, float a_width,
     int *a_selectedIndex = nullptr, bool a_allowCustomInput = true,
     int a_fallbackIndex = -1,
-    const std::function<void(int)> *a_drawItemTooltip = nullptr);
+    const std::function<void(int)> *a_drawItemTooltip = nullptr,
+    const void *a_optionsIdentity = nullptr);
 } // namespace detail
 
 bool DrawEditableStringDropdown(
@@ -43,6 +44,11 @@ bool DrawEditableStringDropdown(
     int *a_selectedIndex = nullptr,
     std::optional<std::string> *a_selectedValue = nullptr,
     int a_fallbackIndex = -1);
+
+bool DrawSearchableStringDropdown(const char *a_label, const char *a_hint,
+                                  std::string &a_value,
+                                  std::span<const std::string> a_options,
+                                  float a_width);
 
 template <class TValue>
 bool DrawSearchableDropdown(
@@ -74,7 +80,7 @@ bool DrawSearchableDropdown(
   const bool changed = detail::DrawEditableDropdownIndexed(
       a_label, a_hint, buffer, sizeof(buffer), optionViews, a_width,
       &selectedIndex, false, selectedIndex,
-      drawItemTooltip ? &drawItemTooltip : nullptr);
+      drawItemTooltip ? &drawItemTooltip : nullptr, a_items.data());
 
   if (a_selectedIndex) {
     *a_selectedIndex = selectedIndex;
