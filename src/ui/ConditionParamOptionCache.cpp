@@ -2,6 +2,7 @@
 
 #include "ArmorUtils.h"
 #include "IncrementalLoader.h"
+#include "conditions/ParamEnumOptions.h"
 #include "ui/Localization.h"
 
 #include <RE/Skyrim.h>
@@ -86,6 +87,33 @@ template <class T> std::vector<RE::TESForm *> CollectForms() {
   return forms;
 }
 
+template <class T> bool IsAssignableForm(RE::TESForm *a_form) {
+  return a_form && a_form->As<T>();
+}
+
+template <class... T> std::vector<RE::TESForm *> CollectAssignableForms() {
+  std::vector<RE::TESForm *> forms;
+  std::unordered_set<RE::FormID> seenForms;
+
+  auto *dataHandler = RE::TESDataHandler::GetSingleton();
+  if (!dataHandler) {
+    return forms;
+  }
+
+  for (const auto &formArray : dataHandler->formArrays) {
+    for (auto *form : formArray) {
+      if (!form || !(IsAssignableForm<T>(form) || ...)) {
+        continue;
+      }
+      const auto formID = form->GetFormID();
+      if (formID != 0 && seenForms.insert(formID).second) {
+        forms.push_back(form);
+      }
+    }
+  }
+  return forms;
+}
+
 void AppendFormToken(CacheEntryLoadState &a_state, RE::TESForm *a_form) {
   if (!a_form) {
     return;
@@ -119,13 +147,16 @@ void AppendCellRefTokens(CacheEntryLoadState &a_state,
 }
 
 std::vector<std::string> BuildImmediateOptions(const ParamType a_type) {
+  if (sosr::conditions::HasParamEnumOptions(a_type)) {
+    return sosr::conditions::BuildParamEnumOptionLabels(a_type);
+  }
+  if (sosr::conditions::HasParamTextOptions(a_type)) {
+    return sosr::conditions::BuildParamTextOptionLabels(a_type);
+  }
+
   switch (a_type) {
   case ParamType::kAxis:
     return {"X", "Y", "Z"};
-  case ParamType::kSex:
-    return {"MALE", "FEMALE"};
-  case ParamType::kCastingSource:
-    return {"LEFT", "RIGHT", "VOICE", "INSTANT"};
   default:
     return {};
   }
@@ -133,8 +164,6 @@ std::vector<std::string> BuildImmediateOptions(const ParamType a_type) {
 
 bool UsesGenericFormSource(const ParamType a_type) {
   switch (a_type) {
-  case ParamType::kObject:
-  case ParamType::kInventoryObject:
   case ParamType::kKnowableForm:
   case ParamType::kForm:
     return true;
@@ -145,10 +174,40 @@ bool UsesGenericFormSource(const ParamType a_type) {
 
 std::vector<RE::TESForm *> CollectFormsForType(const ParamType a_type) {
   switch (a_type) {
+  case ParamType::kMagicItem:
+    return CollectAssignableForms<RE::MagicItem>();
+  case ParamType::kObject:
+  case ParamType::kInventoryObject:
+    return CollectAssignableForms<RE::TESBoundObject>();
+  case ParamType::kFurnitureOrFormList:
+    return CollectAssignableForms<RE::TESFurniture, RE::BGSListForm>();
+  case ParamType::kOwner:
+    return CollectAssignableForms<RE::TESNPC, RE::TESFaction>();
+  case ParamType::kInvObjectOrFormList:
+  case ParamType::kObjectOrFormList:
+    return CollectAssignableForms<RE::TESBoundObject, RE::BGSListForm>();
+  case ParamType::kWorldOrList:
+    return CollectAssignableForms<RE::TESWorldSpace, RE::BGSListForm>();
+  case ParamType::kRegion:
+    return CollectForms<RE::TESRegion>();
   case ParamType::kFormList:
     return CollectForms<RE::BGSListForm>();
   case ParamType::kSpellItem:
     return CollectForms<RE::SpellItem>();
+  case ParamType::kPackage:
+    return CollectForms<RE::TESPackage>();
+  case ParamType::kMagicEffect:
+    return CollectForms<RE::EffectSetting>();
+  case ParamType::kBGSScene:
+    return CollectForms<RE::BGSScene>();
+  case ParamType::kAssociationType:
+    return CollectForms<RE::BGSAssociationType>();
+  case ParamType::kNote:
+    return CollectForms<RE::BGSNote>();
+  case ParamType::kEncounterZone:
+    return CollectForms<RE::BGSEncounterZone>();
+  case ParamType::kIdleForm:
+    return CollectForms<RE::TESIdleForm>();
   case ParamType::kActor:
   case ParamType::kActorBase:
   case ParamType::kNPC:
@@ -167,6 +226,8 @@ std::vector<RE::TESForm *> CollectFormsForType(const ParamType a_type) {
     return CollectForms<RE::TESQuest>();
   case ParamType::kKeyword:
     return CollectForms<RE::BGSKeyword>();
+  case ParamType::kRefType:
+    return CollectForms<RE::BGSLocationRefType>();
   case ParamType::kPerk:
     return CollectForms<RE::BGSPerk>();
   case ParamType::kVoiceType:
@@ -189,15 +250,38 @@ std::vector<RE::TESForm *> CollectFormsForType(const ParamType a_type) {
 std::string GetStatusLabel(const ParamType a_type) {
   const auto *localization = sosr::ui::Localization::GetSingleton();
   switch (a_type) {
+  case ParamType::kMagicItem:
   case ParamType::kObject:
   case ParamType::kInventoryObject:
+  case ParamType::kFurnitureOrFormList:
+  case ParamType::kOwner:
   case ParamType::kKnowableForm:
   case ParamType::kForm:
+  case ParamType::kInvObjectOrFormList:
+  case ParamType::kObjectOrFormList:
+  case ParamType::kWorldOrList:
     return std::string(localization->Get("conditions.loading.forms"));
+  case ParamType::kRegion:
+    return std::string(localization->Get("conditions.loading.regions"));
   case ParamType::kFormList:
     return std::string(localization->Get("conditions.loading.form_lists"));
   case ParamType::kSpellItem:
     return std::string(localization->Get("conditions.loading.spells"));
+  case ParamType::kPackage:
+    return std::string(localization->Get("conditions.loading.packages"));
+  case ParamType::kMagicEffect:
+    return std::string(localization->Get("conditions.loading.magic_effects"));
+  case ParamType::kBGSScene:
+    return std::string(localization->Get("conditions.loading.scenes"));
+  case ParamType::kAssociationType:
+    return std::string(
+        localization->Get("conditions.loading.association_types"));
+  case ParamType::kNote:
+    return std::string(localization->Get("conditions.loading.notes"));
+  case ParamType::kEncounterZone:
+    return std::string(localization->Get("conditions.loading.encounter_zones"));
+  case ParamType::kIdleForm:
+    return std::string(localization->Get("conditions.loading.idles"));
   case ParamType::kObjectRef:
     return std::string(localization->Get("conditions.loading.references"));
   case ParamType::kActor:
@@ -218,6 +302,8 @@ std::string GetStatusLabel(const ParamType a_type) {
     return std::string(localization->Get("conditions.loading.quests"));
   case ParamType::kKeyword:
     return std::string(localization->Get("conditions.loading.keywords"));
+  case ParamType::kRefType:
+    return std::string(localization->Get("conditions.loading.ref_types"));
   case ParamType::kPerk:
     return std::string(localization->Get("conditions.loading.perks"));
   case ParamType::kVoiceType:
@@ -239,14 +325,26 @@ std::string GetStatusLabel(const ParamType a_type) {
 
 std::string_view GetParamTypeLabel(const ParamType a_type) {
   switch (a_type) {
+  case ParamType::kMagicItem:
+    return "MagicItem";
   case ParamType::kObject:
     return "Object";
   case ParamType::kInventoryObject:
     return "InventoryObject";
+  case ParamType::kFurnitureOrFormList:
+    return "FurnitureOrFormList";
+  case ParamType::kOwner:
+    return "Owner";
   case ParamType::kKnowableForm:
     return "KnowableForm";
   case ParamType::kForm:
     return "Form";
+  case ParamType::kInvObjectOrFormList:
+    return "InvObjectOrFormList";
+  case ParamType::kObjectOrFormList:
+    return "ObjectOrFormList";
+  case ParamType::kWorldOrList:
+    return "WorldOrList";
   case ParamType::kFormList:
     return "FormList";
   case ParamType::kSpellItem:
@@ -287,6 +385,42 @@ std::string_view GetParamTypeLabel(const ParamType a_type) {
     return "Shout";
   case ParamType::kWordOfPower:
     return "WordOfPower";
+  case ParamType::kRegion:
+    return "Region";
+  case ParamType::kPackage:
+    return "Package";
+  case ParamType::kMagicEffect:
+    return "MagicEffect";
+  case ParamType::kCrimeType:
+    return "CrimeType";
+  case ParamType::kFormType:
+    return "FormType";
+  case ParamType::kBGSScene:
+    return "Scene";
+  case ParamType::kAssociationType:
+    return "AssociationType";
+  case ParamType::kNote:
+    return "Note";
+  case ParamType::kEncounterZone:
+    return "EncounterZone";
+  case ParamType::kIdleForm:
+    return "IdleForm";
+  case ParamType::kAlignment:
+    return "Alignment";
+  case ParamType::kEquipType:
+    return "EquipType";
+  case ParamType::kCritStage:
+    return "CritStage";
+  case ParamType::kRefType:
+    return "RefType";
+  case ParamType::kWardState:
+    return "WardState";
+  case ParamType::kFurnitureAnimType:
+    return "FurnitureAnimType";
+  case ParamType::kFurnitureEntryType:
+    return "FurnitureEntryType";
+  case ParamType::kSkillAction:
+    return "SkillAction";
   case ParamType::kAxis:
     return "Axis";
   case ParamType::kSex:
@@ -304,12 +438,26 @@ bool SupportsCachedOptions(const ParamType a_type) {
   }
 
   switch (a_type) {
+  case ParamType::kMagicItem:
   case ParamType::kObject:
   case ParamType::kInventoryObject:
+  case ParamType::kFurnitureOrFormList:
+  case ParamType::kOwner:
   case ParamType::kKnowableForm:
   case ParamType::kForm:
+  case ParamType::kInvObjectOrFormList:
+  case ParamType::kObjectOrFormList:
+  case ParamType::kWorldOrList:
   case ParamType::kFormList:
   case ParamType::kSpellItem:
+  case ParamType::kRegion:
+  case ParamType::kPackage:
+  case ParamType::kMagicEffect:
+  case ParamType::kBGSScene:
+  case ParamType::kAssociationType:
+  case ParamType::kNote:
+  case ParamType::kEncounterZone:
+  case ParamType::kIdleForm:
   case ParamType::kObjectRef:
   case ParamType::kActor:
   case ParamType::kActorBase:
@@ -321,6 +469,7 @@ bool SupportsCachedOptions(const ParamType a_type) {
   case ParamType::kGlobal:
   case ParamType::kQuest:
   case ParamType::kKeyword:
+  case ParamType::kRefType:
   case ParamType::kPerk:
   case ParamType::kVoiceType:
   case ParamType::kCell:
@@ -482,9 +631,8 @@ public:
                    cellCount);
 
       loadState->loader.Start({
-          {std::string(
-               sosr::ui::Localization::GetSingleton()->Get(
-                   "conditions.loading.interior_references")),
+          {std::string(sosr::ui::Localization::GetSingleton()->Get(
+               "conditions.loading.interior_references")),
            interiorCount,
            [statePtr, dataHandler](const std::size_t a_index) {
              if (!dataHandler) {
@@ -496,9 +644,8 @@ public:
              AppendCellRefTokens(*statePtr,
                                  dataHandler->interiorCells[cellIndex]);
            }},
-          {std::string(
-               sosr::ui::Localization::GetSingleton()->Get(
-                   "conditions.loading.worldspace_references")),
+          {std::string(sosr::ui::Localization::GetSingleton()->Get(
+               "conditions.loading.worldspace_references")),
            worldspaceCount,
            [statePtr, dataHandler](const std::size_t a_index) {
              if (!dataHandler) {
@@ -519,9 +666,8 @@ public:
                AppendFormToken(*statePtr, ref.get());
              }
            }},
-          {std::string(
-               sosr::ui::Localization::GetSingleton()->Get(
-                   "conditions.loading.cell_references")),
+          {std::string(sosr::ui::Localization::GetSingleton()->Get(
+               "conditions.loading.cell_references")),
            cellCount,
            [statePtr, dataHandler](const std::size_t a_index) {
              if (!dataHandler) {

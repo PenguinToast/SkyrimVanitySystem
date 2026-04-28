@@ -1,5 +1,7 @@
 #include "ui/conditions/ValueEditors.h"
 
+#include "StringUtils.h"
+#include "conditions/ParamEnumOptions.h"
 #include "ui/ConditionParamOptionCache.h"
 #include "ui/Localization.h"
 #include "ui/components/EditableCombo.h"
@@ -33,11 +35,20 @@ std::string FormatNumberStringImpl(const double a_value) {
 
 ValueEditorKind
 GetEditorKindForParamTypeImpl(const RE::SCRIPT_PARAM_TYPE a_type) {
+  if (sosr::conditions::HasParamEnumOptions(a_type) ||
+      sosr::conditions::HasParamTextOptions(a_type)) {
+    return ValueEditorKind::CachedOption;
+  }
+
   switch (a_type) {
   case RE::SCRIPT_PARAM_TYPE::kChar:
   case RE::SCRIPT_PARAM_TYPE::kInt:
   case RE::SCRIPT_PARAM_TYPE::kStage:
   case RE::SCRIPT_PARAM_TYPE::kRelationshipRank:
+  case RE::SCRIPT_PARAM_TYPE::kCrimeType:
+  case RE::SCRIPT_PARAM_TYPE::kAlignment:
+  case RE::SCRIPT_PARAM_TYPE::kEquipType:
+  case RE::SCRIPT_PARAM_TYPE::kSkillAction:
     return ValueEditorKind::Integer;
   case RE::SCRIPT_PARAM_TYPE::kFloat:
     return ValueEditorKind::Number;
@@ -112,6 +123,8 @@ RE::SCRIPT_PARAM_TYPE
 ResolveEditorParamType(std::string_view a_functionName,
                        const std::uint16_t a_paramIndex,
                        const RE::SCRIPT_PARAM_TYPE a_type) {
+  // SVS conditions are evaluated against actors, so constrain GetIsID to actor
+  // bases even if the runtime command table exposes the parameter more broadly.
   if (a_paramIndex == 0 &&
       CompareTextInsensitive(a_functionName, "GetIsID") == 0) {
     return RE::SCRIPT_PARAM_TYPE::kActorBase;

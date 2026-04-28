@@ -3,7 +3,13 @@
 #include "ArmorUtils.h"
 #include "RE/A/ActorValueList.h"
 #include "StringUtils.h"
+#include "conditions/ParamEnumOptions.h"
 #include "conditions/Validation.h"
+
+#include <RE/M/MagicItem.h>
+#include <RE/T/TESBoundObject.h>
+#include <RE/T/TESFurniture.h>
+#include <RE/T/TESWorldSpace.h>
 
 #include <algorithm>
 #include <array>
@@ -11,6 +17,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <exception>
 #include <optional>
 #include <ranges>
 #include <string>
@@ -50,6 +57,8 @@ union ConditionParam {
 ParamType ResolveEditorParamType(const std::string_view a_functionName,
                                  const std::uint16_t a_paramIndex,
                                  const ParamType a_type) {
+  // SVS conditions are evaluated against actors, so constrain GetIsID to actor
+  // bases even if the runtime command table exposes the parameter more broadly.
   if (a_paramIndex == 0 &&
       sosr::strings::EqualsInsensitive(a_functionName, "GetIsID")) {
     return ParamType::kActorBase;
@@ -124,6 +133,34 @@ RE::CONDITION_ITEM_DATA::OpCode ToOpCode(const Comparator a_comparator) {
   return RE::CONDITION_ITEM_DATA::OpCode::kEqualTo;
 }
 
+bool IsIntegerParamType(const ParamType a_type) {
+  switch (a_type) {
+  case ParamType::kChar:
+  case ParamType::kInt:
+  case ParamType::kStage:
+  case ParamType::kRelationshipRank:
+  case ParamType::kCrimeType:
+  case ParamType::kFormType:
+  case ParamType::kAlignment:
+  case ParamType::kEquipType:
+  case ParamType::kCritStage:
+  case ParamType::kWardState:
+  case ParamType::kFurnitureAnimType:
+  case ParamType::kFurnitureEntryType:
+  case ParamType::kSkillAction:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool IsValueParamType(const ParamType a_type) {
+  return IsIntegerParamType(a_type) || a_type == ParamType::kFloat ||
+         a_type == ParamType::kActorValue || a_type == ParamType::kAxis ||
+         a_type == ParamType::kSex || a_type == ParamType::kCastingSource ||
+         a_type == ParamType::kMiscStat;
+}
+
 const RE::SCRIPT_FUNCTION *
 FindConditionFunction(const std::string_view a_name) {
   const auto trimmed = sosr::strings::TrimText(a_name);
@@ -159,6 +196,37 @@ template <class T> T *LookupTypedFormByToken(const std::string &a_token) {
   }
 
   return nullptr;
+}
+
+template <class T>
+RE::TESForm *LookupAssignableFormByToken(const std::string &a_token) {
+  if (auto *form = RE::TESForm::LookupByEditorID(a_token)) {
+    if (form->As<T>()) {
+      return form;
+    }
+  }
+
+  auto *dataHandler = RE::TESDataHandler::GetSingleton();
+  if (!dataHandler) {
+    return nullptr;
+  }
+
+  for (const auto &forms : dataHandler->formArrays) {
+    for (auto *form : forms) {
+      if (form && form->As<T>() && sosr::armor::GetEditorID(form) == a_token) {
+        return form;
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+template <class... T>
+RE::TESForm *LookupAnyAssignableFormByToken(const std::string &a_token) {
+  RE::TESForm *result = nullptr;
+  ((result = result ? result : LookupAssignableFormByToken<T>(a_token)), ...);
+  return result;
 }
 
 RE::TESObjectREFR *LookupReferenceByToken(const std::string &a_token) {
@@ -214,7 +282,41 @@ RE::TESForm *LookupGenericFormByToken(const std::string &a_token) {
   return nullptr;
 }
 
-ConditionParam ParseParam(const std::string &a_text, const ParamType a_type) {
+std::optional<std::int32_t> TryParseInt(std::string_view a_text) {
+  const auto trimmed = sosr::strings::TrimText(a_text);
+  if (trimmed.empty()) {
+    return std::nullopt;
+  }
+
+  std::int32_t value = 0;
+  const auto *begin = trimmed.data();
+  const auto *end = begin + trimmed.size();
+  const auto [ptr, error] = std::from_chars(begin, end, value);
+  if (error == std::errc{} && ptr == end) {
+    return value;
+  }
+  return std::nullopt;
+}
+
+std::optional<float> TryParseFloat(std::string_view a_text) {
+  const auto trimmed = sosr::strings::TrimText(a_text);
+  if (trimmed.empty()) {
+    return std::nullopt;
+  }
+
+  try {
+    std::size_t parsed = 0;
+    const auto value = std::stof(trimmed, std::addressof(parsed));
+    if (parsed == trimmed.size()) {
+      return value;
+    }
+  } catch (const std::exception &) {
+  }
+  return std::nullopt;
+}
+
+std::optional<ConditionParam> ParseParam(const std::string &a_text,
+                                         const ParamType a_type) {
   ConditionParam param{};
   const auto trimmed = sosr::strings::TrimText(a_text);
 
@@ -223,10 +325,36 @@ ConditionParam ParseParam(const std::string &a_text, const ParamType a_type) {
   case ParamType::kInt:
   case ParamType::kStage:
   case ParamType::kRelationshipRank:
-    param.i = std::stoi(trimmed);
+  case ParamType::kCrimeType:
+  case ParamType::kAlignment:
+  case ParamType::kEquipType:
+  case ParamType::kSkillAction:
+    if (const auto value = TryParseInt(trimmed)) {
+      param.i = *value;
+    } else {
+      return std::nullopt;
+    }
+    break;
+  case ParamType::kFormType:
+  case ParamType::kCritStage:
+  case ParamType::kWardState:
+  case ParamType::kFurnitureAnimType:
+  case ParamType::kFurnitureEntryType:
+    if (const auto value =
+            sosr::conditions::ParseParamEnumOption(a_type, trimmed)) {
+      param.i = *value;
+    } else if (const auto integer = TryParseInt(trimmed)) {
+      param.i = *integer;
+    } else {
+      return std::nullopt;
+    }
     break;
   case ParamType::kFloat:
-    param.f = std::stof(trimmed);
+    if (const auto value = TryParseFloat(trimmed)) {
+      param.f = *value;
+    } else {
+      return std::nullopt;
+    }
     break;
   case ParamType::kActorValue: {
     auto actorValue =
@@ -244,23 +372,27 @@ ConditionParam ParseParam(const std::string &a_text, const ParamType a_type) {
                   : (sosr::strings::EqualsInsensitive(trimmed, "Y") ? 1 : 2);
     break;
   case ParamType::kSex:
-    param.i = sosr::strings::EqualsInsensitive(trimmed, "MALE")
-                  ? static_cast<std::int32_t>(RE::SEX::kMale)
-                  : static_cast<std::int32_t>(RE::SEX::kFemale);
+    if (const auto value =
+            sosr::conditions::ParseParamEnumOption(a_type, trimmed)) {
+      param.i = *value;
+    } else {
+      return std::nullopt;
+    }
     break;
   case ParamType::kCastingSource:
-    if (sosr::strings::EqualsInsensitive(trimmed, "LEFT")) {
-      param.i =
-          static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kLeftHand);
-    } else if (sosr::strings::EqualsInsensitive(trimmed, "RIGHT")) {
-      param.i =
-          static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kRightHand);
-    } else if (sosr::strings::EqualsInsensitive(trimmed, "VOICE")) {
-      param.i =
-          static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kOther);
+    if (const auto value =
+            sosr::conditions::ParseParamEnumOption(a_type, trimmed)) {
+      param.i = *value;
     } else {
-      param.i =
-          static_cast<std::int32_t>(RE::MagicSystem::CastingSource::kInstant);
+      return std::nullopt;
+    }
+    break;
+  case ParamType::kMiscStat:
+    if (const auto value =
+            sosr::conditions::ParseParamTextOption(a_type, trimmed)) {
+      param.i = *value;
+    } else {
+      return std::nullopt;
     }
     break;
   case ParamType::kObjectRef:
@@ -316,8 +448,57 @@ ConditionParam ParseParam(const std::string &a_text, const ParamType a_type) {
   case ParamType::kSpellItem:
     param.form = LookupTypedFormByToken<RE::SpellItem>(trimmed);
     break;
+  case ParamType::kRegion:
+    param.form = LookupTypedFormByToken<RE::TESRegion>(trimmed);
+    break;
+  case ParamType::kPackage:
+    param.form = LookupTypedFormByToken<RE::TESPackage>(trimmed);
+    break;
+  case ParamType::kMagicEffect:
+    param.form = LookupTypedFormByToken<RE::EffectSetting>(trimmed);
+    break;
+  case ParamType::kBGSScene:
+    param.form = LookupTypedFormByToken<RE::BGSScene>(trimmed);
+    break;
+  case ParamType::kAssociationType:
+    param.form = LookupTypedFormByToken<RE::BGSAssociationType>(trimmed);
+    break;
+  case ParamType::kNote:
+    param.form = LookupTypedFormByToken<RE::BGSNote>(trimmed);
+    break;
+  case ParamType::kEncounterZone:
+    param.form = LookupTypedFormByToken<RE::BGSEncounterZone>(trimmed);
+    break;
+  case ParamType::kIdleForm:
+    param.form = LookupTypedFormByToken<RE::TESIdleForm>(trimmed);
+    break;
+  case ParamType::kRefType:
+    param.form = LookupTypedFormByToken<RE::BGSLocationRefType>(trimmed);
+    break;
+  case ParamType::kMagicItem:
+    param.form = LookupAssignableFormByToken<RE::MagicItem>(trimmed);
+    break;
   case ParamType::kObject:
   case ParamType::kInventoryObject:
+    param.form = LookupAssignableFormByToken<RE::TESBoundObject>(trimmed);
+    break;
+  case ParamType::kFurnitureOrFormList:
+    param.form = LookupAnyAssignableFormByToken<RE::TESFurniture,
+                                                RE::BGSListForm>(trimmed);
+    break;
+  case ParamType::kOwner:
+    param.form =
+        LookupAnyAssignableFormByToken<RE::TESNPC, RE::TESFaction>(trimmed);
+    break;
+  case ParamType::kInvObjectOrFormList:
+  case ParamType::kObjectOrFormList:
+    param.form = LookupAnyAssignableFormByToken<RE::TESBoundObject,
+                                                RE::BGSListForm>(trimmed);
+    break;
+  case ParamType::kWorldOrList:
+    param.form = LookupAnyAssignableFormByToken<RE::TESWorldSpace,
+                                                RE::BGSListForm>(trimmed);
+    break;
   case ParamType::kKnowableForm:
   case ParamType::kForm:
   default:
@@ -598,8 +779,8 @@ BuildConditionItemData(const NativeLiteral &a_literal,
                        const bool a_isORToNext) {
   RE::CONDITION_ITEM_DATA data{};
 
-  const auto functionIndex =
-      std::to_underlying(a_literal.command->output) - 0x1000;
+  const auto functionIndex = std::to_underlying(a_literal.command->output) -
+                             RE::SCRIPT_FUNCTION::Commands::kScriptOpBase;
   data.functionData.function =
       static_cast<RE::FUNCTION_DATA::FunctionID>(functionIndex);
 
@@ -612,25 +793,25 @@ BuildConditionItemData(const NativeLiteral &a_literal,
 
     const auto param =
         ParseParam(argument, a_literal.parameterTypes[paramIndex]);
-    if ((a_literal.parameterTypes[paramIndex] != ParamType::kChar &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kInt &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kStage &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kRelationshipRank &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kFloat &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kActorValue &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kAxis &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kSex &&
-         a_literal.parameterTypes[paramIndex] != ParamType::kCastingSource) &&
-        !param.form) {
+    if (!param) {
+      return std::nullopt;
+    }
+    if (!IsValueParamType(a_literal.parameterTypes[paramIndex]) &&
+        !param->form) {
       return std::nullopt;
     }
 
-    data.functionData.params[paramIndex] = std::bit_cast<void *>(param);
+    data.functionData.params[paramIndex] = std::bit_cast<void *>(*param);
   }
 
   data.flags.opCode = ToOpCode(a_literal.comparator);
   data.flags.isOR = a_isORToNext;
-  data.comparisonValue.f = std::stof(a_literal.comparand);
+  data.object = RE::CONDITIONITEMOBJECT::kSelf;
+  const auto comparand = TryParseFloat(a_literal.comparand);
+  if (!comparand) {
+    return std::nullopt;
+  }
+  data.comparisonValue.f = *comparand;
   data.flags.global = false;
   return data;
 }
