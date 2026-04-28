@@ -513,8 +513,6 @@ void VariantWorkbench::SyncDynamicArmorVariantsExtended(
         sosr::conditions::MaterializeConditionById(*row.conditionId,
                                                    a_conditions);
     if (!materializedCondition.has_value()) {
-      logger::warn("Failed to materialize SVS condition {} for row {}",
-                   *row.conditionId, row.key);
       continue;
     }
 

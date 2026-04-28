@@ -120,8 +120,10 @@ MaterializeConditionById(std::string_view a_conditionId,
 
   auto &runtime = GetConditionRuntimeMap();
   if (auto runtimeIt = runtime.find(definition->id);
-      runtimeIt != runtime.end() && runtimeIt->second.valid &&
-      runtimeIt->second.condition) {
+      runtimeIt != runtime.end() && runtimeIt->second.attempted) {
+    if (!runtimeIt->second.valid || !runtimeIt->second.condition) {
+      return std::nullopt;
+    }
     return MaterializedCondition{
         .condition = runtimeIt->second.condition,
         .signature = runtimeIt->second.signature,
@@ -133,12 +135,14 @@ MaterializeConditionById(std::string_view a_conditionId,
 
   const auto lowered = LowerAndEmitCondition(*definition, a_conditions);
   if (!lowered) {
-    runtime.erase(definition->id);
+    logger::warn("Failed to materialize SVS condition {}", definition->id);
+    runtime[definition->id].MarkFailure();
     return std::nullopt;
   }
 
   const auto refreshTargets = BuildRefreshTargets(lowered->condition);
   auto &runtimeState = runtime[definition->id];
+  runtimeState.attempted = true;
   runtimeState.valid = true;
   runtimeState.condition = lowered->condition;
   runtimeState.signature = lowered->signature;
