@@ -39,6 +39,18 @@ FindTopAutocompleteOption(std::span<const OptionView> a_options,
   return nullptr;
 }
 
+int FindExactOptionIndex(std::span<const OptionView> a_options,
+                         std::string_view a_buffer) {
+  const auto it = std::ranges::find_if(
+      a_options, [&](const OptionView &option) {
+        return !IsSectionEntry(option) &&
+               sosr::strings::EqualsInsensitive(option.label, a_buffer);
+      });
+  return it != a_options.end()
+             ? static_cast<int>(std::distance(a_options.begin(), it))
+             : -1;
+}
+
 struct EditableDropdownAutocompleteData {
   std::span<const OptionView> options;
 };
@@ -210,7 +222,12 @@ bool DrawEditableDropdownIndexed(
     const void *a_optionsIdentity) {
   bool changed = false;
   const bool acceptAutocompleteOnEnter = !a_allowCustomInput;
-  const bool allowTabAutocomplete = !a_options.empty();
+  const auto *topAutocompleteOption =
+      FindTopAutocompleteOption(a_options, a_buffer);
+  const bool allowTabAutocomplete =
+      topAutocompleteOption != nullptr &&
+      !sosr::strings::EqualsInsensitive(topAutocompleteOption->label,
+                                        a_buffer);
   const auto popupId = std::string(a_label) + "##popup";
   const auto openId = std::string(a_label) + "##open";
   const auto highlightId = std::string(a_label) + "##highlight";
@@ -506,12 +523,12 @@ bool DrawEditableDropdownIndexed(
   }
   ImGui::PopID();
   if (!a_allowCustomInput) {
-    const auto exactMatch = std::ranges::find_if(
-        a_options, [&](const EditableDropdownOptionView &option) {
-          return !option.isSection &&
-                 sosr::strings::EqualsInsensitive(option.label, a_buffer);
-        });
-    if (exactMatch == a_options.end() && !inputTextActive && !dropdownOpen) {
+    const int exactMatchIndex = FindExactOptionIndex(a_options, a_buffer);
+    if (exactMatchIndex >= 0) {
+      if (a_selectedIndex) {
+        *a_selectedIndex = exactMatchIndex;
+      }
+    } else if (!inputTextActive && !dropdownOpen) {
       if (a_fallbackIndex >= 0 &&
           a_fallbackIndex < static_cast<int>(a_options.size()) &&
           !a_options[static_cast<std::size_t>(a_fallbackIndex)].isSection) {
