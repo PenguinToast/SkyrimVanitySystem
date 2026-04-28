@@ -37,6 +37,16 @@ constexpr auto kBlockedGameplayControls = static_cast<UserEventFlag>(
         UserEventFlag::kWheelZoom) |
     static_cast<std::underlying_type_t<UserEventFlag>>(UserEventFlag::kVATS));
 
+bool IsAnyMouseButtonDown(const ImGuiIO &a_io) {
+  for (const bool mouseDown : a_io.MouseDown) {
+    if (mouseDown) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 void AllowTextInput([[maybe_unused]] RE::ControlMap *a_controlMap,
                     [[maybe_unused]] bool a_allow) {
 #ifdef EXCLUSIVE_SKYRIM_VR
@@ -80,10 +90,11 @@ void Menu::NotifyWindowShutdown() {
   catalogPane_.closeActiveTransientPopupRequested = false;
 
   if (auto *controlMap = RE::ControlMap::GetSingleton();
-      controlMap != nullptr && wantTextInput_) {
+      controlMap != nullptr && skyrimTextInputAllowed_) {
     AllowTextInput(controlMap, false);
-    wantTextInput_ = false;
+    skyrimTextInputAllowed_ = false;
   }
+  wantTextInput_ = false;
 
   if (ImGui::GetCurrentContext() != nullptr) {
     auto &io = ImGui::GetIO();
@@ -125,6 +136,8 @@ void Menu::OnMenuShow() {
   io.ClearEventsQueue();
   catalogPane_.activeTransientPopup = ui::catalog::TransientPopup::None;
   catalogPane_.closeActiveTransientPopupRequested = false;
+  wantTextInput_ = false;
+  skyrimTextInputAllowed_ = false;
   visibilityState_ = VisibilityState::Opening;
   windowAlpha_ = 0.0f;
   hideMessageQueued_ = false;
@@ -147,12 +160,13 @@ void Menu::OnMenuHide() {
 
   if (auto *controlMap = RE::ControlMap::GetSingleton();
       controlMap != nullptr) {
-    if (wantTextInput_) {
+    if (skyrimTextInputAllowed_) {
       AllowTextInput(controlMap, false);
-      wantTextInput_ = false;
+      skyrimTextInputAllowed_ = false;
     }
     controlMap->ToggleControls(kBlockedGameplayControls, true, false);
   }
+  wantTextInput_ = false;
 
   auto &io = ImGui::GetIO();
   io.MouseDrawCursor = false;
@@ -375,15 +389,20 @@ void Menu::SyncAllowTextInput() {
   const auto &io = ImGui::GetIO();
   const bool currentWantTextInput = io.WantTextInput;
 
-  if (!wantTextInput_ && currentWantTextInput) {
+  // Toggling Skyrim text input off on every ImGui text-field blur causes the
+  // active Scaleform frame to visibly flash, so defer it across blur clicks.
+  if (currentWantTextInput && !skyrimTextInputAllowed_) {
     if (auto *controlMap = RE::ControlMap::GetSingleton();
         controlMap != nullptr) {
       AllowTextInput(controlMap, true);
+      skyrimTextInputAllowed_ = true;
     }
-  } else if (wantTextInput_ && !currentWantTextInput) {
+  } else if (!currentWantTextInput && skyrimTextInputAllowed_ &&
+             !IsAnyMouseButtonDown(io)) {
     if (auto *controlMap = RE::ControlMap::GetSingleton();
         controlMap != nullptr) {
       AllowTextInput(controlMap, false);
+      skyrimTextInputAllowed_ = false;
     }
   }
 

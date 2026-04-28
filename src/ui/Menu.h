@@ -369,6 +369,7 @@ private:
   bool awaitingToggleKeyCapture_{false};
   bool openToggleKeyPopup_{false};
   bool wantTextInput_{false};
+  bool skyrimTextInputAllowed_{false};
   bool hideMessageQueued_{false};
   VisibilityState visibilityState_{VisibilityState::Closed};
   float windowAlpha_{0.0f};
