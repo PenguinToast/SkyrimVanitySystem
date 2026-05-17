@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <limits>
 #include <unordered_set>
 
@@ -291,6 +292,8 @@ int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
   int fallbackRowIndex = -1;
   int bestPrecedenceRowIndex = -1;
   int bestPrecedenceScore = -1;
+  int bestOverlapRowIndex = -1;
+  int bestOverlapExtraSlotCount = (std::numeric_limits<int>::max)();
 
   const auto visitRow = [&](const int rowIndex) -> bool {
     const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
@@ -314,7 +317,8 @@ int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
       return false;
     }
 
-    if ((row.equipped.slotMask & a_targetSlotMask) != 0) {
+    const auto rowSlotMask = row.GetSelectionConflictSlotMask();
+    if (rowSlotMask == a_targetSlotMask) {
       fallbackRowIndex = rowIndex;
       bestPrecedenceRowIndex = rowIndex;
       bestPrecedenceScore = (std::numeric_limits<int>::max)();
@@ -325,8 +329,18 @@ int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
       fallbackRowIndex = rowIndex;
     }
 
+    if ((rowSlotMask & a_targetSlotMask) != 0) {
+      const auto extraSlotMask = rowSlotMask & ~a_targetSlotMask;
+      const auto extraSlotCount = static_cast<int>(std::popcount(extraSlotMask));
+      if (bestOverlapRowIndex < 0 ||
+          extraSlotCount < bestOverlapExtraSlotCount) {
+        bestOverlapRowIndex = rowIndex;
+        bestOverlapExtraSlotCount = extraSlotCount;
+      }
+    }
+
     const auto precedenceScore =
-        ScoreFallbackTargetRow(a_targetSlotMask, row.equipped.slotMask);
+        ScoreFallbackTargetRow(a_targetSlotMask, rowSlotMask);
     if (precedenceScore > bestPrecedenceScore) {
       bestPrecedenceScore = precedenceScore;
       bestPrecedenceRowIndex = rowIndex;
@@ -351,6 +365,10 @@ int VariantWorkbench::FindBestItemTargetRowIndexBySlotMask(
         return rowIndex;
       }
     }
+  }
+
+  if (bestOverlapRowIndex >= 0) {
+    return bestOverlapRowIndex;
   }
 
   if (bestPrecedenceRowIndex >= 0) {
@@ -984,6 +1002,13 @@ std::optional<KitEntry::Layout> VariantWorkbench::CaptureKitLayout(
     layoutRow.targetSlotMask = row.IsSlotRow()
                                    ? row.equipped.slotMask
                                    : row.GetSelectionConflictSlotMask();
+    if (!row.IsSlotRow()) {
+      if (const auto *equippedArmor =
+              RE::TESForm::LookupByID<RE::TESObjectARMO>(row.equipped.formID);
+          equippedArmor != nullptr) {
+        layoutRow.targetIdentifier = armor::GetFormIdentifier(equippedArmor);
+      }
+    }
     layoutRow.hideEquipped = row.hideEquipped;
 
     for (const auto &overrideItem : row.overrides) {
@@ -1046,6 +1071,7 @@ std::optional<KitEntry::Layout> VariantWorkbench::CaptureEquippedKitLayout(
 
     KitEntry::LayoutRow layoutRow;
     layoutRow.targetKind = KitEntry::LayoutTargetKind::Item;
+    layoutRow.targetIdentifier = identifier;
     layoutRow.targetSlotMask = targetSlotMask;
     layoutRow.overrideIdentifiers.push_back(identifier);
     layout.rows.push_back(std::move(layoutRow));

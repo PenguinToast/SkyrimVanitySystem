@@ -82,6 +82,37 @@ int VariantWorkbench::FindKitLayoutTargetRowIndex(
     return -1;
   }
 
+  if (!a_layoutRow.targetIdentifier.empty()) {
+    const auto *targetArmor = armor::LookupByIdentifier<RE::TESObjectARMO>(
+        a_layoutRow.targetIdentifier);
+    if (targetArmor != nullptr) {
+      const auto targetFormID = targetArmor->GetFormID();
+      for (const auto rowIndex : a_candidateRowIndices) {
+        if (!IsValidRowIndex(rowIndex, rows_.size())) {
+          continue;
+        }
+
+        const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
+        if (!row.IsSlotRow() && row.isEquipped &&
+            row.equipped.formID == targetFormID) {
+          return rowIndex;
+        }
+      }
+    }
+  }
+
+  for (const auto rowIndex : a_candidateRowIndices) {
+    if (!IsValidRowIndex(rowIndex, rows_.size())) {
+      continue;
+    }
+
+    const auto &row = rows_[static_cast<std::size_t>(rowIndex)];
+    if (!row.IsSlotRow() && row.isEquipped &&
+        row.GetSelectionConflictSlotMask() == a_layoutRow.targetSlotMask) {
+      return rowIndex;
+    }
+  }
+
   return FindBestItemTargetRowIndexBySlotMask(
       a_layoutRow.targetSlotMask, false, nullptr, nullptr,
       &a_candidateRowIndices);
