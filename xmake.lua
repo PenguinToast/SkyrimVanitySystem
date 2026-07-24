@@ -15,6 +15,7 @@ set_version(build_version)
 set_license("GPL-3.0")
 
 set_languages("c++23")
+set_encodings("utf-8")
 set_warnings("allextra")
 
 set_policy("package.requires_lock", true)

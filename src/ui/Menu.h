@@ -99,6 +99,9 @@ private:
   static constexpr const char *kLocaleDirectory =
       "Data/Interface/SkyrimVanitySystem/locales";
   static constexpr const char *kDefaultLocaleId = "en";
+  static constexpr const char *kSimplifiedChineseLocaleId = "zh_cn";
+  static constexpr const char *kSimplifiedChineseFontFilename =
+      "SourceHanSans-Regular.otf";
   static constexpr int kDefaultFontSizePixels = 18;
   static constexpr int kMinFontSizePixels = 8;
   static constexpr int kMaxFontSizePixels = 48;
@@ -147,7 +150,8 @@ private:
   void LoadFavorites();
   void SaveFavorites() const;
   void RefreshAvailableFonts();
-  void NormalizeSelectedLocaleId();
+  [[nodiscard]] bool NormalizeSelectedLocaleId();
+  [[nodiscard]] bool SelectLocaleFontFallback();
   void NormalizeSelectedFontPath();
   void RebuildFontAtlas();
   void SyncAllowTextInput();

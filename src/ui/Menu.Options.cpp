@@ -191,6 +191,29 @@ void Menu::NormalizeSelectedFontPath() {
   fontPath_ = kDefaultFontPath;
 }
 
+bool Menu::SelectLocaleFontFallback() {
+  if (localeId_ != kSimplifiedChineseLocaleId ||
+      fontPath_ != kDefaultFontPath) {
+    return false;
+  }
+
+  const auto preferredFont = std::ranges::find_if(
+      bundledFontOptions_, [](const FontOption &a_option) {
+        return std::filesystem::path(a_option.path).filename().string() ==
+               kSimplifiedChineseFontFilename;
+      });
+  if (preferredFont == bundledFontOptions_.end()) {
+    logger::warn("SVS Chinese locale selected but {} is unavailable",
+                 kSimplifiedChineseFontFilename);
+    return false;
+  }
+
+  fontPath_ = preferredFont->path;
+  logger::info("Selected {} for SVS Chinese locale",
+               kSimplifiedChineseFontFilename);
+  return true;
+}
+
 void Menu::RebuildFontAtlas() {
   auto &io = ImGui::GetIO();
   auto &style = ImGui::GetStyle();
@@ -199,16 +222,21 @@ void Menu::RebuildFontAtlas() {
   fontConfig.OversampleH = 1;
   fontConfig.OversampleV = 1;
   fontConfig.PixelSnapH = true;
+  const auto *glyphRanges = localeId_ == kSimplifiedChineseLocaleId
+                                ? io.Fonts->GetGlyphRangesChineseFull()
+                                : nullptr;
 
   io.Fonts->Clear();
   io.FontDefault = nullptr;
   if (std::filesystem::exists(fontPath_)) {
     io.FontDefault = io.Fonts->AddFontFromFileTTF(
-        fontPath_.c_str(), static_cast<float>(fontSizePixels_), &fontConfig);
+        fontPath_.c_str(), static_cast<float>(fontSizePixels_), &fontConfig,
+        glyphRanges);
   } else if (fontPath_ != kDefaultFontPath &&
              std::filesystem::exists(kDefaultFontPath)) {
     io.FontDefault = io.Fonts->AddFontFromFileTTF(
-        kDefaultFontPath, static_cast<float>(fontSizePixels_), &fontConfig);
+        kDefaultFontPath, static_cast<float>(fontSizePixels_), &fontConfig,
+        glyphRanges);
   }
   if (!io.FontDefault) {
     io.FontDefault = io.Fonts->AddFontDefaultVector(&fontConfig);
@@ -300,8 +328,9 @@ void Menu::DrawOptionsTab() {
             const bool selected = option.id == localeId_;
             if (ImGui::Selectable(option.name.c_str(), selected)) {
               localeId_ = option.id;
-              NormalizeSelectedLocaleId();
+              static_cast<void>(NormalizeSelectedLocaleId());
               SaveUserSettings();
+              pendingFontAtlasRebuild_ = true;
             }
             if (selected) {
               ImGui::SetItemDefaultFocus();
@@ -379,6 +408,7 @@ void Menu::DrawOptionsTab() {
 
       if (ImGui::Button(resetToDefaultLabel.data())) {
         fontPath_ = kDefaultFontPath;
+        static_cast<void>(SelectLocaleFontFallback());
         fontSizePixels_ = kDefaultFontSizePixels;
         pendingFontSizePixels_ = fontSizePixels_;
         SaveUserSettings();
