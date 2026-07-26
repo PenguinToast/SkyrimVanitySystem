@@ -29,6 +29,7 @@ nlohmann::json SerializeKitLayout(const KitEntry::Layout &a_layout) {
   nlohmann::json rows = nlohmann::json::array();
   for (const auto &row : a_layout.rows) {
     rows.push_back({{"targetKind", ToTargetKindText(row.targetKind)},
+                    {"targetIdentifier", row.targetIdentifier},
                     {"targetSlotMask", row.targetSlotMask},
                     {"overrideIdentifiers", row.overrideIdentifiers},
                     {"hideEquipped", row.hideEquipped}});
@@ -61,6 +62,8 @@ std::optional<KitEntry::Layout> ParseKitLayout(const nlohmann::json &a_json) {
 
     KitEntry::LayoutRow row;
     row.targetKind = *kind;
+    row.targetIdentifier =
+        rowJson.value("targetIdentifier", std::string{});
     row.targetSlotMask = targetSlotMask;
     row.hideEquipped = rowJson.value("hideEquipped", false);
 

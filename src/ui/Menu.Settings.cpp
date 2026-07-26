@@ -219,7 +219,7 @@ void Menu::ApplyStyle() {
   ThemeConfig::GetSingleton()->ApplyToImGui();
 }
 
-void Menu::NormalizeSelectedLocaleId() {
+bool Menu::NormalizeSelectedLocaleId() {
   if (localeId_.empty()) {
     localeId_ = kDefaultLocaleId;
   }
@@ -227,6 +227,7 @@ void Menu::NormalizeSelectedLocaleId() {
   auto *localization = ui::Localization::GetSingleton();
   localization->SelectLocale(localeId_);
   localeId_ = localization->GetCurrentLocaleId();
+  return SelectLocaleFontFallback();
 }
 
 void Menu::OpenToggleKeyCapture() {
@@ -307,7 +308,9 @@ void Menu::Init(IDXGISwapChain *a_swapChain, ID3D11Device *a_device,
   ui::Localization::GetSingleton()->RefreshAvailableLocales(kLocaleDirectory);
   LoadUserSettings();
   NormalizeSelectedFontPath();
-  NormalizeSelectedLocaleId();
+  if (NormalizeSelectedLocaleId()) {
+    SaveUserSettings();
+  }
   LoadFavorites();
 
   IMGUI_CHECKVERSION();

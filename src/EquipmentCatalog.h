@@ -86,6 +86,7 @@ struct KitEntry {
   enum class LayoutTargetKind : std::uint8_t { Item, Slot };
   struct LayoutRow {
     LayoutTargetKind targetKind{LayoutTargetKind::Item};
+    std::string targetIdentifier;
     std::uint64_t targetSlotMask{0};
     std::vector<std::string> overrideIdentifiers;
     bool hideEquipped{false};
